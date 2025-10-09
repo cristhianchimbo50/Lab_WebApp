@@ -1,0 +1,18 @@
+﻿@inherits LayoutComponentBase
+@using Lab_Blazor.Components.Layout
+
+<div class="app-shell">
+    <Sidebar />
+
+    <button class="btn sb-handle rounded-circle"
+            type="button"
+            onclick="window.toggleSidebar()"
+            aria-label="Expandir/Contraer">
+    </button>
+
+    <main class="content-with-sidebar">
+        <div class="content-inner">
+            @Body
+        </div>
+    </main>
+</div>

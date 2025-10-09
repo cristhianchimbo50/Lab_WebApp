@@ -1,0 +1,197 @@
+﻿@using Lab_Blazor.Services.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+
+<aside class="sidebar d-flex flex-column flex-shrink-0 bg-dark text-white position-fixed top-0 start-0 h-100 shadow">
+    <div class="sb-scroll p-3 d-flex flex-column h-100">
+        <!-- Encabezado -->
+        <div class="sb-header d-flex align-items-center mb-3">
+            <a class="brand d-flex align-items-center text-white text-decoration-none" href="/" title="Inicio">
+                <i class="bi bi-heart-pulse fs-4 me-2 brand-icon"></i>
+                <span class="brand-text fs-5 fw-bold">Laboratorio</span>
+            </a>
+
+            <button class="btn sb-toggle ms-auto" type="button" onclick="window.toggleSidebar()" title="Expandir/Contraer">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" class="sb-toggle-icon">
+                    <rect x="3" y="3" width="5" height="18" rx="1.2" fill="currentColor"></rect>
+                    <path d="M12 12 L19 6 V18 Z" fill="currentColor"></path>
+                </svg>
+            </button>
+        </div>
+
+        <hr class="border-secondary" />
+
+        <!-- NAV -->
+        <ul class="nav nav-pills flex-column mb-3">
+
+            <!-- Elemento general -->
+            <li class="nav-item mb-1">
+                <NavLink class="nav-link text-white d-flex align-items-center"
+                         activeClass="active bg-primary" href="/"
+                         Match="NavLinkMatch.All" title="Inicio">
+                    <i class="bi bi-house-door me-2"></i>
+                    <span class="nav-text">Inicio</span>
+                </NavLink>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE PACIENTES -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpPacientes"
+                        aria-expanded="false" title="Pacientes">
+                    <i class="bi bi-people me-2"></i>
+                    <span class="nav-text">Pacientes</span>
+                </button>
+                <div class="collapse" id="grpPacientes">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li>
+                            <NavLink class="link-light nav-link py-1 px-0" activeClass="active"
+                                     href="/pacientes" title="Listado">Listado</NavLink>
+                        </li>
+                        <li>
+                            <NavLink class="link-light nav-link py-1 px-0" activeClass="active"
+                                     href="/pacientes/nuevo" title="Nuevo">Nuevo</NavLink>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE MÉDICOS -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpMedicos"
+                        aria-expanded="false" title="Médicos">
+                    <i class="bi bi-person-badge me-2"></i>
+                    <span class="nav-text">Médicos</span>
+                </button>
+                <div class="collapse" id="grpMedicos">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/medicos" title="Listado">Listado</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/convenios" title="Convenios">Convenios</NavLink></li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE EXÁMENES -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpExamenes"
+                        aria-expanded="false" title="Exámenes">
+                    <i class="bi bi-clipboard2-pulse me-2"></i>
+                    <span class="nav-text">Exámenes</span>
+                </button>
+                <div class="collapse" id="grpExamenes">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/examenes" title="Catálogo">Catálogo</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/asociaciones-reactivos" title="Asociaciones">Asociaciones</NavLink></li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE REACTIVOS -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpReactivos"
+                        aria-expanded="false" title="Reactivos">
+                    <i class="bi bi-box-seam me-2"></i>
+                    <span class="nav-text">Reactivos</span>
+                </button>
+                <div class="collapse" id="grpReactivos">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/reactivos" title="Stock">Stock</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/reactivos/ingresos" title="Ingresos">Ingresos</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/reactivos/egresos" title="Egresos">Egresos</NavLink></li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE ÓRDENES MÉDICAS -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpOrdenes"
+                        aria-expanded="false" title="Órdenes Médicas">
+                    <i class="bi bi-file-earmark-medical me-2"></i>
+                    <span class="nav-text">Órdenes Médicas</span>
+                </button>
+                <div class="collapse" id="grpOrdenes">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes" title="Órdenes">Órdenes</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes/pendientes" title="Pendientes">Pendientes</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cxc" title="Cuentas por Cobrar">Cuentas por Cobrar</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cxc/pagos" title="Pagos">Pagos</NavLink></li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ========================================== -->
+            <!-- MÓDULO: GESTIÓN DE RESULTADOS -->
+            <!-- ========================================== -->
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-toggle="collapse" data-bs-target="#grpResultados"
+                        aria-expanded="false" title="Resultados">
+                    <i class="bi bi-clipboard-check me-2"></i>
+                    <span class="nav-text">Resultados</span>
+                </button>
+                <div class="collapse" id="grpResultados">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados" title="Validados">Validados</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados/borradores" title="Borradores">Borradores</NavLink></li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+
+        <hr class="border-secondary" />
+
+        <!-- Usuario Autenticado -->
+        <AuthorizeView>
+            <Authorized Context="authState">
+                <div class="sb-user mt-auto p-3 d-flex align-items-center">
+                    <div class="sb-user-info flex-grow-1 ms-2">
+                        <div class="fw-bold">@GetUserName(authState.User)</div>
+                        <small class="text-muted">@GetUserRol(authState.User)</small>
+                        <small class="text-muted">@GetUserEmail(authState.User)</small>
+                    </div>
+                    <button class="btn sb-logout" title="Cerrar sesión" @onclick="Logout">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</aside>
+
+<script src="js/site.js"></script>
+
+@code {
+    private async Task Logout()
+    {
+        if (AuthProvider is CustomAuthenticationStateProvider customAuth)
+        {
+            await customAuth.SignOutAsync();
+        }
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    private string GetUserName(System.Security.Claims.ClaimsPrincipal user)
+        => user?.Identity?.Name ?? "Usuario";
+
+    private string GetUserEmail(System.Security.Claims.ClaimsPrincipal user)
+        => user?.FindFirst("email")?.Value ?? "correo@ejemplo.com";
+
+    private string GetUserRol(System.Security.Claims.ClaimsPrincipal user)
+        => user?.FindFirst("rol")?.Value ?? "administrador";
+}

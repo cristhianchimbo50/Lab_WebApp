@@ -1,0 +1,209 @@
+﻿@page "/examenes"
+@using Lab_Contracts.Examenes
+@using Lab_Blazor.Services.Examenes
+@inject IExamenesApiService ExamenesApiService
+@inject IJSRuntime JS
+
+<h3>Gestión de Exámenes</h3>
+
+<button class="btn btn-success mb-3" @onclick="MostrarModalNuevo">Nuevo Examen</button>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Estudio</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var examen in ListaExamenes)
+            {
+                <tr>
+                    <td>@examen.NombreExamen</td>
+                    <td>@examen.Estudio</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="() => EditarExamen(examen.IdExamen)">Editar</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => AnularExamen(examen.IdExamen)">Anular</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de examen (agregar/editar) -->
+@if (ModalVisible)
+{
+    <div class="modal show d-block" style="background:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <EditForm Model="ExamenActual" OnValidSubmit="GuardarExamen">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@((ExamenActual.IdExamen == 0) ? "Nuevo Examen" : "Editar Examen")</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <InputText class="form-control mb-2" @bind-Value="ExamenActual.NombreExamen" placeholder="Nombre Examen" />
+                        <InputText class="form-control mb-2" @bind-Value="ExamenActual.Estudio" placeholder="Estudio" />
+
+                        <hr />
+                        <h6>Exámenes Incluidos (Composición):</h6>
+                        <button class="btn btn-secondary btn-sm mb-2" @onclick="MostrarModalAgregarHijo">Agregar Examen Hijo</button>
+                        <ul>
+                            @foreach (var hijo in HijosSeleccionados)
+                            {
+                                <li>
+                                    @hijo.NombreExamen
+                                    <button class="btn btn-sm btn-danger ms-2" @onclick="() => QuitarHijo(hijo.IdExamen)">Quitar</button>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal búsqueda de hijos -->
+@if (ModalBuscarHijos)
+{
+    <div class="modal show d-block" style="background:rgba(0,0,0,0.4);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Buscar Examen Hijo</h5>
+                    <button class="btn-close" @onclick="CerrarModalBuscarHijos" />
+                </div>
+                <div class="modal-body">
+                    <InputText class="form-control mb-2" @bind-Value="TextoBusquedaHijo" placeholder="Buscar por nombre..." />
+                    <button class="btn btn-primary btn-sm" @onclick="BuscarHijos">Buscar</button>
+                    <ul>
+                        @foreach (var ex in ResultadosBusquedaHijo)
+                        {
+                            <li>
+                                @ex.NombreExamen
+                                <button class="btn btn-success btn-sm ms-2" @onclick="() => SeleccionarHijo(ex)">Agregar</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ExamenDto> ListaExamenes = new();
+    private ExamenDto ExamenActual = new();
+    private List<ExamenDto> HijosSeleccionados = new();
+    private bool ModalVisible = false;
+    private bool ModalBuscarHijos = false;
+    private string TextoBusquedaHijo = "";
+    private List<ExamenDto> ResultadosBusquedaHijo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarExamenes();
+    }
+
+    private async Task CargarExamenes()
+    {
+        ListaExamenes = await ExamenesApiService.GetExamenesAsync();
+    }
+
+    private void MostrarModalNuevo()
+    {
+        ExamenActual = new();
+        HijosSeleccionados = new();
+        ModalVisible = true;
+    }
+
+    private async Task EditarExamen(int id)
+    {
+        var examen = await ExamenesApiService.GetExamenPorIdAsync(id);
+        if (examen is null)
+        {
+            await JS.InvokeVoidAsync("alert", "Examen no encontrado.");
+            return;
+        }
+
+        ExamenActual = examen;
+        HijosSeleccionados = await ExamenesApiService.ObtenerHijosDeExamenAsync(id);
+        ModalVisible = true;
+    }
+
+    private async Task GuardarExamen()
+    {
+        HttpResponseMessage res;
+        if (ExamenActual.IdExamen == 0)
+            res = await ExamenesApiService.CrearExamenAsync(ExamenActual);
+        else
+            res = await ExamenesApiService.EditarExamenAsync(ExamenActual.IdExamen, ExamenActual);
+
+        if (ExamenActual.IdExamen != 0)
+        {
+            var hijosPrevios = await ExamenesApiService.ObtenerHijosDeExamenAsync(ExamenActual.IdExamen);
+            foreach (var hijo in hijosPrevios)
+                await ExamenesApiService.EliminarExamenHijoAsync(ExamenActual.IdExamen, hijo.IdExamen);
+
+            foreach (var hijo in HijosSeleccionados)
+                await ExamenesApiService.AgregarExamenHijoAsync(ExamenActual.IdExamen, hijo.IdExamen);
+        }
+
+        if (res.IsSuccessStatusCode)
+        {
+            ModalVisible = false;
+            await CargarExamenes();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Error al guardar examen.");
+        }
+    }
+
+    private async Task AnularExamen(int id)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "¿Anular este examen?"))
+        {
+            await ExamenesApiService.AnularExamenAsync(id);
+            await CargarExamenes();
+        }
+    }
+
+    private void QuitarHijo(int id) => HijosSeleccionados = HijosSeleccionados.Where(x => x.IdExamen != id).ToList();
+
+    private void MostrarModalAgregarHijo()
+    {
+        TextoBusquedaHijo = "";
+        ResultadosBusquedaHijo = new();
+        ModalBuscarHijos = true;
+    }
+
+    private void CerrarModal() => ModalVisible = false;
+    private void CerrarModalBuscarHijos() => ModalBuscarHijos = false;
+
+    private async Task BuscarHijos()
+    {
+        var todos = await ExamenesApiService.GetExamenesAsync();
+        ResultadosBusquedaHijo = todos
+            .Where(x => x.NombreExamen.Contains(TextoBusquedaHijo, StringComparison.OrdinalIgnoreCase)
+                     && !HijosSeleccionados.Any(h => h.IdExamen == x.IdExamen)
+                     && x.IdExamen != ExamenActual.IdExamen)
+            .ToList();
+    }
+
+    private void SeleccionarHijo(ExamenDto ex)
+    {
+        if (!HijosSeleccionados.Any(x => x.IdExamen == ex.IdExamen))
+            HijosSeleccionados.Add(ex);
+
+        ModalBuscarHijos = false;
+    }
+}

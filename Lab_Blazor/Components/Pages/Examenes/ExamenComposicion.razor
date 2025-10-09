@@ -1,0 +1,136 @@
+﻿@using Lab_Contracts.Examenes
+@using Lab_Blazor.Services.Examenes
+@inject IExamenComposicionApiService ExamenComposicionApiService
+@inject IExamenesApiService ExamenesApiService
+@inject IJSRuntime JS
+
+<h4>Composición de Examen: @NombreExamenPadre</h4>
+
+@if (ExamenPadre == null)
+{
+    <div class="alert alert-info">Seleccione un examen para ver su composición.</div>
+}
+else
+{
+    <div class="mb-3">
+        <label class="form-label">Agregar examen hijo:</label>
+        <select class="form-select" @bind="IdExamenHijoSeleccionado">
+            <option value="">-- Seleccionar examen --</option>
+            @foreach (var examen in ExamenesDisponibles)
+            {
+                <option value="@examen.IdExamen">@examen.NombreExamen</option>
+            }
+        </select>
+        <button class="btn btn-primary ms-2" @onclick="AgregarComposicion">Agregar</button>
+    </div>
+
+    <h5>Exámenes hijos</h5>
+    @if (Composiciones is null || Composiciones.Count == 0)
+    {
+        <div class="alert alert-warning">No hay exámenes hijos asociados.</div>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nombre examen hijo</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var composicion in Composiciones)
+                {
+                    <tr>
+                        <td>@composicion.NombreExamenHijo</td>
+                        <td class="text-center">
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarComposicion(composicion)">
+                                <i class="bi bi-x-circle"></i> Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public int? IdExamenPadre { get; set; }
+    private ExamenDto? ExamenPadre;
+    private string? NombreExamenPadre;
+    private List<ExamenComposicionDto> Composiciones = new();
+    private List<ExamenDto> ExamenesDisponibles = new();
+    private int? IdExamenHijoSeleccionado;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IdExamenPadre.HasValue)
+        {
+            ExamenPadre = await ExamenesApiService.GetExamenPorIdAsync(IdExamenPadre.Value);
+            NombreExamenPadre = ExamenPadre?.NombreExamen;
+            await CargarComposiciones();
+            await CargarExamenesDisponibles();
+        }
+    }
+
+    private async Task CargarComposiciones()
+    {
+        if (IdExamenPadre.HasValue)
+            Composiciones = await ExamenComposicionApiService.GetComposicionesPorExamenPadreAsync(IdExamenPadre.Value);
+    }
+
+    private async Task CargarExamenesDisponibles()
+    {
+        var todos = await ExamenesApiService.GetExamenesAsync();
+        // Evita seleccionar el mismo examen como hijo y los que ya están asociados
+        ExamenesDisponibles = todos
+            .Where(x => x.IdExamen != IdExamenPadre && !Composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
+            .ToList();
+    }
+
+    private async Task AgregarComposicion()
+    {
+        if (!IdExamenHijoSeleccionado.HasValue)
+        {
+            await JS.InvokeVoidAsync("alert", "Seleccione un examen hijo.");
+            return;
+        }
+
+        var dto = new ExamenComposicionDto
+        {
+            IdExamenPadre = IdExamenPadre!.Value,
+            IdExamenHijo = IdExamenHijoSeleccionado.Value
+        };
+
+        var response = await ExamenComposicionApiService.CrearComposicionAsync(dto);
+        if (response.IsSuccessStatusCode)
+        {
+            await CargarComposiciones();
+            await CargarExamenesDisponibles();
+            IdExamenHijoSeleccionado = null;
+        }
+        else
+        {
+            var msg = await response.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"No se pudo agregar: {msg}");
+        }
+    }
+
+    private async Task EliminarComposicion(ExamenComposicionDto composicion)
+    {
+        var conf = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
+        if (!conf) return;
+
+        var response = await ExamenComposicionApiService.EliminarComposicionAsync(composicion.IdExamenPadre, composicion.IdExamenHijo);
+        if (response.IsSuccessStatusCode)
+        {
+            await CargarComposiciones();
+            await CargarExamenesDisponibles();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "No se pudo eliminar la relación.");
+        }
+    }
+}

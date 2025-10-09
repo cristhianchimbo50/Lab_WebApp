@@ -1,0 +1,175 @@
+﻿@page "/login"
+@layout EmptyLayout
+@rendermode InteractiveServer
+
+@using Lab_Blazor.Components.Layout
+@using Lab_Blazor.Services.Auth
+@using Lab_Contracts.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+@inject IAuthApiService AuthApi
+
+<PageTitle>Iniciar Sesión</PageTitle>
+
+@if (!_checkedAuth)
+{
+    <div class="d-flex align-items-center text-primary">
+        <div class="spinner-border me-2" role="status"></div>
+        <strong>Cargando login...</strong>
+    </div>
+}
+else
+{
+    <div class="container d-flex align-items-center justify-content-center vh-100">
+        <div class="row w-100 shadow-lg rounded p-4 bg-white" style="max-width: 900px;">
+            <div class="col-md-6 d-none d-md-flex align-items-center justify-content-center">
+                <img src="images/login.png" class="img-fluid rounded" alt="Ilustración de inicio de sesión" />
+            </div>
+            <div class="col-md-6">
+                <h3 class="mb-4 fw-bold text-primary">
+                    <i class="bi bi-person-circle me-2"></i>Iniciar Sesión
+                </h3>
+
+                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label for="correo" class="form-label">Correo electrónico</label>
+                        <InputText id="correo" class="form-control" @bind-Value="loginModel.CorreoUsuario" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="clave" class="form-label">Contraseña</label>
+                        <InputText id="clave" type="password" class="form-control" @bind-Value="loginModel.Clave" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(error))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>@error
+                        </div>
+                    }
+
+                    <button type="submit" class="btn btn-primary w-100 mb-2" disabled="@loginBloqueado">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
+                    </button>
+
+                    <button type="button" class="btn btn-secondary w-100"
+                            @onclick="@(() => Navigation.NavigateTo("/recuperar-clave"))">
+                        <i class="bi bi-question-circle me-1"></i>¿Olvidó su contraseña?
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private LoginRequestDto loginModel = new();
+    private string? error;
+    private int intentosFallidos = 0;
+    private int maxIntentos = 3;
+    private bool loginBloqueado = false;
+    private int segundosEspera = 30;
+    private Timer? temporizador;
+    private string? redirectUrl;
+    private bool _checkedAuth = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Verifica si el usuario YA está autenticado
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated ?? false)
+            {
+                Navigation.NavigateTo("/home", true);
+                return;
+            }
+
+            // Leer returnUrl del querystring si existe
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            redirectUrl = query["returnUrl"];
+            _checkedAuth = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        if (loginBloqueado)
+            return;
+
+        error = null;
+
+        try
+        {
+            var result = await AuthApi.LoginAsync(loginModel);
+
+            if (result == null)
+            {
+                intentosFallidos++;
+                if (intentosFallidos >= maxIntentos)
+                {
+                    loginBloqueado = true;
+                    error = $"Demasiados intentos fallidos. Espere {segundosEspera} segundos.";
+                    IniciarTemporizadorDesbloqueo();
+                }
+                else
+                {
+                    error = $"Credenciales inválidas. Intento {intentosFallidos} de {maxIntentos}.";
+                }
+                return;
+            }
+
+            intentosFallidos = 0;
+
+            if (AuthProvider is CustomAuthenticationStateProvider customAuth)
+            {
+                await customAuth.SignInAsync(result);
+
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (user.Identity?.IsAuthenticated ?? false)
+                {
+                    if (result.EsContraseñaTemporal)
+                        Navigation.NavigateTo("/cambiar-contraseña", true);
+                    else
+                        Navigation.NavigateTo(string.IsNullOrWhiteSpace(redirectUrl) ? "/home" : redirectUrl!, true);
+                }
+                else
+                {
+                    error = "Autenticación fallida. Intente de nuevo.";
+                }
+            }
+            else
+            {
+                error = "No se pudo validar el usuario.";
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            error = ex.Message;
+        }
+        catch (Exception)
+        {
+            error = "Error inesperado. Intente de nuevo más tarde.";
+        }
+    }
+
+    private void IniciarTemporizadorDesbloqueo()
+    {
+        temporizador?.Dispose();
+        temporizador = new Timer(async _ =>
+        {
+            loginBloqueado = false;
+            intentosFallidos = 0;
+            error = null;
+            await InvokeAsync(StateHasChanged);
+        }, null, segundosEspera * 1000, Timeout.Infinite);
+    }
+}

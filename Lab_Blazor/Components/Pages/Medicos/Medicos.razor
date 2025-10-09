@@ -1,0 +1,239 @@
+﻿@page "/medicos"
+@using Lab_Contracts.Medicos
+@using Lab_Blazor.Services.Medicos
+@inject IMedicosApiService MedicosApiService
+@inject IJSRuntime JS
+
+<h3 class="mb-4">
+    <i class="fas fa-user-md me-2 text-primary"></i>Gestión de Médicos
+</h3>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-body row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Buscar por</label>
+            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                <option value="">-- Seleccione --</option>
+                <option value="nombre">Nombre</option>
+                <option value="especialidad">Especialidad</option>
+                <option value="correo">Correo</option>
+            </InputSelect>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Valor</label>
+            <InputText class="form-control" @bind-Value="valorBusqueda" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2 flex-wrap justify-content-md-end">
+            <button class="btn btn-primary" @onclick="BuscarMedicos">
+                <i class="bi bi-search"></i>
+            </button>
+            <button class="btn btn-success" @onclick="MostrarModalNuevo">
+                <i class="bi bi-person-plus-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (ListaMedicos is null || ListaMedicos.Count == 0)
+{
+    <div class="alert alert-warning">No se encontraron médicos.</div>
+}
+else
+{
+    <div class="table-responsive shadow-sm" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Especialidad</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var medico in ListaMedicos)
+                {
+                    <tr>
+                        <td>@medico.NombreMedico</td>
+                        <td>@medico.Especialidad</td>
+                        <td>@medico.Correo</td>
+                        <td>@medico.Telefono</td>
+                        <td>
+                            <span class="badge bg-@(medico.Anulado ? "danger" : "success")">
+                                @(medico.Anulado ? "Deshabilitado" : "Habilitado")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm me-1 shadow-sm" title="Editar" @onclick="() => EditarMedico(medico)">
+                                <i class="bi bi-pencil-square text-black"></i>
+                            </button>
+                            @if (medico.Anulado)
+                            {
+                                <button class="btn btn-success btn-sm shadow-sm" title="Habilitar" @onclick="() => ConfirmarReactivacion(medico)">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-danger btn-sm shadow-sm" title="Deshabilitar" @onclick="() => ConfirmarAnulacion(medico.IdMedico)">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <EditForm Model="@MedicoActual" OnValidSubmit="ValidarYGuardar">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-circle me-2"></i>
+                        @(MedicoActual.IdMedico == 0 ? "Nuevo Médico" : "Editar Médico")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <InputText class="form-control" @bind-Value="MedicoActual.NombreMedico" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Especialidad</label>
+                            <InputText class="form-control" @bind-Value="MedicoActual.Especialidad" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <InputText class="form-control" @bind-Value="MedicoActual.Correo" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Teléfono</label>
+                            <InputText class="form-control" @bind-Value="MedicoActual.Telefono" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill me-1"></i> Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                        <i class="bi bi-x-lg me-1"></i> Cancelar
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<MedicoDto> ListaMedicos = new();
+    private MedicoDto MedicoActual = new();
+    private bool modalVisible = false;
+    private string criterioBusqueda = "";
+    private string valorBusqueda = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await BuscarMedicos();
+    }
+
+    private async Task BuscarMedicos()
+    {
+        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
+            ListaMedicos = await MedicosApiService.GetMedicosAsync();
+        else
+            ListaMedicos = await MedicosApiService.BuscarMedicosAsync(criterioBusqueda, valorBusqueda);
+    }
+
+    private void MostrarModalNuevo()
+    {
+        MedicoActual = new MedicoDto();
+        modalVisible = true;
+    }
+
+    private void CerrarModal() => modalVisible = false;
+
+    private void EditarMedico(MedicoDto medico)
+    {
+        MedicoActual = new MedicoDto
+        {
+            IdMedico = medico.IdMedico,
+            NombreMedico = medico.NombreMedico,
+            Especialidad = medico.Especialidad,
+            Correo = medico.Correo,
+            Telefono = medico.Telefono,
+            Anulado = medico.Anulado
+        };
+        modalVisible = true;
+    }
+
+    private async Task ValidarYGuardar()
+    {
+        HttpResponseMessage result;
+        if (MedicoActual.IdMedico == 0)
+            result = await MedicosApiService.CrearMedicoAsync(MedicoActual);
+        else
+            result = await MedicosApiService.EditarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
+
+        if (result.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "Médico guardado correctamente.");
+            MedicoActual = new MedicoDto();
+            await BuscarMedicos();
+            modalVisible = false;
+        }
+        else
+        {
+            var msg = await result.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al guardar: {result.StatusCode} \n{msg}");
+        }
+    }
+
+    private async Task ConfirmarAnulacion(int id)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este médico?");
+        if (confirm)
+        {
+            var result = await MedicosApiService.AnularMedicoAsync(id);
+            if (result.IsSuccessStatusCode)
+            {
+                await BuscarMedicos();
+                await JS.InvokeVoidAsync("alert", "Médico anulado.");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Error: {result.StatusCode}");
+            }
+        }
+    }
+
+    private async Task ConfirmarReactivacion(MedicoDto medico)
+    {
+        var confirmar = await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?");
+        if (confirmar)
+        {
+            medico.Anulado = false;
+            var resultado = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
+
+            if (resultado.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Médico reactivado correctamente.");
+                await BuscarMedicos();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Error al reactivar médico: {resultado.StatusCode}");
+            }
+        }
+    }
+}

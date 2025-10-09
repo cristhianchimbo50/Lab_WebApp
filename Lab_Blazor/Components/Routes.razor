@@ -1,0 +1,23 @@
+﻿@* Routes.razor *@
+@using Microsoft.AspNetCore.Components.Routing
+@using Lab_Blazor.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+
+        <NotFound>
+            <LayoutView Layout="typeof(MainLayout)">
+                <div class="container py-5">
+                    <h1 class="display-6">404</h1>
+                    <p>La página que buscas no existe.</p>
+                    <a class="btn btn-primary" href="/">Ir al inicio</a>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

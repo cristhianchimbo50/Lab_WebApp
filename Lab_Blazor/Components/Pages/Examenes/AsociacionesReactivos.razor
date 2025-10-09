@@ -1,0 +1,176 @@
+﻿@page "/asociaciones-reactivos"
+@using Lab_Contracts.Examenes
+@using Lab_Blazor.Services.Examenes
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IExamenReactivoAsociacionesApiService AsociacionesApi
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Asociaciones Exámenes - Reactivos</PageTitle>
+
+<h3 class="mb-4 d-flex align-items-center">
+    <i class="bi bi-link-45deg fs-3 text-primary me-2"></i>
+    Asociaciones Exámenes - Reactivos
+</h3>
+
+
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Buscar por</label>
+                <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                    <option value="">-- Seleccione --</option>
+                    <option value="examen">Examen</option>
+                    <option value="reactivo">Reactivo</option>
+                    <option value="unidad">Unidad</option>
+                </InputSelect>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Valor</label>
+                <InputText class="form-control" @bind-Value="valorBusqueda" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end justify-content-md-end gap-2">
+                <button class="btn btn-primary" @onclick="BuscarAsociaciones">
+                    <i class="bi bi-search me-2"></i> Buscar
+                </button>
+                <button class="btn btn-success" @onclick="IrAVinculoReactivos">
+                    <i class="bi bi-plus-circle me-2"></i> Vincular Reactivos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (asociacionesFiltradas.Any())
+    {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover table-bordered align-middle text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th>Examen</th>
+                        <th>Reactivo</th>
+                        <th class="text-end">Cantidad Usada</th>
+                        <th>Unidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in asociacionesFiltradas)
+                    {
+                        <tr>
+                            <td>@item.NombreExamen</td>
+                            <td>@item.NombreReactivo</td>
+                            <td class="text-end">@item.CantidadUsada</td>
+                            <td>@item.Unidad</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm shadow-sm" @onclick="() => IrAEditar(item.IdExamen)">
+                                    <i class="bi bi-pencil-square text-dark"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm shadow-sm" @onclick="() => EliminarAsociacion(item.IdExamenReactivo)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning d-flex align-items-center mt-4" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            No hay asociaciones registradas aún.
+        </div>
+    }
+
+
+@code {
+    private List<AsociacionReactivoDto> asociaciones = new();
+    private List<AsociacionReactivoDto> asociacionesFiltradas = new();
+    private bool cargando = true;
+    private bool accesoDenegado = false;
+    private bool isRendered = false;
+
+    private string criterioBusqueda = "";
+    private string valorBusqueda = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isRendered)
+        {
+            var auth = await AuthProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                Navigation.NavigateTo("/login", true);
+                return;
+            }
+
+            if (!user.IsInRole("administrador"))
+            {
+                accesoDenegado = true;
+                cargando = false;
+                isRendered = true;
+                StateHasChanged();
+                return;
+            }
+
+            try
+            {
+                asociaciones = await AsociacionesApi.ObtenerTodasAsync();
+                asociacionesFiltradas = asociaciones.ToList();
+            }
+            catch
+            {
+                accesoDenegado = true;
+            }
+            finally
+            {
+                cargando = false;
+                isRendered = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void BuscarAsociaciones()
+    {
+        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
+        {
+            asociacionesFiltradas = asociaciones.ToList();
+            return;
+        }
+
+        var valor = valorBusqueda.Trim().ToLower();
+
+        asociacionesFiltradas = criterioBusqueda switch
+        {
+            "examen" => asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
+            "reactivo" => asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
+            "unidad" => asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
+            _ => asociaciones.ToList()
+        };
+    }
+
+    private void IrAEditar(int idExamen)
+    {
+        Navigation.NavigateTo($"/examenes-reactivos?idExamen={idExamen}");
+    }
+
+    private void IrAVinculoReactivos()
+    {
+        Navigation.NavigateTo("/examenes-reactivos");
+    }
+
+    private async Task EliminarAsociacion(int idAsociacion)
+    {
+        var ok = await AsociacionesApi.EliminarAsync(idAsociacion);
+        if (ok)
+        {
+            asociaciones = await AsociacionesApi.ObtenerTodasAsync();
+            asociacionesFiltradas = asociaciones.ToList();
+            StateHasChanged();
+        }
+    }
+}
