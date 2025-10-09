@@ -27,9 +27,9 @@ namespace Lab_Blazor.Services.Medicos
             return await _http.GetFromJsonAsync<List<MedicoDto>>($"api/medicos/buscar?campo={campo}&valor={valor}") ?? new();
         }
 
-        public async Task<HttpResponseMessage> CrearMedicoAsync(MedicoDto medico)
+        public async Task<HttpResponseMessage> CrearMedicoAsync(MedicoDto dto)
         {
-            return await _http.PostAsJsonAsync("api/medicos", medico);
+            return await _http.PostAsJsonAsync("api/medicos", dto);
         }
 
         public async Task<HttpResponseMessage> EditarMedicoAsync(int id, MedicoDto medico)
@@ -41,5 +41,12 @@ namespace Lab_Blazor.Services.Medicos
         {
             return await _http.PutAsync($"api/medicos/anular/{id}", null);
         }
+
+        public async Task<List<MedicoDto>> ListarMedicosAsync()
+        {
+            return await _http.GetFromJsonAsync<List<MedicoDto>>("api/medicos") ?? new List<MedicoDto>();
+        }
+
+
     }
 }

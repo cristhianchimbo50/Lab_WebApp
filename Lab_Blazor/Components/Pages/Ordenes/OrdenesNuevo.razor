@@ -1,0 +1,317 @@
+﻿@page "/ordenes/nuevo"
+@inject IOrdenesApiService OrdenApi
+@inject NavigationManager Navigation
+
+@inject IPacientesApiService PacientesApi
+@inject IMedicosApiService MedicosApi
+@inject IExamenesApiService ExamenesApi
+@inject IJSRuntime JS
+
+@using Lab_Blazor.Services.Examenes
+@using Lab_Blazor.Services.Medicos
+@using Lab_Blazor.Services.Ordenes
+@using Lab_Blazor.Services.Pacientes
+
+@using Lab_Contracts.Ordenes
+@using Lab_Contracts.Pacientes
+@using Lab_Contracts.Medicos
+@using Lab_Contracts.Examenes
+
+<h4 class="mb-4 d-flex align-items-center">
+    <i class="fas fa-file-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden de Laboratorio
+</h4>
+
+@if (!cargado)
+{
+    <div class="d-flex align-items-center text-primary">
+        <div class="spinner-border me-2" role="status"></div>
+        <strong>Cargando...</strong>
+    </div>
+}
+else
+{
+    <EditForm Model="orden" OnValidSubmit="MostrarPagoModal">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha de la Orden</label>
+                        <InputDate class="form-control" @bind-Value="FechaOrdenSeleccionada" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cédula del Paciente</label>
+                        <div class="input-group">
+                            <InputText class="form-control" @bind-Value="Cedula" />
+                            <button class="btn btn-info" @onclick="BuscarPorCedula">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                @if (PacienteActual is not null)
+                {
+                    <hr />
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Nombre</label>
+                            <input class="form-control" value="@PacienteActual.NombrePaciente" disabled />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Edad</label>
+                            <input class="form-control" value="@PacienteActual.EdadPaciente" disabled />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input class="form-control" value="@PacienteActual.DireccionPaciente" disabled />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono</label>
+                            <input class="form-control" value="@PacienteActual.TelefonoPaciente" disabled />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <input class="form-control" value="@PacienteActual.CorreoElectronicoPaciente" disabled />
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <label class="form-label">Médico</label>
+                <div class="input-group">
+                    <select class="form-select" @bind="MedicoIdSeleccionado">
+                        <option value="">-- Seleccione un médico --</option>
+                        @foreach (var medico in Medicos)
+                        {
+                            <option value="@medico.IdMedico">@medico.NombreMedico</option>
+                        }
+                    </select>
+                    <button class="btn btn-secondary" type="button" @onclick="AbrirModalNuevoMedico">
+                        <i class="fas fa-user-md"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-success" type="button" @onclick="() => MostrarModalExamen = true">
+                <i class="fas fa-vial me-1"></i> Agregar Examen
+            </button>
+        </div>
+        @if (ExamenesSeleccionados.Any())
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-bordered table-sm align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Estudio</th>
+                                <th>Precio</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ex in ExamenesSeleccionados)
+                            {
+                                <tr>
+                                    <td>@ex.NombreExamen</td>
+                                    <td>@ex.Estudio</td>
+                                    <td>@ex.Precio.ToString("C")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => QuitarExamen(ex)">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        <div class="text-end mb-4">
+            <button class="btn btn-success px-4" type="submit">
+                <i class="fas fa-save me-1"></i> Guardar Orden
+            </button>
+        </div>
+    </EditForm>
+}
+
+@if (MostrarModalMedico)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <EditForm Model="@NuevoMedico" OnValidSubmit="GuardarNuevoMedico">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-user-md me-2"></i> Registrar Nuevo Médico</h5>
+                        <button class="btn-close" @onclick="CerrarModalNuevoMedico"></button>
+                    </div>
+                    <div class="modal-body">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-2"><label>Nombre</label><InputText class="form-control" @bind-Value="NuevoMedico.NombreMedico" /></div>
+                        <div class="mb-2"><label>Especialidad</label><InputText class="form-control" @bind-Value="NuevoMedico.Especialidad" /></div>
+                        <div class="mb-2"><label>Teléfono</label><InputText class="form-control" @bind-Value="NuevoMedico.Telefono" /></div>
+                        <div class="mb-2"><label>Correo</label><InputText class="form-control" @bind-Value="NuevoMedico.Correo" /></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" type="submit">Guardar</button>
+                        <button class="btn btn-secondary" type="button" @onclick="CerrarModalNuevoMedico">Cancelar</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (MostrarModalExamen)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-vials me-2"></i> Buscar y Seleccionar Examen</h5>
+                    <button class="btn-close" @onclick="CerrarModalExamen"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-2">
+                        <div class="col-md-9">
+                            <InputText class="form-control" @bind-Value="TextoBuscarExamen" placeholder="Buscar por nombre o estudio" />
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" @onclick="BuscarExamenes">
+                                <i class="fas fa-search me-1"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Estudio</th>
+                                <th>Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ex in ExamenesDisponibles)
+                            {
+                                <tr @ondblclick="() => SeleccionarExamen(ex)">
+                                    <td>@ex.NombreExamen</td>
+                                    <td>@ex.Estudio</td>
+                                    <td>@ex.Precio.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!ExamenesSeleccionados.Any())
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-circle me-2"></i> No hay exámenes seleccionados.
+    </div>
+}
+
+@code {
+    private bool cargado = false;
+    private string Cedula = "";
+    private PacienteDto? PacienteActual;
+    private List<MedicoDto> Medicos = new();
+    private MedicoDto? MedicoActual;
+    private MedicoDto NuevoMedico = new();
+    private bool MostrarModalMedico = false;
+    private bool MostrarModalExamen = false;
+    private string TextoBuscarExamen = "";
+    private List<ExamenDto> ExamenesDisponibles = new();
+    private List<ExamenDto> ExamenesSeleccionados = new();
+    private DateOnly FechaOrdenSeleccionada = DateOnly.FromDateTime(DateTime.Now);
+    private OrdenDto orden = new();
+    private int? MedicoIdSeleccionado
+    {
+        get => MedicoActual?.IdMedico;
+        set => MedicoActual = Medicos.FirstOrDefault(m => m.IdMedico == value);
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        Medicos = await MedicosApi.ListarMedicosAsync();
+        cargado = true;
+    }
+    private async Task BuscarPorCedula()
+    {
+        if (string.IsNullOrWhiteSpace(Cedula))
+            return;
+
+        var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(Cedula);
+        if (paciente != null)
+            PacienteActual = paciente;
+        else
+        {
+            PacienteActual = null;
+            await JS.InvokeVoidAsync("alert", "No se encontró paciente con esa cédula.");
+        }
+        StateHasChanged();
+    }
+
+    private void AbrirModalNuevoMedico()
+    {
+        NuevoMedico = new MedicoDto();
+        MostrarModalMedico = true;
+    }
+    private async Task GuardarNuevoMedico()
+    {
+        var res = await MedicosApi.CrearMedicoAsync(NuevoMedico);
+        if (res.IsSuccessStatusCode)
+        {
+            Medicos = await MedicosApi.ListarMedicosAsync();
+            MedicoActual = Medicos.FirstOrDefault(m => m.NombreMedico == NuevoMedico.NombreMedico);
+            MostrarModalMedico = false;
+        }
+        else
+        {
+            var errorMsg = await res.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"No se pudo crear el médico. {errorMsg}");
+        }
+    }
+
+    private void CerrarModalNuevoMedico() => MostrarModalMedico = false;
+    private async Task BuscarExamenes()
+    {
+        ExamenesDisponibles = await ExamenesApi.ListarExamenesAsync(TextoBuscarExamen);
+    }
+    private void SeleccionarExamen(ExamenDto examen)
+    {
+        if (!ExamenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
+            ExamenesSeleccionados.Add(examen);
+        MostrarModalExamen = false;
+    }
+    private void QuitarExamen(ExamenDto examen)
+    {
+        ExamenesSeleccionados.Remove(examen);
+    }
+    private void CerrarModalExamen() => MostrarModalExamen = false;
+    private void MostrarPagoModal()
+    {
+        if (PacienteActual == null || MedicoActual == null || !ExamenesSeleccionados.Any())
+            return;
+        GuardarOrden();
+    }
+    private async Task GuardarOrden()
+    {
+        orden.IdPaciente = PacienteActual.IdPaciente;
+        orden.IdMedico = MedicoActual.IdMedico;
+        orden.FechaOrden = FechaOrdenSeleccionada;
+        var dto = new OrdenCompletaDto
+        {
+            Orden = orden,
+            IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList()
+        };
+        var resp = await OrdenApi.CrearOrdenAsync(dto);
+        Navigation.NavigateTo("/ordenes");
+    }
+}

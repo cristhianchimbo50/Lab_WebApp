@@ -1,0 +1,69 @@
+﻿@page "/ordenes"
+@using Lab_Blazor.Services.Ordenes
+@using Lab_Contracts.Ordenes
+
+@inject IOrdenesApiService OrdenApi
+@inject NavigationManager Navigation
+
+<h4>Órdenes</h4>
+<button class="btn btn-success mb-3" @onclick="IrANuevaOrden">Nueva Orden</button>
+
+@if (ordenes == null)
+{
+    <p>Cargando...</p>
+}
+else if (!ordenes.Any())
+{
+    <p>No hay órdenes registradas.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Paciente</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Pagado</th>
+                <th>Saldo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var o in ordenes)
+            {
+                <tr>
+                    <td>@o.NumeroOrden</td>
+                    <td>@o.IdPaciente</td>
+                    <td>@o.FechaOrden.ToShortDateString()</td>
+                    <td>@o.Total.ToString("C")</td>
+                    <td>@o.TotalPagado.ToString("C")</td>
+                    <td>@o.SaldoPendiente.ToString("C")</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" @onclick="() => VerOrden(o.IdOrden)">Ver</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<OrdenDto>? ordenes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ordenes = await OrdenApi.GetOrdenesAsync();
+    }
+
+    void IrANuevaOrden()
+    {
+        Navigation.NavigateTo("/ordenes/nuevo");
+    }
+
+    void VerOrden(int id)
+    {
+        Navigation.NavigateTo($"/ordenes/{id}");
+    }
+}

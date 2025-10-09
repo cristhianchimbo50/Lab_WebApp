@@ -16,5 +16,9 @@ namespace Lab_Blazor.Services.Examenes
         Task<List<ExamenDto>> ObtenerHijosDeExamenAsync(int idPadre);
         Task<HttpResponseMessage> AgregarExamenHijoAsync(int idPadre, int idHijo);
         Task<HttpResponseMessage> EliminarExamenHijoAsync(int idPadre, int idHijo);
+
+        //Para orden
+
+        Task<List<ExamenDto>> ListarExamenesAsync(string filtro);
     }
 }

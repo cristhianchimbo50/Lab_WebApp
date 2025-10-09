@@ -13,5 +13,6 @@ namespace Lab_APIRest.Services.Medicos
         Task<MedicoDto> CrearMedicoAsync(MedicoDto dto);
         Task<bool> EditarMedicoAsync(int id, MedicoDto dto);
         Task<bool> AnularMedicoAsync(int id);
+        Task<List<MedicoDto>> ListarMedicosAsync();
     }
 }

@@ -11,5 +11,6 @@ namespace Lab_Blazor.Services.Pacientes
         Task<HttpResponseMessage> CrearPacienteAsync(PacienteDto paciente);
         Task<HttpResponseMessage> EditarPacienteAsync(int id, PacienteDto paciente);
         Task<HttpResponseMessage> AnularPacienteAsync(int id);
+        Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string cedula);
     }
 }

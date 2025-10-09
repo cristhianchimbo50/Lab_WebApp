@@ -9,6 +9,7 @@ using Lab_APIRest.Services.Pacientes;
 using Lab_APIRest.Services.Medicos;
 using Lab_APIRest.Services.Examenes;
 using Lab_APIRest.Services.Reactivos;
+using Lab_APIRest.Services.Ordenes;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,7 @@ builder.Services.AddScoped<IExamenService, ExamenService>();
 builder.Services.AddScoped<IReactivoService, ReactivoService>();
 builder.Services.AddScoped<IExamenReactivoAsociacionService, ExamenReactivoAsociacionService>();
 builder.Services.AddScoped<IExamenComposicionService, ExamenComposicionService>();
+builder.Services.AddScoped<IOrdenService, OrdenService>();
 
 
 

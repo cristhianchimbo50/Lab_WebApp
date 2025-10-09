@@ -41,5 +41,13 @@ namespace Lab_Blazor.Services.Pacientes
         {
             return await _http.PutAsync($"api/pacientes/anular/{id}", null);
         }
+
+        public async Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string cedula)
+        {
+            var url = $"api/pacientes/buscar?campo=cedula&valor={cedula}";
+            var pacientes = await _http.GetFromJsonAsync<List<PacienteDto>>(url);
+            return pacientes?.FirstOrDefault();
+        }
+
     }
 }

@@ -149,5 +149,19 @@ namespace Lab_APIRest.Services.Medicos
                 }).ToListAsync();
         }
 
+        public async Task<List<MedicoDto>> ListarMedicosAsync()
+        {
+            return await _context.medicos
+                .Where(x => x.anulado == false)
+                .Select(m => new MedicoDto
+                {
+                    IdMedico = m.id_medico,
+                    NombreMedico = m.nombre_medico,
+                    Especialidad = m.especialidad,
+                    Telefono = m.telefono,
+                    Correo = m.correo
+                })
+                .ToListAsync();
+        }
     }
 }

@@ -70,5 +70,14 @@ namespace Lab_Blazor.Services.Examenes
             return await _http.PostAsJsonAsync($"api/ExamenReactivos/guardar-masivo/{idExamen}", reactivos);
         }
 
+        //Para orden
+
+        public async Task<List<ExamenDto>> ListarExamenesAsync(string filtro)
+        {
+            if (string.IsNullOrWhiteSpace(filtro))
+                return await _http.GetFromJsonAsync<List<ExamenDto>>("api/examenes");
+
+            return await _http.GetFromJsonAsync<List<ExamenDto>>($"api/examenes/buscar?nombre={filtro}");
+        }
     }
 }
