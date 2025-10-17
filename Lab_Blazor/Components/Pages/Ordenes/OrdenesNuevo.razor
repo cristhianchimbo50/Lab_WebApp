@@ -1,21 +1,22 @@
 ﻿@page "/ordenes/nuevo"
 @inject IOrdenesApiService OrdenApi
 @inject NavigationManager Navigation
-
 @inject IPacientesApiService PacientesApi
 @inject IMedicosApiService MedicosApi
 @inject IExamenesApiService ExamenesApi
+@inject IPagosApiService PagosApi
 @inject IJSRuntime JS
 
 @using Lab_Blazor.Services.Examenes
 @using Lab_Blazor.Services.Medicos
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Blazor.Services.Pacientes
-
+@using Lab_Blazor.Services.Pagos
 @using Lab_Contracts.Ordenes
 @using Lab_Contracts.Pacientes
 @using Lab_Contracts.Medicos
 @using Lab_Contracts.Examenes
+@using Lab_Contracts.Pagos
 
 <h4 class="mb-4 d-flex align-items-center">
     <i class="fas fa-file-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden de Laboratorio
@@ -211,6 +212,65 @@ else
     </div>
 }
 
+@if (MostrarModalPago)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <EditForm Model="@PagoActual" OnValidSubmit="GuardarPago">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-cash-register me-2"></i> Registrar Pago</h5>
+                        <button class="btn-close" @onclick="CerrarModalPago"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-2">
+                            <label>Total a pagar</label>
+                            <input class="form-control" value="@CalcularTotal().ToString("C")" disabled />
+                        </div>
+                        <div class="mb-2">
+                            <label>Efectivo</label>
+                            <InputNumber class="form-control" @bind-Value="Efectivo" />
+                        </div>
+                        <div class="mb-2">
+                            <label>Transferencia</label>
+                            <InputNumber class="form-control" @bind-Value="Transferencia" />
+                        </div>
+                        @if (ObtenerCambio() > 0)
+                        {
+                            <div class="mb-2">
+                                <label>Cambio</label>
+                                <input class="form-control" value="@ObtenerCambio().ToString("C")" disabled />
+                            </div>
+                        }
+                        else if (ObtenerSaldoPendiente() > 0)
+                        {
+                            <div class="mb-2">
+                                <label>Saldo pendiente</label>
+                                <input class="form-control" value="@ObtenerSaldoPendiente().ToString("C")" disabled />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-2">
+                                <label>Cambio</label>
+                                <input class="form-control" value="0,00" disabled />
+                            </div>
+                        }
+                        <div class="mb-2">
+                            <label>Observación</label>
+                            <InputTextArea class="form-control" @bind-Value="PagoActual.Observacion" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" type="submit">Confirmar</button>
+                        <button class="btn btn-secondary" type="button" @onclick="CerrarModalPago">Cancelar</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
 @if (!ExamenesSeleccionados.Any())
 {
     <div class="alert alert-warning">
@@ -227,11 +287,16 @@ else
     private MedicoDto NuevoMedico = new();
     private bool MostrarModalMedico = false;
     private bool MostrarModalExamen = false;
+    private bool MostrarModalPago = false;
     private string TextoBuscarExamen = "";
     private List<ExamenDto> ExamenesDisponibles = new();
     private List<ExamenDto> ExamenesSeleccionados = new();
     private DateOnly FechaOrdenSeleccionada = DateOnly.FromDateTime(DateTime.Now);
     private OrdenDto orden = new();
+    private PagoDto PagoActual = new();
+    private decimal Efectivo = 0;
+    private decimal Transferencia = 0;
+
     private int? MedicoIdSeleccionado
     {
         get => MedicoActual?.IdMedico;
@@ -257,7 +322,6 @@ else
         }
         StateHasChanged();
     }
-
     private void AbrirModalNuevoMedico()
     {
         NuevoMedico = new MedicoDto();
@@ -278,7 +342,6 @@ else
             await JS.InvokeVoidAsync("alert", $"No se pudo crear el médico. {errorMsg}");
         }
     }
-
     private void CerrarModalNuevoMedico() => MostrarModalMedico = false;
     private async Task BuscarExamenes()
     {
@@ -295,23 +358,123 @@ else
         ExamenesSeleccionados.Remove(examen);
     }
     private void CerrarModalExamen() => MostrarModalExamen = false;
+
     private void MostrarPagoModal()
     {
         if (PacienteActual == null || MedicoActual == null || !ExamenesSeleccionados.Any())
             return;
-        GuardarOrden();
+
+        Efectivo = 0;
+        Transferencia = 0;
+        PagoActual = new PagoDto();
+        MostrarModalPago = true;
     }
-    private async Task GuardarOrden()
+
+    private void CerrarModalPago() => MostrarModalPago = false;
+
+    private decimal CalcularTotal() => ExamenesSeleccionados.Sum(e => e.Precio);
+
+    private decimal ObtenerCambio()
     {
+        var total = CalcularTotal();
+        var pagado = Efectivo + Transferencia;
+        return pagado > total ? pagado - total : 0;
+    }
+
+    private decimal ObtenerSaldoPendiente()
+    {
+        var total = CalcularTotal();
+        var pagado = Efectivo + Transferencia;
+        return pagado < total ? total - pagado : 0;
+    }
+
+    private async Task GuardarPago()
+    {
+        var pagado = Efectivo + Transferencia;
+        var saldo = ObtenerSaldoPendiente();
+
         orden.IdPaciente = PacienteActual.IdPaciente;
         orden.IdMedico = MedicoActual.IdMedico;
         orden.FechaOrden = FechaOrdenSeleccionada;
+        orden.Total = CalcularTotal();
+        orden.SaldoPendiente = saldo;
+        orden.TotalPagado = pagado;
+        orden.EstadoPago = (saldo == 0) ? "PAGADO" : "PENDIENTE";
+        orden.Anulado = false;
+        orden.LiquidadoConvenio = false;
+        orden.NumeroOrden = "";
+        orden.Observacion = PagoActual.Observacion ?? "";
+
+        orden.Detalles = ExamenesSeleccionados.Select(e => new DetalleOrdenDto
+        {
+            IdExamen = e.IdExamen,
+            Precio = e.Precio
+        }).ToList();
+
         var dto = new OrdenCompletaDto
         {
             Orden = orden,
             IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList()
         };
-        var resp = await OrdenApi.CrearOrdenAsync(dto);
-        Navigation.NavigateTo("/ordenes");
+
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(dto));
+        var httpResponse = await OrdenApi.CrearOrdenHttpResponseAsync(dto);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            var resp = await httpResponse.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
+            if (resp != null && resp.IdOrden > 0)
+            {
+                var pagoDto = new PagoDto
+                {
+                    IdOrden = resp.IdOrden,
+                    FechaPago = DateTime.Now,
+                    MontoPagado = pagado,
+                    Observacion = PagoActual.Observacion,
+                    DetallePagos = new List<DetallePagoDto>
+                {
+                    new DetallePagoDto { TipoPago = "Efectivo", Monto = Efectivo },
+                    new DetallePagoDto { TipoPago = "Transferencia", Monto = Transferencia }
+                }
+                };
+                await PagosApi.RegistrarPagoAsync(pagoDto);
+                Navigation.NavigateTo("/ordenes");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
+            }
+        }
+        else
+        {
+            var errorJson = await httpResponse.Content.ReadAsStringAsync();
+
+            string mensajeFinal = "Error al registrar la orden.";
+            try
+            {
+                var errorObj = System.Text.Json.JsonDocument.Parse(errorJson);
+                if (errorObj.RootElement.TryGetProperty("errors", out var errores))
+                {
+                    var lista = new List<string>();
+                    foreach (var property in errores.EnumerateObject())
+                    {
+                        foreach (var errMsg in property.Value.EnumerateArray())
+                            lista.Add($"{property.Name}: {errMsg.GetString()}");
+                    }
+                    mensajeFinal = string.Join("\n", lista);
+                }
+                else
+                {
+                    mensajeFinal += "\n" + errorJson;
+                }
+            }
+            catch
+            {
+                mensajeFinal += "\n" + errorJson;
+            }
+
+            await JS.InvokeVoidAsync("alert", mensajeFinal);
+        }
+
     }
 }

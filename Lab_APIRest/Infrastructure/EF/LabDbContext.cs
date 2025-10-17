@@ -370,10 +370,6 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.numero_resultado).HasMaxLength(50);
             entity.Property(e => e.observaciones).HasMaxLength(255);
 
-            entity.HasOne(d => d.id_medicoNavigation).WithMany(p => p.resultados)
-                .HasForeignKey(d => d.id_medico)
-                .HasConstraintName("FK__resultado__id_me__7B5B524B");
-
             entity.HasOne(d => d.id_ordenNavigation).WithMany(p => p.resultados)
                 .HasForeignKey(d => d.id_orden)
                 .HasConstraintName("FK__resultado__id_or__7C4F7684");

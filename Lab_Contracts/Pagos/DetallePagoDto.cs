@@ -1,4 +1,4 @@
-namespace Lab_Contracts.Ordenes
+namespace Lab_Contracts.Pagos
 {
     public class DetallePagoDto
     {
@@ -6,6 +6,5 @@ namespace Lab_Contracts.Ordenes
         public int IdPago { get; set; }
         public string TipoPago { get; set; }
         public decimal Monto { get; set; }
-        public DateTime? FechaAnulacion { get; set; }
     }
 }

@@ -20,6 +20,4 @@ public partial class medico
     public virtual ICollection<convenio> convenios { get; set; } = new List<convenio>();
 
     public virtual ICollection<orden> ordens { get; set; } = new List<orden>();
-
-    public virtual ICollection<resultado> resultados { get; set; } = new List<resultado>();
 }

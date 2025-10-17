@@ -11,8 +11,6 @@ public partial class resultado
 
     public int? id_paciente { get; set; }
 
-    public int? id_medico { get; set; }
-
     public DateTime fecha_resultado { get; set; }
 
     public string? observaciones { get; set; }
@@ -24,8 +22,6 @@ public partial class resultado
     public virtual ICollection<detalle_orden> detalle_ordens { get; set; } = new List<detalle_orden>();
 
     public virtual ICollection<detalle_resultado> detalle_resultados { get; set; } = new List<detalle_resultado>();
-
-    public virtual medico? id_medicoNavigation { get; set; }
 
     public virtual orden? id_ordenNavigation { get; set; }
 

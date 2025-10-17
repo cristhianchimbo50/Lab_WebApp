@@ -5,8 +5,11 @@ namespace Lab_Contracts.Ordenes
     public class OrdenDto
     {
         public int IdOrden { get; set; }
-        public string NumeroOrden { get; set; }
-        public int IdPaciente { get; set; }
+        public string NumeroOrden { get; set; } = "";
+        public int? IdPaciente { get; set; }
+        public string? CedulaPaciente { get; set; }
+        public string? NombrePaciente { get; set; }
+
         public DateOnly FechaOrden { get; set; }
         public decimal Total { get; set; }
         public decimal SaldoPendiente { get; set; }
@@ -18,6 +21,7 @@ namespace Lab_Contracts.Ordenes
         public string Observacion { get; set; }
         public List<DetalleOrdenDto> Detalles { get; set; }
     }
+
 
 
 }

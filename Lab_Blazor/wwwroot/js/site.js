@@ -167,5 +167,25 @@
     };
 })();
 
+window.mostrarModalPdfDesdeBytes = function (pdfUrl) {
+    console.log("mostrarModalPdfDesdeBytes ejecutado con:", pdfUrl);
 
+    const iframe = document.getElementById('iframePdf');
+    if (!iframe) {
+        console.error("No se encontró el iframe con id 'iframePdf'.");
+        return;
+    }
 
+    iframe.src = pdfUrl;
+
+    const modalElement = document.getElementById('pdfModal');
+    if (!modalElement) {
+        console.error("No se encontró el modal con id 'pdfModal'.");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+};
+
+console.log("site.js cargado correctamente (Blazor Server)");
