@@ -184,7 +184,12 @@ window.mostrarModalPdfDesdeBytes = function (pdfUrl) {
         return;
     }
 
-    const modal = new bootstrap.Modal(modalElement);
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: false,
+        keyboard: true,
+        focus: true
+    });
+    modalElement.style.zIndex = 2000;
     modal.show();
 };
 

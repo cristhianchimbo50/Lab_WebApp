@@ -4,7 +4,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace Lab_APIRest.Services
+namespace Lab_APIRest.Services.PDF
 {
     public class PdfTicketService
     {

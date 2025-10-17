@@ -11,7 +11,7 @@ public partial class detalle_resultado
 
     public int? id_examen { get; set; }
 
-    public decimal valor { get; set; }
+    public string? valor { get; set; }
 
     public string? unidad { get; set; }
 

@@ -1,6 +1,7 @@
 ﻿@using Lab_Blazor.Services.Auth
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Routing
+@using System.Security.Claims
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
 
@@ -36,9 +37,7 @@
                 </NavLink>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE PACIENTES -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpPacientes"
@@ -60,9 +59,7 @@
                 </div>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE MÉDICOS -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpMedicos"
@@ -78,9 +75,7 @@
                 </div>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE EXÁMENES -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpExamenes"
@@ -96,9 +91,7 @@
                 </div>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE REACTIVOS -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpReactivos"
@@ -115,9 +108,7 @@
                 </div>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE ÓRDENES MÉDICAS -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpOrdenes"
@@ -128,16 +119,12 @@
                 <div class="collapse" id="grpOrdenes">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
                         <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes" title="Órdenes">Órdenes</NavLink></li>
-                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes/pendientes" title="Pendientes">Pendientes</NavLink></li>
                         <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cxc" title="Cuentas por Cobrar">Cuentas por Cobrar</NavLink></li>
-                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cxc/pagos" title="Pagos">Pagos</NavLink></li>
                     </ul>
                 </div>
             </li>
 
-            <!-- ========================================== -->
             <!-- MÓDULO: GESTIÓN DE RESULTADOS -->
-            <!-- ========================================== -->
             <li class="mb-1">
                 <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                         data-bs-toggle="collapse" data-bs-target="#grpResultados"
@@ -147,8 +134,7 @@
                 </button>
                 <div class="collapse" id="grpResultados">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados" title="Validados">Validados</NavLink></li>
-                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados/borradores" title="Borradores">Borradores</NavLink></li>
+                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados" title="Listado">Listado</NavLink></li>
                     </ul>
                 </div>
             </li>
@@ -193,5 +179,18 @@
         => user?.FindFirst("email")?.Value ?? "correo@ejemplo.com";
 
     private string GetUserRol(System.Security.Claims.ClaimsPrincipal user)
-        => user?.FindFirst("rol")?.Value ?? "administrador";
+    {
+        var rawRol = user?.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        return rawRol switch
+        {
+            "administrador" => "Administrador",
+            "recepcionista" => "Recepcionista",
+            "paciente" => "Paciente",
+            "laboratorista" => "Laboratorista",
+            _ => rawRol
+        };
+    }
+
+
+
 }

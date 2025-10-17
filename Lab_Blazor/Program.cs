@@ -10,6 +10,7 @@ using Lab_Blazor.Services.Examenes;
 using Lab_Blazor.Services.Reactivos;
 using Lab_Blazor.Services.Ordenes;
 using Lab_Blazor.Services.Pagos;
+using Lab_Blazor.Services.Resultados;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +36,7 @@ builder.Services.AddScoped<IExamenComposicionApiService, ExamenComposicionApiSer
 builder.Services.AddScoped<IExamenReactivoAsociacionesApiService, ExamenReactivoAsociacionesApiService>();
 builder.Services.AddScoped<IOrdenesApiService, OrdenesApiService>();
 builder.Services.AddScoped<IPagosApiService, PagosApiService>();
+builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
 
 
 

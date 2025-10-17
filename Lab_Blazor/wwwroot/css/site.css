@@ -592,3 +592,15 @@ h2 {
     }
 }
 |
+
+#pdfModal {
+    z-index: 2000 !important;
+}
+
+#pdfModal .modal-backdrop {
+    display: none !important;
+}
+
+body.modal-open {
+    overflow: hidden;
+}

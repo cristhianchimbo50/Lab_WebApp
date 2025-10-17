@@ -92,6 +92,8 @@ public partial class LabDbContext : DbContext
 
             entity.Property(e => e.precio).HasColumnType("decimal(10, 2)");
 
+            entity.Property(e => e.anulado).HasDefaultValue(false);
+
             entity.HasOne(d => d.id_examenNavigation).WithMany(p => p.detalle_ordens)
                 .HasForeignKey(d => d.id_examen)
                 .OnDelete(DeleteBehavior.Cascade)
@@ -134,7 +136,7 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.anulado).HasDefaultValue(false);
             entity.Property(e => e.observacion).HasMaxLength(255);
             entity.Property(e => e.unidad).HasMaxLength(50);
-            entity.Property(e => e.valor).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.valor).HasMaxLength(100).IsUnicode(false);
             entity.Property(e => e.valor_referencia).HasMaxLength(100);
 
             entity.HasOne(d => d.id_examenNavigation).WithMany(p => p.detalle_resultados)

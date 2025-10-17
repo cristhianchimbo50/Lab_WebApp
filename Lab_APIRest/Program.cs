@@ -12,7 +12,7 @@ using Lab_APIRest.Services.Reactivos;
 using Lab_APIRest.Services.Ordenes;
 using Lab_APIRest.Services.Pagos;
 using Lab_APIRest.Services.Resultados;
-using Lab_APIRest.Services;
+using Lab_APIRest.Services.PDF;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +36,7 @@ builder.Services.AddScoped<IOrdenService, OrdenService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IResultadoService, ResultadoService>();
 builder.Services.AddScoped<PdfTicketService>();
+builder.Services.AddScoped<PdfResultadoService>();
 
 
 

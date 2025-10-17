@@ -4,7 +4,10 @@
 
 @using Lab_Contracts.Ordenes
 @using Lab_Blazor.Services.Ordenes
+@using Lab_Blazor.Services.Resultados
 @inject IOrdenesApiService OrdenesApi
+@inject IResultadosApiService ResultadosApi
+
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -133,7 +136,7 @@ else
 
 @if (mostrarDetalleOrden && DetalleActual is not null)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
+    <div class="modal fade show d-block" style="background-color: transparent; z-index:1050;">
         <div class="modal-dialog modal-xl">
             <div class="modal-content shadow">
                 <div class="modal-header bg-primary text-white">
@@ -368,26 +371,26 @@ else
 
     private async Task ImprimirResultados()
     {
-        // if (DetalleActual is null) return;
-        // var idsResultados = DetalleActual.Examenes
-        //     .Where(e => e.IdResultado.HasValue)
-        //     .Select(e => e.IdResultado!.Value)
-        //     .Distinct()
-        //     .ToList();
-        // if (!idsResultados.Any())
-        // {
-        //     await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
-        //     return;
-        // }
-        // var pdfBytes = await OrdenesApi.ObtenerResultadosPdfAsync(idsResultados);
-        // if (pdfBytes == null || pdfBytes.Length == 0)
-        // {
-        //     await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
-        //     return;
-        // }
-        // var base64Pdf = Convert.ToBase64String(pdfBytes);
-        // var pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
-        // await JS.InvokeVoidAsync("mostrarModalPdfDesdeBytes", pdfUrl);
+        if (DetalleActual is null) return;
+        var idsResultados = DetalleActual.Examenes
+            .Where(e => e.IdResultado.HasValue)
+            .Select(e => e.IdResultado!.Value)
+            .Distinct()
+            .ToList();
+        if (!idsResultados.Any())
+        {
+            await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
+            return;
+        }
+        var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(idsResultados);
+        if (pdfBytes == null || pdfBytes.Length == 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
+            return;
+        }
+        var base64Pdf = Convert.ToBase64String(pdfBytes);
+        var pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
+        await JS.InvokeVoidAsync("mostrarModalPdfDesdeBytes", pdfUrl);
     }
 
     private async Task AnularOrden()

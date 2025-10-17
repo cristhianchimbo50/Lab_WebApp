@@ -14,6 +14,7 @@ public partial class detalle_orden
     public decimal? precio { get; set; }
 
     public int? id_resultado { get; set; }
+    public bool? anulado { get; set; }
 
     public virtual examen? id_examenNavigation { get; set; }
 

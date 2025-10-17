@@ -138,7 +138,7 @@ else
         var resultados = ExamenesSeleccionados.Select(ex => new ResultadoExamenDto
         {
             IdExamen = ex.IdExamen,
-            Valor = decimal.TryParse(ValoresIngresados.GetValueOrDefault(ex.IdExamen), out var v) ? v : 0,
+            Valor = ValoresIngresados.GetValueOrDefault(ex.IdExamen) ?? "",
             Unidad = ex.Unidad,
             ValorReferencia = ex.ValorReferencia,
             Observacion = ""
@@ -159,7 +159,22 @@ else
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("alert", "Resultado guardado correctamente.");
-            Navigation.NavigateTo("/ordenes");
+            Navigation.NavigateTo("/resultados");
+        }
+        else
+        {
+            try
+            {
+                var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(resultadoJson);
+                var mensaje = errorObj != null && errorObj.ContainsKey("mensaje")
+                    ? errorObj["mensaje"]
+                    : "Error al guardar el resultado.";
+                await JS.InvokeVoidAsync("alert", mensaje);
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("alert", "Error inesperado al procesar la respuesta.");
+            }
         }
 
     }

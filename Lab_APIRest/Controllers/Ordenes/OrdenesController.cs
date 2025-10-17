@@ -1,6 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
-using Lab_APIRest.Services;
+using Lab_APIRest.Services.PDF;
 using Lab_APIRest.Services.Resultados;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
