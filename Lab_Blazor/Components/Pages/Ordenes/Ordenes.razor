@@ -115,7 +115,7 @@ else
                             </td>
                             <td>
                                 <span class="badge bg-@(orden.Anulado ? "danger" : "success")">
-                                    @(orden.Anulado ? "Deshabilitado" : "Habilitado")
+                                    @(orden.Anulado ? "ANULADO" : "")
                                 </span>
                             </td>
                             <td>
@@ -398,7 +398,7 @@ else
         if (DetalleActual is null) return;
         bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular esta orden? Esto anulará también resultados y pagos relacionados.");
         if (!confirmar) return;
-        var response = await OrdenesApi.AnularOrdenAsync(DetalleActual.IdOrden);
+        var response = await OrdenesApi.AnularOrdenCompletaAsync(DetalleActual.IdOrden);
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("alert", "Orden anulada correctamente.");

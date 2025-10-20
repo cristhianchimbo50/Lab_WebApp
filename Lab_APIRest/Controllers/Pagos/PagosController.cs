@@ -19,6 +19,7 @@ namespace Lab_APIRest.Controllers
         [HttpPost]
         public async Task<ActionResult<PagoDto>> RegistrarPago(PagoDto dto)
         {
+            Console.WriteLine("LLEGA AL CONTROLLER PAGO: " + System.Text.Json.JsonSerializer.Serialize(dto));
             var pago = await _service.RegistrarPagoAsync(dto);
             if (pago == null) return BadRequest();
             return Ok(pago);
@@ -29,6 +30,23 @@ namespace Lab_APIRest.Controllers
         {
             var pagos = await _service.ListarPagosPorOrdenAsync(idOrden);
             return Ok(pagos);
+        }
+
+        [HttpPost("cuentasporcobrar/listar")]
+        public async Task<ActionResult<List<OrdenDto>>> ListarCuentasPorCobrar([FromBody] PagoFiltroDto filtro)
+        {
+            var ordenes = await _service.ListarCuentasPorCobrarAsync(filtro);
+            return Ok(ordenes);
+        }
+
+        [HttpPost("cuentasporcobrar/registrar")]
+        public async Task<ActionResult<PagoDto>> RegistrarCobroCuentaPorCobrar(PagoDto dto)
+        {
+            var pago = await _service.RegistrarCobroCuentaPorCobrarAsync(dto);
+            if (pago == null)
+                return BadRequest("No se pudo registrar el cobro. Verifica la orden o los valores.");
+
+            return Ok(pago);
         }
     }
 }

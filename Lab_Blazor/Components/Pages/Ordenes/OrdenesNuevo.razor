@@ -403,7 +403,7 @@ else
         orden.Anulado = false;
         orden.LiquidadoConvenio = false;
         orden.NumeroOrden = "";
-        orden.Observacion = PagoActual.Observacion ?? "";
+        orden.Observacion = "";
 
         orden.Detalles = ExamenesSeleccionados.Select(e => new DetalleOrdenDto
         {
@@ -417,7 +417,6 @@ else
             IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList()
         };
 
-        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(dto));
         var httpResponse = await OrdenApi.CrearOrdenHttpResponseAsync(dto);
 
         if (httpResponse.IsSuccessStatusCode)
@@ -425,16 +424,20 @@ else
             var resp = await httpResponse.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
             if (resp != null && resp.IdOrden > 0)
             {
+                var observacionPago = string.IsNullOrWhiteSpace(PagoActual.Observacion)
+                    ? "PAGO DESDE ORDEN"
+                    : PagoActual.Observacion;
+
                 var pagoDto = new PagoDto
                 {
                     IdOrden = resp.IdOrden,
                     FechaPago = DateTime.Now,
                     MontoPagado = pagado,
-                    Observacion = PagoActual.Observacion,
+                    Observacion = observacionPago,
                     DetallePagos = new List<DetallePagoDto>
                 {
-                    new DetallePagoDto { TipoPago = "Efectivo", Monto = Efectivo },
-                    new DetallePagoDto { TipoPago = "Transferencia", Monto = Transferencia }
+                    new DetallePagoDto { TipoPago = "EFECTIVO", Monto = Efectivo },
+                    new DetallePagoDto { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
                 }
                 };
                 await PagosApi.RegistrarPagoAsync(pagoDto);
@@ -475,6 +478,5 @@ else
 
             await JS.InvokeVoidAsync("alert", mensajeFinal);
         }
-
     }
 }

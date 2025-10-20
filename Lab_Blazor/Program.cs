@@ -1,16 +1,15 @@
 using Lab_Blazor.Components;
-
+using Lab_Blazor.Services.Auth;
+using Lab_Blazor.Services.Convenios;
+using Lab_Blazor.Services.Examenes;
+using Lab_Blazor.Services.Medicos;
+using Lab_Blazor.Services.Ordenes;
+using Lab_Blazor.Services.Pacientes;
+using Lab_Blazor.Services.Pagos;
+using Lab_Blazor.Services.Reactivos;
+using Lab_Blazor.Services.Resultados;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-
-using Lab_Blazor.Services.Auth;
-using Lab_Blazor.Services.Pacientes;
-using Lab_Blazor.Services.Medicos;
-using Lab_Blazor.Services.Examenes;
-using Lab_Blazor.Services.Reactivos;
-using Lab_Blazor.Services.Ordenes;
-using Lab_Blazor.Services.Pagos;
-using Lab_Blazor.Services.Resultados;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +36,7 @@ builder.Services.AddScoped<IExamenReactivoAsociacionesApiService, ExamenReactivo
 builder.Services.AddScoped<IOrdenesApiService, OrdenesApiService>();
 builder.Services.AddScoped<IPagosApiService, PagosApiService>();
 builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
+builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
 
 
 

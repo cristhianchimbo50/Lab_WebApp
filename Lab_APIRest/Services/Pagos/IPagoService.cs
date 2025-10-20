@@ -7,5 +7,8 @@ namespace Lab_APIRest.Services.Pagos
     {
         Task<PagoDto?> RegistrarPagoAsync(PagoDto dto);
         Task<List<PagoDto>> ListarPagosPorOrdenAsync(int idOrden);
+
+        Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto dto);
+        Task<List<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro);
     }
 }

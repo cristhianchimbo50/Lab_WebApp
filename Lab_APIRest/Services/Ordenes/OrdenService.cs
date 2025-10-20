@@ -127,5 +127,43 @@ namespace Lab_APIRest.Services.Ordenes
                 NumeroOrden = entidad.numero_orden
             };
         }
+
+        public async Task<bool> AnularOrdenCompletaAsync(int idOrden)
+        {
+            var orden = await _context.ordens
+                .Include(o => o.detalle_ordens)
+                .Include(o => o.resultados)
+                    .ThenInclude(r => r.detalle_resultados)
+                .Include(o => o.pagos)
+                    .ThenInclude(p => p.detalle_pagos)
+                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
+
+            if (orden == null || orden.anulado == true)
+                return false;
+
+            orden.anulado = true;
+            orden.estado_pago = "ANULADO";
+
+            foreach (var d in orden.detalle_ordens)
+                d.anulado = true;
+
+            foreach (var r in orden.resultados)
+            {
+                r.anulado = true;
+                foreach (var dr in r.detalle_resultados)
+                    dr.anulado = true;
+            }
+
+            foreach (var p in orden.pagos)
+            {
+                p.anulado = true;
+                foreach (var dp in p.detalle_pagos)
+                    dp.anulado = true;
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

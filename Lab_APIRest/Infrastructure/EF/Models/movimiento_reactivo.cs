@@ -15,11 +15,11 @@ public partial class movimiento_reactivo
 
     public DateTime fecha_movimiento { get; set; }
 
-    public int? id_orden { get; set; }
-
     public string? observacion { get; set; }
 
-    public virtual orden? id_ordenNavigation { get; set; }
+    public int? id_detalle_resultado { get; set; }
 
     public virtual reactivo? id_reactivoNavigation { get; set; }
+
+    public virtual detalle_resultado? id_detalle_resultadoNavigation { get; set; }
 }

@@ -7,6 +7,7 @@ namespace Lab_APIRest.Services.Ordenes
         Task<List<OrdenDto>> ListarOrdenesAsync();
         Task<OrdenDto?> ObtenerOrdenPorIdAsync(int idOrden);
         Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto dto);
+        Task<bool> AnularOrdenCompletaAsync(int idOrden);
     }
 
 

@@ -1,18 +1,17 @@
 using Lab_APIRest.Infrastructure.EF;
-using Microsoft.EntityFrameworkCore;
+using Lab_APIRest.Services.Convenios;
+using Lab_APIRest.Services.Examenes;
+using Lab_APIRest.Services.Medicos;
+using Lab_APIRest.Services.Ordenes;
+using Lab_APIRest.Services.Pacientes;
+using Lab_APIRest.Services.Pagos;
+using Lab_APIRest.Services.PDF;
+using Lab_APIRest.Services.Reactivos;
+using Lab_APIRest.Services.Resultados;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
-
-using Lab_APIRest.Services.Pacientes;
-using Lab_APIRest.Services.Medicos;
-using Lab_APIRest.Services.Examenes;
-using Lab_APIRest.Services.Reactivos;
-using Lab_APIRest.Services.Ordenes;
-using Lab_APIRest.Services.Pagos;
-using Lab_APIRest.Services.Resultados;
-using Lab_APIRest.Services.PDF;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +36,7 @@ builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IResultadoService, ResultadoService>();
 builder.Services.AddScoped<PdfTicketService>();
 builder.Services.AddScoped<PdfResultadoService>();
+builder.Services.AddScoped<IConvenioService, ConvenioService>();
 
 
 

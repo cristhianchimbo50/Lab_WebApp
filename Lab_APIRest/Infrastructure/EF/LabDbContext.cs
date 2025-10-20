@@ -119,6 +119,8 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.monto).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.tipo_pago).HasMaxLength(50);
 
+            entity.Property(e => e.anulado).HasDefaultValue(false);
+
             entity.HasOne(d => d.id_pagoNavigation).WithMany(p => p.detalle_pagos)
                 .HasForeignKey(d => d.id_pago)
                 .OnDelete(DeleteBehavior.Cascade)
@@ -246,16 +248,17 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.observacion).HasMaxLength(255);
             entity.Property(e => e.tipo_movimiento).HasMaxLength(50);
 
-            entity.HasOne(d => d.id_ordenNavigation).WithMany(p => p.movimiento_reactivos)
-                .HasForeignKey(d => d.id_orden)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__movimient__id_or__04E4BC85");
-
             entity.HasOne(d => d.id_reactivoNavigation).WithMany(p => p.movimiento_reactivos)
                 .HasForeignKey(d => d.id_reactivo)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__movimient__id_re__03F0984C");
+
+            entity.HasOne(d => d.id_detalle_resultadoNavigation).WithMany(p => p.movimiento_reactivos)
+                .HasForeignKey(d => d.id_detalle_resultado)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_movimiento_detalle_resultado");
         });
+
 
         modelBuilder.Entity<orden>(entity =>
         {

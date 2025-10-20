@@ -18,7 +18,7 @@ namespace Lab_Blazor.Services.Ordenes
         Task<List<ExamenDto>> ObtenerExamenesPorOrdenAsync(int idOrden);
         Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);
 
-
+        Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden);
     }
 
 }

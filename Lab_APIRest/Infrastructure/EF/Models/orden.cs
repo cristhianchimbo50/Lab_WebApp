@@ -37,7 +37,6 @@ public partial class orden
 
     public virtual paciente? id_pacienteNavigation { get; set; }
 
-    public virtual ICollection<movimiento_reactivo> movimiento_reactivos { get; set; } = new List<movimiento_reactivo>();
 
     public virtual ICollection<pago> pagos { get; set; } = new List<pago>();
 

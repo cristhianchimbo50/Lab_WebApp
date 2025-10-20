@@ -24,4 +24,6 @@ public partial class detalle_resultado
     public virtual examen? id_examenNavigation { get; set; }
 
     public virtual resultado? id_resultadoNavigation { get; set; }
+    public virtual ICollection<movimiento_reactivo> movimiento_reactivos { get; set; } = new List<movimiento_reactivo>();
+
 }

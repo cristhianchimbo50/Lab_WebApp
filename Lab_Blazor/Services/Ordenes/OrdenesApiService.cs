@@ -69,6 +69,10 @@ namespace Lab_Blazor.Services.Ordenes
             return await _http.GetFromJsonAsync<List<ExamenDto>>($"api/Ordenes/{idOrden}/examenes") ?? new();
         }
 
+        public async Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden)
+        {
+            return await _http.PutAsync($"api/ordenes/anular-completo/{idOrden}", null);
+        }
 
     }
 

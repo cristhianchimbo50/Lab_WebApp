@@ -21,7 +21,32 @@ namespace Lab_Blazor.Services.Pagos
 
         public async Task<List<PagoDto>> ListarPagosPorOrdenAsync(int idOrden)
         {
-            return await _http.GetFromJsonAsync<List<PagoDto>>($"api/pagos/orden/{idOrden}") ?? new();
+            var response = await _http.GetAsync($"api/pagos/orden/{idOrden}");
+            if (!response.IsSuccessStatusCode)
+                return new List<PagoDto>();
+
+            return await response.Content.ReadFromJsonAsync<List<PagoDto>>() ?? new List<PagoDto>();
+        }
+
+
+        public async Task<IEnumerable<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro)
+        {
+            var response = await _http.PostAsJsonAsync("api/pagos/cuentasporcobrar/listar", filtro);
+
+            if (!response.IsSuccessStatusCode)
+                return Enumerable.Empty<OrdenDto>();
+
+            return await response.Content.ReadFromJsonAsync<IEnumerable<OrdenDto>>() ?? [];
+        }
+
+        public async Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto pago)
+        {
+            var response = await _http.PostAsJsonAsync("api/pagos/cuentasporcobrar/registrar", pago);
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            return await response.Content.ReadFromJsonAsync<PagoDto>();
         }
     }
 }

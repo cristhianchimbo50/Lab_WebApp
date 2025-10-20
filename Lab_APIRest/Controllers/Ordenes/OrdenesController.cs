@@ -1,5 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using Lab_APIRest.Services.Ordenes;
 using Lab_APIRest.Services.PDF;
 using Lab_APIRest.Services.Resultados;
 using Lab_Contracts.Ordenes;
@@ -16,8 +17,10 @@ public class OrdenesController : ControllerBase
     private readonly LabDbContext _context;
     private readonly PdfTicketService _pdfTicketService;
     private readonly IResultadoService _resultadoService;
+    private readonly IOrdenService _ordenService;
 
     public OrdenesController(
+        IOrdenService ordenService,
         LabDbContext context,
         PdfTicketService pdfTicketService,
         IResultadoService resultadoService)
@@ -25,6 +28,8 @@ public class OrdenesController : ControllerBase
         _context = context;
         _pdfTicketService = pdfTicketService;
         _resultadoService = resultadoService;
+
+        _ordenService = ordenService;
     }
 
     // GET: api/ordenes
@@ -131,6 +136,16 @@ public class OrdenesController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost]
+    public async Task<ActionResult<OrdenRespuestaDto>> CrearOrden([FromBody] OrdenCompletaDto dto)
+    {
+        var result = await _ordenService.CrearOrdenAsync(dto);
+        if (result == null) return BadRequest();
+        return Ok(result);
+    }
+
+
+
     [HttpGet("{id}/ticket-pdf")]
     public async Task<IActionResult> ObtenerTicketPdf(int id)
     {
@@ -190,4 +205,13 @@ public class OrdenesController : ControllerBase
     }
 
 
+    [HttpPut("anular-completo/{idOrden}")]
+    public async Task<IActionResult> AnularOrdenCompleta(int idOrden)
+    {
+        var exito = await _ordenService.AnularOrdenCompletaAsync(idOrden);
+        if (!exito)
+            return NotFound("No se pudo anular la orden o ya estaba anulada.");
+
+        return Ok(new { mensaje = "Orden anulada correctamente junto con sus detalles, pagos y resultados." });
+    }
 }
