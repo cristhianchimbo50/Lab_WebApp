@@ -167,8 +167,9 @@ html, body {
     }
 
     .btn.btn-toggle[aria-expanded="true"]::before {
-        transform: rotate(90deg) !important;
+        transform: rotate(90deg);
     }
+
 
 .btn-toggle-nav {
     margin: 0 !important;
@@ -591,7 +592,7 @@ h2 {
         padding: 16px 20px 16px 0 !important;
     }
 }
-|
+
 
 #pdfModal {
     z-index: 2000 !important;
@@ -603,4 +604,25 @@ h2 {
 
 body.modal-open {
     overflow: hidden;
+}
+
+.brand-logo {
+    max-height: 45px;
+    width: auto;
+    display: block;
+    transition: opacity .3s ease, transform .3s ease;
+}
+
+.sb-collapsed .brand-logo {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+main.content-with-sidebar .content-inner {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background-color: #fff !important;
 }

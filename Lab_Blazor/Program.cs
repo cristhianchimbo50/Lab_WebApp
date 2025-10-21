@@ -37,6 +37,8 @@ builder.Services.AddScoped<IOrdenesApiService, OrdenesApiService>();
 builder.Services.AddScoped<IPagosApiService, PagosApiService>();
 builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
 builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
+builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
+
 
 
 

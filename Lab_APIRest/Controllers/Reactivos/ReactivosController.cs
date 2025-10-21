@@ -52,5 +52,32 @@ namespace Lab_APIRest.Controllers.Reactivos
             if (!ok) return NotFound();
             return NoContent();
         }
+
+        [HttpPost("ingresos")]
+        public async Task<ActionResult> RegistrarIngresos([FromBody] IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        {
+            if (ingresos == null || !ingresos.Any())
+                return BadRequest("No se enviaron datos de ingreso.");
+
+            var ok = await _service.RegistrarIngresosAsync(ingresos);
+            if (ok)
+                return Ok(new { message = "Ingresos registrados correctamente." });
+            else
+                return StatusCode(500, new { message = "Error al registrar ingresos." });
+        }
+
+
+        [HttpPost("egresos")]
+        public async Task<ActionResult> RegistrarEgresos([FromBody] IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        {
+            if (egresos == null || !egresos.Any())
+                return BadRequest("No se enviaron datos de egreso.");
+
+            var ok = await _service.RegistrarEgresosAsync(egresos);
+            if (ok)
+                return Ok(new { message = "Egresos registrados correctamente." });
+            else
+                return StatusCode(500, new { message = "Error al registrar egresos." });
+        }
     }
 }

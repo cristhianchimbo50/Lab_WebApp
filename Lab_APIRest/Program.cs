@@ -37,6 +37,8 @@ builder.Services.AddScoped<IResultadoService, ResultadoService>();
 builder.Services.AddScoped<PdfTicketService>();
 builder.Services.AddScoped<PdfResultadoService>();
 builder.Services.AddScoped<IConvenioService, ConvenioService>();
+builder.Services.AddScoped<IMovimientoService, MovimientoService>();
+
 
 
 

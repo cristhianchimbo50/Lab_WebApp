@@ -17,6 +17,7 @@ namespace Lab_APIRest.Services.Reactivos
         public async Task<List<ReactivoDto>> GetReactivosAsync()
         {
             return await _context.reactivos
+                .Where(r => !(r.anulado ?? false))
                 .Select(r => new ReactivoDto
                 {
                     IdReactivo = r.id_reactivo,
@@ -28,6 +29,7 @@ namespace Lab_APIRest.Services.Reactivos
                 })
                 .ToListAsync();
         }
+
 
         public async Task<ReactivoDto?> GetReactivoPorIdAsync(int id)
         {
@@ -83,6 +85,83 @@ namespace Lab_APIRest.Services.Reactivos
             reactivo.anulado = true;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var ingreso in ingresos)
+                {
+                    var reactivo = await _context.reactivos
+                        .FirstOrDefaultAsync(r => r.id_reactivo == ingreso.IdReactivo);
+
+                    if (reactivo == null)
+                        continue;
+
+                    var movimiento = new Infrastructure.EF.Models.movimiento_reactivo
+                    {
+                        id_reactivo = ingreso.IdReactivo,
+                        tipo_movimiento = "INGRESO",
+                        cantidad = ingreso.Cantidad,
+                        fecha_movimiento = ingreso.FechaMovimiento,
+                        observacion = ingreso.Observacion
+                    };
+                    await _context.movimiento_reactivos.AddAsync(movimiento);
+
+                    reactivo.cantidad_disponible += ingreso.Cantidad;
+                    _context.reactivos.Update(reactivo);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+        }
+
+
+        public async Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var egreso in egresos)
+                {
+                    var reactivo = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == egreso.IdReactivo);
+                    if (reactivo == null) continue;
+
+                    if (reactivo.cantidad_disponible < egreso.Cantidad)
+                        throw new InvalidOperationException($"Stock insuficiente para {reactivo.nombre_reactivo}");
+
+                    var movimiento = new movimiento_reactivo
+                    {
+                        id_reactivo = egreso.IdReactivo,
+                        tipo_movimiento = "EGRESO",
+                        cantidad = egreso.Cantidad,
+                        fecha_movimiento = egreso.FechaMovimiento,
+                        observacion = egreso.Observacion,
+                        id_detalle_resultado = egreso.IdDetalleResultado
+                    };
+                    await _context.movimiento_reactivos.AddAsync(movimiento);
+                    reactivo.cantidad_disponible -= egreso.Cantidad;
+                    _context.reactivos.Update(reactivo);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
         }
     }
 }

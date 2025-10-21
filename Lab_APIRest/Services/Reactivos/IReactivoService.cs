@@ -9,5 +9,7 @@ namespace Lab_APIRest.Services.Reactivos
         Task<ReactivoDto> CrearReactivoAsync(ReactivoDto dto);
         Task<bool> EditarReactivoAsync(int id, ReactivoDto dto);
         Task<bool> AnularReactivoAsync(int id);
+        Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos);
+        Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos);
     }
 }

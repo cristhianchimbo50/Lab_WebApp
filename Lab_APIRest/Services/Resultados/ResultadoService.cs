@@ -16,48 +16,84 @@ namespace Lab_APIRest.Services.Resultados
 
         public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto dto)
         {
-            var lastResult = await _context.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
-            int nextNum = lastResult?.id_resultado + 1 ?? 1;
-            string numeroResultado = $"RES-{nextNum.ToString("D5")}";
-
-            var resultado = new resultado
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                numero_resultado = numeroResultado,
-                id_paciente = dto.IdPaciente,
-                fecha_resultado = dto.FechaResultado,
-                observaciones = dto.ObservacionesGenerales,
-                id_orden = dto.IdOrden,
-                anulado = false
-            };
-            _context.resultados.Add(resultado);
-            await _context.SaveChangesAsync();
+                var lastResult = await _context.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
+                int nextNum = lastResult?.id_resultado + 1 ?? 1;
+                string numeroResultado = $"RES-{nextNum.ToString("D5")}";
 
-            foreach (var ex in dto.Examenes)
-            {
-                var detRes = new detalle_resultado
+                var resultado = new resultado
                 {
-                    id_resultado = resultado.id_resultado,
-                    id_examen = ex.IdExamen,
-                    valor = ex.Valor,
-                    unidad = ex.Unidad,
-                    observacion = ex.Observacion,
-                    valor_referencia = ex.ValorReferencia,
+                    numero_resultado = numeroResultado,
+                    id_paciente = dto.IdPaciente,
+                    fecha_resultado = dto.FechaResultado,
+                    observaciones = dto.ObservacionesGenerales,
+                    id_orden = dto.IdOrden,
                     anulado = false
                 };
-                _context.detalle_resultados.Add(detRes);
+                _context.resultados.Add(resultado);
+                await _context.SaveChangesAsync();
 
-                var detalleOrden = await _context.detalle_ordens
-                    .FirstOrDefaultAsync(detalle => detalle.id_orden == dto.IdOrden && detalle.id_examen == ex.IdExamen);
-
-
-                if (detalleOrden != null)
+                foreach (var ex in dto.Examenes)
                 {
-                    detalleOrden.id_resultado = resultado.id_resultado;
-                }
-            }
+                    var detRes = new detalle_resultado
+                    {
+                        id_resultado = resultado.id_resultado,
+                        id_examen = ex.IdExamen,
+                        valor = ex.Valor,
+                        unidad = ex.Unidad,
+                        observacion = ex.Observacion,
+                        valor_referencia = ex.ValorReferencia,
+                        anulado = false
+                    };
+                    _context.detalle_resultados.Add(detRes);
+                    await _context.SaveChangesAsync();
 
-            await _context.SaveChangesAsync();
-            return true;
+                    var detalleOrden = await _context.detalle_ordens
+                        .FirstOrDefaultAsync(detalle => detalle.id_orden == dto.IdOrden && detalle.id_examen == ex.IdExamen);
+
+                    if (detalleOrden != null)
+                        detalleOrden.id_resultado = resultado.id_resultado;
+
+                    var examReactivos = await _context.examen_reactivos
+                        .Where(er => er.id_examen == ex.IdExamen)
+                        .Include(er => er.id_reactivoNavigation)
+                        .ToListAsync();
+
+                    foreach (var er in examReactivos)
+                    {
+                        var reactivo = er.id_reactivoNavigation;
+                        if (reactivo == null) continue;
+
+                        if (reactivo.cantidad_disponible < er.cantidad_usada)
+                            throw new InvalidOperationException($"Stock insuficiente para el reactivo {reactivo.nombre_reactivo}");
+
+                        var movimiento = new movimiento_reactivo
+                        {
+                            id_reactivo = reactivo.id_reactivo,
+                            tipo_movimiento = "EGRESO",
+                            cantidad = er.cantidad_usada,
+                            fecha_movimiento = dto.FechaResultado,
+                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numeroResultado}",
+                            id_detalle_resultado = detRes.id_detalle_resultado
+                        };
+
+                        await _context.movimiento_reactivos.AddAsync(movimiento);
+                        reactivo.cantidad_disponible -= er.cantidad_usada;
+                        _context.reactivos.Update(reactivo);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
         }
 
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro)
@@ -135,7 +171,6 @@ namespace Lab_APIRest.Services.Resultados
                     .ThenInclude(d => d.id_examenNavigation)
                 .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
 
-
             if (resultado == null)
                 return null;
 
@@ -169,7 +204,6 @@ namespace Lab_APIRest.Services.Resultados
                             ValorReferencia = d.valor_referencia ?? "",
                             Anulado = d.anulado ?? false
                         }).ToList()
-
                     }
                 }
             };
@@ -195,23 +229,17 @@ namespace Lab_APIRest.Services.Resultados
             resultado.anulado = true;
 
             foreach (var dr in resultado.detalle_resultados)
-            {
                 dr.anulado = true;
-            }
 
             var detallesOrden = await _context.detalle_ordens
                 .Where(d => d.id_resultado == idResultado)
                 .ToListAsync();
 
             foreach (var det in detallesOrden)
-            {
                 det.id_resultado = null;
-            }
 
             await _context.SaveChangesAsync();
             return true;
         }
-
-
     }
 }

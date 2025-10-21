@@ -1,4 +1,4 @@
-using Lab_Contracts.Reactivos;
+﻿using Lab_Contracts.Reactivos;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Reactivos
@@ -35,6 +35,16 @@ namespace Lab_Blazor.Services.Reactivos
         public async Task<HttpResponseMessage> AnularReactivoAsync(int id)
         {
             return await _http.PutAsync($"api/reactivos/anular/{id}", null);
+        }
+
+        public async Task<HttpResponseMessage> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        {
+            return await _http.PostAsJsonAsync("api/reactivos/ingresos", ingresos);
+        }
+
+        public async Task<HttpResponseMessage> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        {
+            return await _http.PostAsJsonAsync("api/reactivos/egresos", egresos);
         }
     }
 }
