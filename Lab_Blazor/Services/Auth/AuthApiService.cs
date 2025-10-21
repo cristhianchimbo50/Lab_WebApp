@@ -19,7 +19,7 @@ namespace Lab_Blazor.Services.Auth
 
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto, CancellationToken ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("auth/login", dto, ct);
+            var resp = await _http.PostAsJsonAsync("api/auth/login", dto, ct);
 
             if (resp.StatusCode == HttpStatusCode.OK)
             {
@@ -48,19 +48,19 @@ namespace Lab_Blazor.Services.Auth
 
         public async Task<bool> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("auth/change-password", dto, ct);
+            var resp = await _http.PostAsJsonAsync("api/auth/change-password", dto, ct);
             return resp.IsSuccessStatusCode;
         }
 
         public async Task<bool> RegisterAsync(RegisterRequestDto dto, CancellationToken ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("auth/register", dto, ct);
+            var resp = await _http.PostAsJsonAsync("api/auth/register", dto, ct);
             return resp.IsSuccessStatusCode;
         }
 
         public async Task<bool> ActivateAccountAsync(ActivateAccountDto dto, CancellationToken ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("auth/activate", dto, ct);
+            var resp = await _http.PostAsJsonAsync("api/auth/activate", dto, ct);
             return resp.IsSuccessStatusCode;
         }
     }

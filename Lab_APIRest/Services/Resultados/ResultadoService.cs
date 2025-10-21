@@ -1,45 +1,50 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using Lab_APIRest.Services.PDF;
 using Lab_Contracts.Resultados;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Resultados
 {
     public class ResultadoService : IResultadoService
     {
         private readonly LabDbContext _context;
+        private readonly PdfResultadoService _pdf;
+        private readonly ILogger<ResultadoService> _logger;
 
-        public ResultadoService(LabDbContext context)
+        public ResultadoService(LabDbContext context, PdfResultadoService pdf, ILogger<ResultadoService> logger)
         {
             _context = context;
+            _pdf = pdf;
+            _logger = logger;
         }
 
         public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto dto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var trx = await _context.Database.BeginTransactionAsync();
             try
             {
-                var lastResult = await _context.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
-                int nextNum = lastResult?.id_resultado + 1 ?? 1;
-                string numeroResultado = $"RES-{nextNum.ToString("D5")}";
+                var last = await _context.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
+                string numero = $"RES-{((last?.id_resultado ?? 0) + 1):D5}";
 
-                var resultado = new resultado
+                var res = new resultado
                 {
-                    numero_resultado = numeroResultado,
+                    numero_resultado = numero,
                     id_paciente = dto.IdPaciente,
                     fecha_resultado = dto.FechaResultado,
                     observaciones = dto.ObservacionesGenerales,
                     id_orden = dto.IdOrden,
                     anulado = false
                 };
-                _context.resultados.Add(resultado);
+                _context.resultados.Add(res);
                 await _context.SaveChangesAsync();
 
                 foreach (var ex in dto.Examenes)
                 {
-                    var detRes = new detalle_resultado
+                    var det = new detalle_resultado
                     {
-                        id_resultado = resultado.id_resultado,
+                        id_resultado = res.id_resultado,
                         id_examen = ex.IdExamen,
                         valor = ex.Valor,
                         unidad = ex.Unidad,
@@ -47,14 +52,12 @@ namespace Lab_APIRest.Services.Resultados
                         valor_referencia = ex.ValorReferencia,
                         anulado = false
                     };
-                    _context.detalle_resultados.Add(detRes);
+                    _context.detalle_resultados.Add(det);
                     await _context.SaveChangesAsync();
 
-                    var detalleOrden = await _context.detalle_ordens
-                        .FirstOrDefaultAsync(detalle => detalle.id_orden == dto.IdOrden && detalle.id_examen == ex.IdExamen);
-
-                    if (detalleOrden != null)
-                        detalleOrden.id_resultado = resultado.id_resultado;
+                    var detOrden = await _context.detalle_ordens
+                        .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == ex.IdExamen);
+                    if (detOrden != null) detOrden.id_resultado = res.id_resultado;
 
                     var examReactivos = await _context.examen_reactivos
                         .Where(er => er.id_examen == ex.IdExamen)
@@ -67,56 +70,52 @@ namespace Lab_APIRest.Services.Resultados
                         if (reactivo == null) continue;
 
                         if (reactivo.cantidad_disponible < er.cantidad_usada)
-                            throw new InvalidOperationException($"Stock insuficiente para el reactivo {reactivo.nombre_reactivo}");
+                            throw new InvalidOperationException($"Stock insuficiente para {reactivo.nombre_reactivo}");
 
-                        var movimiento = new movimiento_reactivo
+                        await _context.movimiento_reactivos.AddAsync(new movimiento_reactivo
                         {
                             id_reactivo = reactivo.id_reactivo,
                             tipo_movimiento = "EGRESO",
                             cantidad = er.cantidad_usada,
                             fecha_movimiento = dto.FechaResultado,
-                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numeroResultado}",
-                            id_detalle_resultado = detRes.id_detalle_resultado
-                        };
+                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}",
+                            id_detalle_resultado = det.id_detalle_resultado
+                        });
 
-                        await _context.movimiento_reactivos.AddAsync(movimiento);
                         reactivo.cantidad_disponible -= er.cantidad_usada;
-                        _context.reactivos.Update(reactivo);
                     }
                 }
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await trx.CommitAsync();
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                await trx.RollbackAsync();
+                _logger.LogError(ex, "Error guardando resultados.");
                 return false;
             }
         }
 
-        public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro)
+        public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto f)
         {
-            var query = _context.resultados
-                .Include(r => r.id_pacienteNavigation)
-                .AsQueryable();
+            var q = _context.resultados.Include(r => r.id_pacienteNavigation).AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
-                query = query.Where(r => r.numero_resultado.Contains(filtro.NumeroResultado));
-            if (!string.IsNullOrWhiteSpace(filtro.Cedula))
-                query = query.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
-            if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                query = query.Where(r => r.id_pacienteNavigation.nombre_paciente.Contains(filtro.Nombre));
-            if (filtro.FechaDesde != null)
-                query = query.Where(r => r.fecha_resultado >= filtro.FechaDesde);
-            if (filtro.FechaHasta != null)
-                query = query.Where(r => r.fecha_resultado <= filtro.FechaHasta);
-            if (filtro.Anulado != null)
-                query = query.Where(r => r.anulado == filtro.Anulado);
+            if (!string.IsNullOrWhiteSpace(f.NumeroResultado))
+                q = q.Where(r => r.numero_resultado.Contains(f.NumeroResultado));
+            if (!string.IsNullOrWhiteSpace(f.Cedula))
+                q = q.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(f.Cedula));
+            if (!string.IsNullOrWhiteSpace(f.Nombre))
+                q = q.Where(r => r.id_pacienteNavigation.nombre_paciente.Contains(f.Nombre));
+            if (f.FechaDesde != null)
+                q = q.Where(r => r.fecha_resultado >= f.FechaDesde);
+            if (f.FechaHasta != null)
+                q = q.Where(r => r.fecha_resultado <= f.FechaHasta);
+            if (f.Anulado != null)
+                q = q.Where(r => r.anulado == f.Anulado);
 
-            return await query
-                .OrderByDescending(r => r.id_resultado)
+            return await q.OrderByDescending(r => r.id_resultado)
                 .Select(r => new ResultadoListadoDto
                 {
                     IdResultado = r.id_resultado,
@@ -124,18 +123,17 @@ namespace Lab_APIRest.Services.Resultados
                     CedulaPaciente = r.id_pacienteNavigation.cedula_paciente,
                     NombrePaciente = r.id_pacienteNavigation.nombre_paciente,
                     FechaResultado = r.fecha_resultado,
-                    Anulado = (bool)r.anulado,
+                    Anulado = r.anulado ?? false,
                     Observaciones = r.observaciones
                 }).ToListAsync();
         }
 
-        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado)
+        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int id)
         {
             var r = await _context.resultados
-                .Include(res => res.id_pacienteNavigation)
-                .Include(res => res.detalle_resultados)
-                    .ThenInclude(dr => dr.id_examenNavigation)
-                .FirstOrDefaultAsync(res => res.id_resultado == idResultado);
+                .Include(x => x.id_pacienteNavigation)
+                .Include(x => x.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
+                .FirstOrDefaultAsync(x => x.id_resultado == id);
 
             if (r == null) return null;
 
@@ -147,99 +145,104 @@ namespace Lab_APIRest.Services.Resultados
                 NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
                 FechaResultado = r.fecha_resultado,
                 Observaciones = r.observaciones,
-                Anulado = (bool)r.anulado,
-                Detalles = r.detalle_resultados.Select(dr => new DetalleResultadoDto
+                Anulado = r.anulado ?? false,
+                Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
                 {
-                    IdDetalleResultado = dr.id_detalle_resultado,
-                    NombreExamen = dr.id_examenNavigation?.nombre_examen ?? "",
-                    Valor = dr.valor.ToString() ?? "",
-                    Unidad = dr.unidad ?? "",
-                    Observacion = dr.observacion ?? "",
-                    ValorReferencia = dr.valor_referencia ?? "",
-                    Anulado = dr.anulado ?? false
+                    IdDetalleResultado = d.id_detalle_resultado,
+                    NombreExamen = d.id_examenNavigation?.nombre_examen ?? "",
+                    Valor = d.valor,
+                    Unidad = d.unidad ?? "",
+                    Observacion = d.observacion ?? "",
+                    ValorReferencia = d.valor_referencia ?? "",
+                    Anulado = d.anulado ?? false
                 }).ToList()
             };
         }
 
-        public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int idResultado)
+        public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int id)
         {
-            var resultado = await _context.resultados
-                .Include(r => r.id_pacienteNavigation)
-                .Include(r => r.id_ordenNavigation)
-                    .ThenInclude(o => o.id_medicoNavigation)
-                .Include(r => r.detalle_resultados)
-                    .ThenInclude(d => d.id_examenNavigation)
-                .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
+            var r = await _context.resultados
+                .Include(x => x.id_pacienteNavigation)
+                .Include(x => x.id_ordenNavigation).ThenInclude(o => o.id_medicoNavigation)
+                .Include(x => x.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
+                .FirstOrDefaultAsync(x => x.id_resultado == id);
 
-            if (resultado == null)
-                return null;
+            if (r == null) return null;
 
             return new ResultadoCompletoDto
             {
-                NumeroOrden = resultado.id_ordenNavigation?.numero_orden ?? "",
-                NumeroResultado = resultado.numero_resultado,
-                FechaResultado = resultado.fecha_resultado,
-                NombrePaciente = resultado.id_pacienteNavigation?.nombre_paciente ?? "",
-                CedulaPaciente = resultado.id_pacienteNavigation?.cedula_paciente ?? "",
-                EdadPaciente = resultado.id_pacienteNavigation != null ? CalcularEdad(resultado.id_pacienteNavigation.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)) : 0,
-                MedicoSolicitante = resultado.id_ordenNavigation?.id_medicoNavigation?.nombre_medico ?? "",
+                NumeroOrden = r.id_ordenNavigation?.numero_orden ?? "",
+                NumeroResultado = r.numero_resultado,
+                FechaResultado = r.fecha_resultado,
+                NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
+                CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
+                EdadPaciente = CalcularEdad(r.id_pacienteNavigation?.fecha_nac_paciente),
+                MedicoSolicitante = r.id_ordenNavigation?.id_medicoNavigation?.nombre_medico ?? "",
                 Detalles = new List<ResultadoDetalleDto>
                 {
                     new ResultadoDetalleDto
                     {
-                        IdResultado = resultado.id_resultado,
-                        NumeroResultado = resultado.numero_resultado,
-                        CedulaPaciente = resultado.id_pacienteNavigation?.cedula_paciente ?? "",
-                        NombrePaciente = resultado.id_pacienteNavigation?.nombre_paciente ?? "",
-                        FechaResultado = resultado.fecha_resultado,
-                        Anulado = resultado.anulado ?? false,
-                        Detalles = resultado.detalle_resultados.Select(d => new DetalleResultadoDto
+                        IdResultado = r.id_resultado,
+                        NumeroResultado = r.numero_resultado,
+                        CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
+                        NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
+                        FechaResultado = r.fecha_resultado,
+                        Observaciones = r.observaciones,
+                        Anulado = r.anulado ?? false,
+                        Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
                         {
                             IdDetalleResultado = d.id_detalle_resultado,
-                            NombreExamen = d.id_examenNavigation.nombre_examen,
+                            NombreExamen = d.id_examenNavigation?.nombre_examen ?? "",
                             Valor = d.valor,
-                            Unidad = d.unidad,
-                            Observacion = d.observacion,
-                            TituloExamen = d.id_examenNavigation.titulo_examen,
+                            Unidad = d.unidad ?? "",
+                            Observacion = d.observacion ?? "",
                             ValorReferencia = d.valor_referencia ?? "",
                             Anulado = d.anulado ?? false
                         }).ToList()
                     }
                 }
+
             };
         }
 
-        private int CalcularEdad(DateTime fechaNacimiento)
+        public async Task<byte[]?> GenerarResultadosPdfAsync(List<int> ids)
         {
-            var hoy = DateTime.Today;
-            var edad = hoy.Year - fechaNacimiento.Year;
-            if (fechaNacimiento.Date > hoy.AddYears(-edad)) edad--;
-            return edad;
+            var resultados = new List<ResultadoCompletoDto>();
+            foreach (var id in ids)
+            {
+                var r = await ObtenerResultadoCompletoAsync(id);
+                if (r != null) resultados.Add(r);
+            }
+
+            if (!resultados.Any()) return null;
+            return _pdf.GenerarResultadosPdf(resultados);
         }
 
-        public async Task<bool> AnularResultadoAsync(int idResultado)
+        public async Task<bool> AnularResultadoAsync(int id)
         {
-            var resultado = await _context.resultados
-                .Include(r => r.detalle_resultados)
-                .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
+            var r = await _context.resultados.Include(x => x.detalle_resultados)
+                .FirstOrDefaultAsync(x => x.id_resultado == id);
 
-            if (resultado == null)
-                return false;
+            if (r == null || r.anulado == true) return false;
 
-            resultado.anulado = true;
+            r.anulado = true;
+            foreach (var dr in r.detalle_resultados) dr.anulado = true;
 
-            foreach (var dr in resultado.detalle_resultados)
-                dr.anulado = true;
-
-            var detallesOrden = await _context.detalle_ordens
-                .Where(d => d.id_resultado == idResultado)
-                .ToListAsync();
-
-            foreach (var det in detallesOrden)
-                det.id_resultado = null;
+            var detOrden = await _context.detalle_ordens.Where(d => d.id_resultado == id).ToListAsync();
+            foreach (var d in detOrden) d.id_resultado = null;
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        private int CalcularEdad(DateOnly? fn)
+        {
+            if (fn == null) return 0;
+            var f = fn.Value.ToDateTime(TimeOnly.MinValue);
+            var h = DateTime.Today;
+            var edad = h.Year - f.Year;
+            if (f > h.AddYears(-edad)) edad--;
+            return edad;
         }
     }
 }

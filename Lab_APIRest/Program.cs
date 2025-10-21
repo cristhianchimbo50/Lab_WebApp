@@ -1,4 +1,5 @@
 using Lab_APIRest.Infrastructure.EF;
+using Lab_APIRest.Services.Auth;
 using Lab_APIRest.Services.Convenios;
 using Lab_APIRest.Services.Examenes;
 using Lab_APIRest.Services.Medicos;
@@ -38,6 +39,8 @@ builder.Services.AddScoped<PdfTicketService>();
 builder.Services.AddScoped<PdfResultadoService>();
 builder.Services.AddScoped<IConvenioService, ConvenioService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
+builder.Services.AddScoped<IMovimientoService, MovimientoService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 
 
