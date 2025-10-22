@@ -61,12 +61,12 @@ namespace Lab_Blazor.Services.Ordenes
 
         public async Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto)
         {
-            return await _http.PostAsJsonAsync("api/Ordenes/ingresar-resultado", dto);
+            return await _http.PostAsJsonAsync("api/ordenes/ingresar-resultado", dto);
         }
 
         public async Task<List<ExamenDto>> ObtenerExamenesPorOrdenAsync(int idOrden)
         {
-            return await _http.GetFromJsonAsync<List<ExamenDto>>($"api/Ordenes/{idOrden}/examenes") ?? new();
+            return await _http.GetFromJsonAsync<List<ExamenDto>>($"api/ordenes/{idOrden}/examenes") ?? new();
         }
 
         public async Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden)
