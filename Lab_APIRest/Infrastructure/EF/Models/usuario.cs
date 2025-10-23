@@ -21,7 +21,9 @@ public partial class usuario
 
     public string estado { get; set; } = null!;
 
+    public DateTime? fecha_expira_temporal { get; set; }
+
+
     public virtual ICollection<paciente> pacientes { get; set; } = new List<paciente>();
 
-    public virtual ICollection<usuario_token_activacion> usuario_token_activacions { get; set; } = new List<usuario_token_activacion>();
 }

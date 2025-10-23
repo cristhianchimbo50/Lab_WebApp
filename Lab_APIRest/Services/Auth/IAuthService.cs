@@ -4,9 +4,9 @@ namespace Lab_APIRest.Services.Auth
 {
     public interface IAuthService
     {
-        /// <summary>
-        /// Autentica un usuario y devuelve el token JWT si las credenciales son válidas.
-        /// </summary>
         Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto, CancellationToken ct);
+        Task<bool> CambiarClaveAsync(ChangePasswordDto dto, CancellationToken ct);
+        Task<bool> ReenviarContraseñaTemporalAsync(string correo, CancellationToken ct);
+
     }
 }

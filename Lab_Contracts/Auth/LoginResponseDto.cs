@@ -9,4 +9,5 @@ public class LoginResponseDto
     public bool EsContraseñaTemporal { get; set; }
     public string AccessToken { get; set; } = default!;
     public DateTime ExpiresAtUtc { get; set; }
+    public string Mensaje { get; set; }
 }

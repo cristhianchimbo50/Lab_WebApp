@@ -1,8 +1,16 @@
-namespace Lab_Contracts.Auth;
+using System.ComponentModel.DataAnnotations;
 
-public class ChangePasswordDto
+namespace Lab_Contracts.Auth
 {
-    public int IdUsuario { get; set; }
-    public string ClaveActual { get; set; } = default!;
-    public string NuevaClave { get; set; } = default!;
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CorreoUsuario { get; set; } = string.Empty;
+
+        [Required, MinLength(6)]
+        public string ClaveActual { get; set; } = string.Empty;
+
+        [Required, MinLength(8)]
+        public string NuevaClave { get; set; } = string.Empty;
+    }
 }

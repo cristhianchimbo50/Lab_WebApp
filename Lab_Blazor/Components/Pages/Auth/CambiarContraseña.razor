@@ -1,0 +1,164 @@
+﻿@page "/cambiar-contraseña"
+@layout EmptyLayout
+@rendermode InteractiveServer
+
+@using Lab_Blazor.Components.Layout
+@using Lab_Blazor.Services.Auth
+@using Lab_Contracts.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IAuthApiService AuthApi
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Cambiar Contraseña</PageTitle>
+
+<div class="container d-flex align-items-center justify-content-center vh-100">
+    <div class="card shadow-lg p-4" style="max-width: 450px; width: 100%;">
+        <div class="text-center mb-3">
+            <i class="bi bi-shield-lock text-primary" style="font-size: 3rem;"></i>
+            <h4 class="mt-2 text-primary fw-bold">Cambio de Contraseña</h4>
+            <p class="text-muted mb-0">Debe cambiar su contraseña temporal para continuar</p>
+        </div>
+
+        <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaClave">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3 position-relative">
+                <label class="form-label">Contraseña Temporal</label>
+                <div class="input-group">
+                    <InputText class="form-control" @bind-Value="Cambio.ClaveActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña temporal" />
+                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordActual">
+                        <i class="@passwordIconActual"></i>
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => Cambio.ClaveActual)" />
+            </div>
+
+            <div class="mb-3 position-relative">
+                <label class="form-label">Nueva Contraseña</label>
+                <div class="input-group">
+                    <InputText class="form-control" @bind-Value="Cambio.NuevaClave" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
+                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordNueva">
+                        <i class="@passwordIconNueva"></i>
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => Cambio.NuevaClave)" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensaje))
+            {
+                <div class="alert alert-@(exito ? "success" : "danger") mt-2" role="alert">
+                    <i class="bi @(exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@mensaje
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100 mt-3">
+                <i class="bi bi-save me-1"></i>Guardar Nueva Contraseña
+            </button>
+
+            <button type="button" class="btn btn-link text-secondary w-100 mt-2" @onclick="@(() => Navigation.NavigateTo("/login", true))">
+                <i class="bi bi-arrow-left-circle me-1"></i>Volver al inicio de sesión
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private ChangePasswordDto Cambio = new();
+    private string mensaje = "";
+    private bool exito;
+
+    private string passwordInputTypeActual = "password";
+    private string passwordIconActual = "bi bi-eye-slash";
+    private string passwordInputTypeNueva = "password";
+    private string passwordIconNueva = "bi bi-eye-slash";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var correoQuery = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("correo");
+
+        if (!string.IsNullOrWhiteSpace(correoQuery))
+        {
+            Cambio.CorreoUsuario = correoQuery;
+        }
+        else
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated ?? false)
+            {
+                Cambio.CorreoUsuario = user.FindFirst("sub")?.Value ?? user.Identity?.Name ?? "";
+            }
+        }
+    }
+
+    private async Task GuardarNuevaClave()
+    {
+        mensaje = "";
+        exito = false;
+
+        if (string.IsNullOrWhiteSpace(Cambio.CorreoUsuario))
+        {
+            await JS.InvokeVoidAsync("alert", "No se pudo identificar el usuario. Inicie sesión nuevamente.");
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        var (resultado, msg) = await AuthApi.CambiarClaveAsync(Cambio);
+
+        if (!resultado && msg.StartsWith("{"))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(msg);
+                if (doc.RootElement.TryGetProperty("mensaje", out var mensajeJson))
+                    msg = mensajeJson.GetString() ?? msg;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        mensaje = msg;
+        exito = resultado;
+
+
+        if (resultado)
+        {
+            await JS.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+
+    private void TogglePasswordActual()
+    {
+        if (passwordInputTypeActual == "password")
+        {
+            passwordInputTypeActual = "text";
+            passwordIconActual = "bi bi-eye";
+        }
+        else
+        {
+            passwordInputTypeActual = "password";
+            passwordIconActual = "bi bi-eye-slash";
+        }
+    }
+
+    private void TogglePasswordNueva()
+    {
+        if (passwordInputTypeNueva == "password")
+        {
+            passwordInputTypeNueva = "text";
+            passwordIconNueva = "bi bi-eye";
+        }
+        else
+        {
+            passwordInputTypeNueva = "password";
+            passwordIconNueva = "bi bi-eye-slash";
+        }
+    }
+}

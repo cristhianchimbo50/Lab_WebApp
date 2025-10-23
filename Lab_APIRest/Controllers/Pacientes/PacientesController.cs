@@ -42,12 +42,21 @@ namespace Lab_APIRest.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<PacienteDto>> ObtenerPaciente(int id)
         {
-            var paciente = await _service.GetPacienteByIdAsync(id);
-            if (paciente == null)
-                return NotFound("No se encontró el paciente solicitado.");
+            try
+            {
+                var paciente = await _service.GetPacienteByIdAsync(id);
+                if (paciente == null)
+                    return NotFound(new { mensaje = "No se encontró el paciente solicitado." });
 
-            return Ok(paciente);
+                return Ok(paciente);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener paciente ID {id}");
+                return StatusCode(500, new { mensaje = "Error interno al obtener el paciente." });
+            }
         }
+
 
         /// <summary>
         /// Busca pacientes por cédula, nombre o correo.
@@ -104,14 +113,33 @@ namespace Lab_APIRest.Controllers
 
             try
             {
-                int usuarioId = 1; // Usuario por defecto o tomado del contexto de autenticación
+                int usuarioId = 1;
+
                 var paciente = await _service.CrearPacienteAsync(dto, usuarioId);
-                return CreatedAtAction(nameof(ObtenerPaciente), new { id = paciente.IdPaciente }, paciente);
+
+                return CreatedAtAction(
+                    nameof(ObtenerPaciente),
+                    new { id = paciente.IdPaciente },
+                    new
+                    {
+                        mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
+                        paciente.IdPaciente,
+                        paciente.NombrePaciente,
+                        paciente.CorreoElectronicoPaciente,
+                        paciente.ContraseñaTemporal
+                    }
+                );
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Casos como "correo duplicado" o "paciente ya existe"
+                _logger.LogWarning(ex, "Error de validación al registrar paciente.");
+                return Conflict(new { mensaje = ex.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar paciente.");
-                return StatusCode(500, "Ocurrió un error interno al registrar el paciente.");
+                return StatusCode(500, new { mensaje = "Ocurrió un error interno al registrar el paciente." });
             }
         }
 
@@ -181,5 +209,15 @@ namespace Lab_APIRest.Controllers
 
             return ultimoDigito == digitoCalculado;
         }
+
+        [HttpPost("{id:int}/reenviar-temporal")]
+        public async Task<IActionResult> ReenviarTemporal(int id)
+        {
+            var (exito, mensaje, temp) = await _service.ReenviarCredencialesTemporalesAsync(id);
+            if (!exito) return BadRequest(new { mensaje });
+
+            return Ok(new { mensaje, nuevaTemporal = temp });
+        }
+
     }
 }

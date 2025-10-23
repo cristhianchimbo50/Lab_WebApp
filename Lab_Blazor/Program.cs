@@ -19,7 +19,7 @@ builder.Services.AddHttpClient("Api", client =>
     client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5265/");
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationCore();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ProtectedSessionStorage>();
@@ -38,6 +38,8 @@ builder.Services.AddScoped<IPagosApiService, PagosApiService>();
 builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
 builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
 builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
+
+
 
 
 

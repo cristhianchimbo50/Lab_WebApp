@@ -43,7 +43,6 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<usuario> usuarios { get; set; }
 
-    public virtual DbSet<usuario_token_activacion> usuario_token_activacions { get; set; }
 
     public virtual DbSet<v_paciente> v_pacientes { get; set; }
 
@@ -396,6 +395,8 @@ public partial class LabDbContext : DbContext
                 .IsUnique()
                 .HasFilter("([correo_usuario] IS NOT NULL)");
 
+            entity.Property(e => e.fecha_expira_temporal).HasColumnType("datetime");
+
             entity.HasIndex(e => e.correo_usuario, "idx_usuario_correo");
 
             entity.Property(e => e.clave_usuario)
@@ -416,25 +417,6 @@ public partial class LabDbContext : DbContext
                 .IsUnicode(false);
         });
 
-        modelBuilder.Entity<usuario_token_activacion>(entity =>
-        {
-            entity.HasKey(e => e.id_token).HasName("PK__usuario___3C2FA9C416545FD3");
-
-            entity.ToTable("usuario_token_activacion");
-
-            entity.HasIndex(e => new { e.id_usuario, e.usado, e.expira_en }, "IX_TokenUsuario_Activo");
-
-            entity.Property(e => e.emitido_en).HasDefaultValueSql("(sysdatetime())");
-            entity.Property(e => e.token_hash)
-                .HasMaxLength(64)
-                .IsUnicode(false)
-                .IsFixedLength();
-
-            entity.HasOne(d => d.id_usuarioNavigation).WithMany(p => p.usuario_token_activacions)
-                .HasForeignKey(d => d.id_usuario)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_TokenUsuario");
-        });
 
         modelBuilder.Entity<v_paciente>(entity =>
         {

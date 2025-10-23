@@ -9,10 +9,15 @@ using Lab_APIRest.Services.Pagos;
 using Lab_APIRest.Services.PDF;
 using Lab_APIRest.Services.Reactivos;
 using Lab_APIRest.Services.Resultados;
+using Lab_APIRest.Services.Email;
+
+
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Lab_APIRest.Infrastructure.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +46,7 @@ builder.Services.AddScoped<IConvenioService, ConvenioService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<EmailService>();
 
 
 

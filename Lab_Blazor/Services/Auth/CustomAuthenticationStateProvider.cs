@@ -24,9 +24,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        // Protección: si es prerendering, JS interop no está disponible aún.
-        // Try/catch simple: si ProtectedSessionStorage falla, devuelve usuario anónimo.
         string? token = null;
+
         try
         {
             var result = await _session.GetAsync<string>("jwt");
@@ -34,40 +33,36 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         }
         catch
         {
-            // Si ProtectedSessionStorage falla por prerendering o por otro motivo,
-            // se retorna un usuario anónimo (sin claims)
             return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
 
         if (string.IsNullOrWhiteSpace(token))
             return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
-        // Decodifica el JWT y extrae claims
-        JwtSecurityToken? jwt = null;
         try
         {
             var handler = new JwtSecurityTokenHandler();
-            jwt = handler.ReadJwtToken(token);
+            var jwt = handler.ReadJwtToken(token);
+            var claims = jwt.Claims.ToList();
+            var identity = new ClaimsIdentity(claims, "jwt");
+            return new AuthenticationState(new ClaimsPrincipal(identity));
         }
         catch
         {
-            // Token corrupto o inválido: sesión inválida
             return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
-
-        var claims = jwt?.Claims ?? Enumerable.Empty<Claim>();
-        var identity = new ClaimsIdentity(claims, "jwt");
-        var principal = new ClaimsPrincipal(identity);
-
-        return new AuthenticationState(principal);
     }
-
     /// <summary>
     /// Almacena el token de sesión y notifica el cambio de autenticación.
     /// </summary>
     public async Task SignInAsync(LoginResponseDto session)
     {
+        if (string.IsNullOrEmpty(session.AccessToken))
+            return;
+
         await _session.SetAsync("jwt", session.AccessToken);
+        await _session.SetAsync("usuario", session);
+
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
@@ -77,6 +72,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     public async Task SignOutAsync()
     {
         await _session.DeleteAsync("jwt");
+        await _session.DeleteAsync("usuario");
+
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 }

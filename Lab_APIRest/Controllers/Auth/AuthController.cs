@@ -1,7 +1,6 @@
 ﻿using Lab_Contracts.Auth;
 using Lab_APIRest.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Controllers.Auth
 {
@@ -18,25 +17,56 @@ namespace Lab_APIRest.Controllers.Auth
             _logger = logger;
         }
 
-        /// <summary>
-        /// Autentica un usuario y devuelve su token JWT.
-        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto dto, CancellationToken ct)
         {
             try
             {
                 var result = await _authService.LoginAsync(dto, ct);
+
                 if (result == null)
-                    return Unauthorized(new { error = "Credenciales inválidas o cuenta bloqueada." });
+                    return Unauthorized(new { Mensaje = "Credenciales inválidas o la cuenta está bloqueada." });
+
+                if (result.EsContraseñaTemporal && string.IsNullOrEmpty(result.AccessToken))
+                    return Ok(result);
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error en inicio de sesión.");
-                return StatusCode(500, "Error interno al procesar el inicio de sesión.");
+                return StatusCode(500, new { Mensaje = "Error interno del servidor." });
             }
         }
+
+
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> CambiarClave([FromBody] ChangePasswordDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { Mensaje = "Datos inválidos en la solicitud." });
+
+            try
+            {
+                bool actualizado = await _authService.CambiarClaveAsync(dto, ct);
+
+                if (!actualizado)
+                    return Unauthorized(new { Mensaje = "Correo o contraseña actual incorrectos." });
+
+                return Ok(new { Mensaje = "Contraseña actualizada correctamente." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar la contraseña.");
+                return StatusCode(500, new { Mensaje = "Error interno al cambiar la contraseña." });
+            }
+        }
+
+
     }
 }

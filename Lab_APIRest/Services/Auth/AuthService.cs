@@ -1,5 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -15,31 +16,29 @@ namespace Lab_APIRest.Services.Auth
         private readonly IMemoryCache _cache;
         private readonly ILogger<AuthService> _logger;
         private readonly PasswordHasher<object> _hasher = new();
+        private readonly EmailService _emailService;
 
         private const int MaxIntentos = 5;
         private static readonly TimeSpan LockoutTiempo = TimeSpan.FromMinutes(15);
 
-        public AuthService(LabDbContext db, TokenService tokenService, IMemoryCache cache, ILogger<AuthService> logger)
+        public AuthService(LabDbContext db, TokenService tokenService, IMemoryCache cache, ILogger<AuthService> logger, EmailService emailService)
         {
             _db = db;
             _tokenService = tokenService;
             _cache = cache;
             _logger = logger;
+            _emailService = emailService;
         }
 
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto, CancellationToken ct)
         {
             var email = (dto.CorreoUsuario ?? "").Trim().ToLowerInvariant();
-
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(dto.Clave))
                 return null;
 
             string cacheKey = $"login_intentos_{email}";
             if (_cache.TryGetValue<int>(cacheKey, out int intentos) && intentos >= MaxIntentos)
-            {
-                _logger.LogWarning("Cuenta bloqueada temporalmente para {Email}", email);
                 return null;
-            }
 
             var usuario = await _db.usuarios
                 .AsNoTracking()
@@ -48,7 +47,6 @@ namespace Lab_APIRest.Services.Auth
             if (usuario is null)
             {
                 RegistrarIntentoFallido(email);
-                _logger.LogWarning("Intento de login fallido - usuario no encontrado: {Email}", email);
                 return null;
             }
 
@@ -56,28 +54,53 @@ namespace Lab_APIRest.Services.Auth
             if (!claveOk)
             {
                 RegistrarIntentoFallido(email);
-                _logger.LogWarning("Intento de login fallido - contraseña incorrecta: {Email}", email);
                 return null;
             }
 
             if (!string.Equals(usuario.estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Usuario inactivo: {Email}", email);
                 return null;
-            }
 
-            // Limpia intentos fallidos
             _cache.Remove(cacheKey);
 
+            if (usuario.es_contraseña_temporal == true)
+            {
+                if (usuario.fecha_expira_temporal.HasValue &&
+                    usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
+                {
+                    _logger.LogWarning("Contraseña temporal expirada para {Correo}", email);
+
+                    return new LoginResponseDto
+                    {
+                        IdUsuario = usuario.id_usuario,
+                        CorreoUsuario = usuario.correo_usuario,
+                        Nombre = usuario.nombre,
+                        Rol = usuario.rol,
+                        EsContraseñaTemporal = true,
+                        AccessToken = null,
+                        ExpiresAtUtc = usuario.fecha_expira_temporal.Value,
+                        Mensaje = "La contraseña temporal ha expirado. Solicite una nueva a recepción."
+                    };
+                }
+
+                return new LoginResponseDto
+                {
+                    IdUsuario = usuario.id_usuario,
+                    CorreoUsuario = usuario.correo_usuario,
+                    Nombre = usuario.nombre,
+                    Rol = usuario.rol,
+                    EsContraseñaTemporal = true,
+                    AccessToken = null,
+                    ExpiresAtUtc = (DateTime)usuario.fecha_expira_temporal,
+                    Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
+                };
+            }
             (string token, DateTime exp) = _tokenService.CreateToken(
                 usuario.id_usuario,
                 usuario.correo_usuario,
                 usuario.nombre,
                 usuario.rol,
-                usuario.es_contraseña_temporal ?? false
+                false
             );
-
-            _logger.LogInformation("Inicio de sesión exitoso: {Email}", usuario.correo_usuario);
 
             return new LoginResponseDto
             {
@@ -85,9 +108,10 @@ namespace Lab_APIRest.Services.Auth
                 CorreoUsuario = usuario.correo_usuario,
                 Nombre = usuario.nombre,
                 Rol = usuario.rol,
-                EsContraseñaTemporal = usuario.es_contraseña_temporal ?? false,
+                EsContraseñaTemporal = false,
                 AccessToken = token,
-                ExpiresAtUtc = exp
+                ExpiresAtUtc = exp,
+                Mensaje = "Inicio de sesión exitoso."
             };
         }
 
@@ -97,9 +121,78 @@ namespace Lab_APIRest.Services.Auth
             int intentos = _cache.TryGetValue(cacheKey, out int actuales) ? actuales : 0;
             intentos++;
             _cache.Set(cacheKey, intentos, LockoutTiempo);
-
-            if (intentos >= MaxIntentos)
-                _logger.LogWarning("Usuario {Email} bloqueado temporalmente por intentos fallidos.", email);
         }
+
+        public async Task<bool> CambiarClaveAsync(ChangePasswordDto dto, CancellationToken ct)
+        {
+            var email = (dto.CorreoUsuario ?? "").Trim().ToLowerInvariant();
+            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == email, ct);
+            if (usuario == null)
+                return false;
+
+            if (usuario.es_contraseña_temporal == true &&
+                usuario.fecha_expira_temporal.HasValue &&
+                usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
+            {
+                _logger.LogWarning("Intento de cambio con contraseña temporal expirada para el usuario {Correo}", email);
+                throw new InvalidOperationException("La contraseña temporal ha expirado. Solicite una nueva.");
+            }
+
+            var claveOk = _hasher.VerifyHashedPassword(null!, usuario.clave_usuario, dto.ClaveActual) != PasswordVerificationResult.Failed;
+            if (!claveOk)
+                return false;
+
+            var nuevaHash = _hasher.HashPassword(null!, dto.NuevaClave);
+            usuario.clave_usuario = nuevaHash;
+            usuario.es_contraseña_temporal = false;
+            usuario.estado_registro = true;
+
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+
+        public async Task<bool> ReenviarContraseñaTemporalAsync(string correo, CancellationToken ct)
+        {
+            correo = (correo ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(correo))
+                return false;
+
+            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
+            if (usuario == null)
+                return false;
+
+            if (usuario.es_contraseña_temporal != true)
+                return false;
+
+            string nuevaClave = Guid.NewGuid().ToString("N")[..8];
+            string hash = _hasher.HashPassword(null!, nuevaClave);
+
+            usuario.clave_usuario = hash;
+            usuario.fecha_expira_temporal = DateTime.UtcNow.AddHours(48);
+            usuario.es_contraseña_temporal = true;
+            usuario.estado = "ACTIVO";
+
+            await _db.SaveChangesAsync(ct);
+
+            string asunto = "Nueva Contraseña Temporal - Laboratorio Clínico";
+            string cuerpoHtml = $@"
+        <p>Hola <b>{usuario.nombre}</b>,</p>
+        <p>Se ha generado una nueva contraseña temporal para tu cuenta.</p>
+        <p><b>Contraseña temporal:</b> <span style='font-size:1.1em;color:#0d6efd'>{nuevaClave}</span></p>
+        <p>Esta contraseña expirará en <b>48 horas</b>.</p>
+        <p>Por favor, inicia sesión y cámbiala por una contraseña definitiva.</p>
+        <br/>
+        <p>Saludos,<br/><b>Laboratorio Clínico</b></p>";
+
+            await _emailService.EnviarCorreoAsync(
+                usuario.correo_usuario,
+                usuario.nombre,
+                asunto,
+                cuerpoHtml
+            );
+
+            return true;
+        }
+
     }
 }

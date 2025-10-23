@@ -14,7 +14,7 @@
 
 @if (!_checkedAuth)
 {
-    <div class="d-flex align-items-center text-primary">
+    <div class="d-flex align-items-center justify-content-center vh-100 text-primary">
         <div class="spinner-border me-2" role="status"></div>
         <strong>Cargando login...</strong>
     </div>
@@ -22,12 +22,13 @@
 else
 {
     <div class="container d-flex align-items-center justify-content-center vh-100">
-        <div class="row w-100 shadow-lg rounded p-4 bg-white" style="max-width: 900px;">
-            <div class="col-md-6 d-none d-md-flex align-items-center justify-content-center">
-                <img src="images/login.png" class="img-fluid rounded" alt="Ilustración de inicio de sesión" />
+        <div class="row w-100 shadow-lg rounded p-4 bg-white" style="max-width: 850px;">
+            <div class="col-md-6 d-none d-md-flex align-items-center justify-content-center bg-light">
+                <img src="images/login.png" class="img-fluid rounded" alt="Inicio de sesión" />
             </div>
-            <div class="col-md-6">
-                <h3 class="mb-4 fw-bold text-primary">
+
+            <div class="col-md-6 p-3">
+                <h3 class="mb-4 fw-bold text-primary text-center">
                     <i class="bi bi-person-circle me-2"></i>Iniciar Sesión
                 </h3>
 
@@ -37,26 +38,38 @@ else
 
                     <div class="mb-3">
                         <label for="correo" class="form-label">Correo electrónico</label>
-                        <InputText id="correo" class="form-control" @bind-Value="loginModel.CorreoUsuario" />
+                        <InputText id="correo" class="form-control" @bind-Value="loginModel.CorreoUsuario" placeholder="ejemplo@correo.com" />
+                        <ValidationMessage For="@(() => loginModel.CorreoUsuario)" />
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3 position-relative">
                         <label for="clave" class="form-label">Contraseña</label>
-                        <InputText id="clave" type="password" class="form-control" @bind-Value="loginModel.Clave" />
+                        <div class="input-group">
+                            <InputText id="clave" class="form-control" @bind-Value="loginModel.Clave" type="@passwordInputType" placeholder="Ingrese su contraseña" />
+                            <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility" title="Mostrar/Ocultar contraseña">
+                                <i class="@passwordIcon"></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.Clave)" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(error))
                     {
-                        <div class="alert alert-danger" role="alert">
-                            <i class="bi bi-exclamation-triangle me-2"></i>@error
+                        <div class="alert alert-danger d-flex align-items-start mt-2" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                            <div>
+                                <strong>Atención:</strong><br />
+                                @error
+                            </div>
                         </div>
                     }
 
-                    <button type="submit" class="btn btn-primary w-100 mb-2" disabled="@loginBloqueado">
+
+                    <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@loginBloqueado">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
                     </button>
 
-                    <button type="button" class="btn btn-secondary w-100"
+                    <button type="button" class="btn btn-link w-100 text-secondary mt-2"
                             @onclick="@(() => Navigation.NavigateTo("/recuperar-clave"))">
                         <i class="bi bi-question-circle me-1"></i>¿Olvidó su contraseña?
                     </button>
@@ -65,6 +78,7 @@ else
         </div>
     </div>
 }
+
 
 @code {
     private LoginRequestDto loginModel = new();
@@ -77,11 +91,13 @@ else
     private string? redirectUrl;
     private bool _checkedAuth = false;
 
+    private string passwordInputType = "password";
+    private string passwordIcon = "bi bi-eye-slash";
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Verifica si el usuario YA está autenticado
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated ?? false)
             {
@@ -89,7 +105,6 @@ else
                 return;
             }
 
-            // Leer returnUrl del querystring si existe
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
             redirectUrl = query["returnUrl"];
@@ -100,64 +115,49 @@ else
 
     private async Task HandleLogin()
     {
-        if (loginBloqueado)
-            return;
-
         error = null;
 
         try
         {
-            var result = await AuthApi.LoginAsync(loginModel);
+            var (exito, mensaje, usuario, requiereCambio) = await AuthApi.LoginAsync(loginModel);
 
-            if (result == null)
+            if (!exito || usuario is null)
             {
-                intentosFallidos++;
-                if (intentosFallidos >= maxIntentos)
-                {
-                    loginBloqueado = true;
-                    error = $"Demasiados intentos fallidos. Espere {segundosEspera} segundos.";
-                    IniciarTemporizadorDesbloqueo();
-                }
-                else
-                {
-                    error = $"Credenciales inválidas. Intento {intentosFallidos} de {maxIntentos}.";
-                }
+                error = mensaje;
                 return;
             }
 
-            intentosFallidos = 0;
-
             if (AuthProvider is CustomAuthenticationStateProvider customAuth)
             {
-                await customAuth.SignInAsync(result);
+                await customAuth.SignInAsync(usuario);
 
-                var authState = await AuthProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
+                if (requiereCambio)
+                {
+                    Navigation.NavigateTo($"/cambiar-contraseña?correo={usuario.CorreoUsuario}", true);
+                    return;
+                }
 
-                if (user.Identity?.IsAuthenticated ?? false)
-                {
-                    if (result.EsContraseñaTemporal)
-                        Navigation.NavigateTo("/cambiar-contraseña", true);
-                    else
-                        Navigation.NavigateTo(string.IsNullOrWhiteSpace(redirectUrl) ? "/home" : redirectUrl!, true);
-                }
-                else
-                {
-                    error = "Autenticación fallida. Intente de nuevo.";
-                }
-            }
-            else
-            {
-                error = "No se pudo validar el usuario.";
+                Navigation.NavigateTo("/home", true);
+
             }
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            error = ex.Message;
+            error = $"Error: {ex.Message}";
         }
-        catch (Exception)
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        if (passwordInputType == "password")
         {
-            error = "Error inesperado. Intente de nuevo más tarde.";
+            passwordInputType = "text";
+            passwordIcon = "bi bi-eye";
+        }
+        else
+        {
+            passwordInputType = "password";
+            passwordIcon = "bi bi-eye-slash";
         }
     }
 
