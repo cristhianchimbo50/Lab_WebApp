@@ -6,6 +6,7 @@ using Lab_Blazor.Services.Medicos;
 using Lab_Blazor.Services.Ordenes;
 using Lab_Blazor.Services.Pacientes;
 using Lab_Blazor.Services.Pagos;
+using Lab_Blazor.Services.Perfil;
 using Lab_Blazor.Services.Reactivos;
 using Lab_Blazor.Services.Resultados;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -38,6 +39,7 @@ builder.Services.AddScoped<IPagosApiService, PagosApiService>();
 builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
 builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
 builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
+builder.Services.AddScoped<IPerfilApiService, PerfilApiService>();
 
 
 

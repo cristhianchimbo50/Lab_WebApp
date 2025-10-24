@@ -25,6 +25,7 @@ namespace Lab_APIRest.Infrastructure.Services
         {
             var claims = new[]
             {
+                new Claim(ClaimTypes.NameIdentifier, idUsuario.ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, idUsuario.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, correoUsuario),
                 new Claim(ClaimTypes.Name, nombre ?? ""),
@@ -42,8 +43,10 @@ namespace Lab_APIRest.Infrastructure.Services
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: expires,
-                signingCredentials: creds);
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddHours(4),
+                signingCredentials: creds
+            );
 
             return (new JwtSecurityTokenHandler().WriteToken(token), expires);
         }

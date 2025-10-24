@@ -1,23 +1,22 @@
 using Lab_APIRest.Infrastructure.EF;
+using Lab_APIRest.Infrastructure.Services;
 using Lab_APIRest.Services.Auth;
 using Lab_APIRest.Services.Convenios;
+using Lab_APIRest.Services.Email;
 using Lab_APIRest.Services.Examenes;
 using Lab_APIRest.Services.Medicos;
 using Lab_APIRest.Services.Ordenes;
 using Lab_APIRest.Services.Pacientes;
 using Lab_APIRest.Services.Pagos;
 using Lab_APIRest.Services.PDF;
+using Lab_APIRest.Services.Perfil;
 using Lab_APIRest.Services.Reactivos;
 using Lab_APIRest.Services.Resultados;
-using Lab_APIRest.Services.Email;
-
-
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
-using Lab_APIRest.Infrastructure.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,27 +46,35 @@ builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<EmailService>();
-
-
-
-
-
+builder.Services.AddScoped<IPerfilService, PerfilService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o =>
+    .AddJwtBearer(options =>
     {
-        o.TokenValidationParameters = new TokenValidationParameters
+        var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
+
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+
             ValidateIssuer = true,
             ValidateAudience = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+
+            NameClaimType = ClaimTypes.NameIdentifier,
+            RoleClaimType = ClaimTypes.Role
         };
+
+
+        options.RequireHttpsMetadata = true;
+        options.SaveToken = false;
     });
+
 builder.Services.AddMemoryCache();
 
 var app = builder.Build();

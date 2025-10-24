@@ -146,6 +146,56 @@
 
         <hr class="border-secondary" />
 
+
+        <ul class="nav nav-pills flex-column mb-3">
+
+            <li class="mb-1">
+                <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
+                        data-bs-target="#grpAjustes"
+                        aria-expanded="false"
+                        title="Ajustes"
+                        data-rail-tooltip="true"
+                        type="button">
+                    <i class="bi bi-gear-fill me-2"></i>
+                    <span class="nav-text">Ajustes</span>
+                </button>
+
+                <div class="collapse" id="grpAjustes">
+                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
+                        <li>
+                            <NavLink class="link-light nav-link py-1 px-0"
+                                     activeClass="active"
+                                     href="/ajustes/perfil"
+                                     title="Mi Perfil"
+                                     data-rail-tooltip="true">
+                                Mi Perfil
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink class="link-light nav-link py-1 px-0"
+                                     activeClass="active"
+                                     href="/ajustes/seguridad"
+                                     title="Seguridad"
+                                     data-rail-tooltip="true">
+                                Seguridad
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink class="link-light nav-link py-1 px-0"
+                                     activeClass="active"
+                                     href="/ajustes/preferencias"
+                                     title="Preferencias"
+                                     data-rail-tooltip="true">
+                                Preferencias
+                            </NavLink>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+
+
+
         <AuthorizeView>
             <Authorized Context="authState">
                 <div class="sb-user mt-auto p-3 d-flex align-items-center">

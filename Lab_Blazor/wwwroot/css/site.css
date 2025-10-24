@@ -768,3 +768,28 @@ main.content-with-sidebar .content-inner {
         min-width: unset !important;
     }
 }
+
+
+.perfil-container {
+    max-width: 900px;
+    margin: auto;
+}
+
+@media (max-width: 768px) {
+    .perfil-container h4 {
+        font-size: 1.2rem;
+    }
+
+    .perfil-container .card {
+        border-radius: 1rem;
+    }
+
+    .perfil-container .col-lg-4 {
+        padding: 2rem 1rem;
+    }
+
+    .perfil-container .col-lg-8 {
+        padding: 1.5rem;
+    }
+}
+

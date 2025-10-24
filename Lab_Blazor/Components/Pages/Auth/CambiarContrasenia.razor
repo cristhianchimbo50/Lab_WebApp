@@ -1,4 +1,4 @@
-﻿@page "/cambiar-contraseña"
+﻿@page "/cambiar-contrasenia"
 @layout EmptyLayout
 @rendermode InteractiveServer
 
@@ -6,6 +6,8 @@
 @using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Auth
 @using Microsoft.AspNetCore.Components.Authorization
+
+
 @inject IAuthApiService AuthApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -18,33 +20,38 @@
         <div class="text-center mb-3">
             <i class="bi bi-shield-lock text-primary" style="font-size: 3rem;"></i>
             <h4 class="mt-2 text-primary fw-bold">Cambio de Contraseña</h4>
-            <p class="text-muted mb-0">Debe cambiar su contraseña temporal para continuar</p>
+            <p class="text-muted mb-0">Ingrese su contraseña actual y la nueva contraseña</p>
         </div>
 
-        <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaClave">
+        <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaContrasenia">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
+            <div class="mb-3">
+                <label class="form-label">Correo Electrónico</label>
+                <InputText class="form-control" @bind-Value="Cambio.CorreoUsuario" readonly />
+            </div>
+
             <div class="mb-3 position-relative">
-                <label class="form-label">Contraseña Temporal</label>
+                <label class="form-label">Contraseña Actual</label>
                 <div class="input-group">
-                    <InputText class="form-control" @bind-Value="Cambio.ClaveActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña temporal" />
+                    <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña actual" />
                     <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordActual">
                         <i class="@passwordIconActual"></i>
                     </button>
                 </div>
-                <ValidationMessage For="@(() => Cambio.ClaveActual)" />
+                <ValidationMessage For="@(() => Cambio.ContraseniaActual)" />
             </div>
 
             <div class="mb-3 position-relative">
                 <label class="form-label">Nueva Contraseña</label>
                 <div class="input-group">
-                    <InputText class="form-control" @bind-Value="Cambio.NuevaClave" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
+                    <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
                     <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordNueva">
                         <i class="@passwordIconNueva"></i>
                     </button>
                 </div>
-                <ValidationMessage For="@(() => Cambio.NuevaClave)" />
+                <ValidationMessage For="@(() => Cambio.NuevaContrasenia)" />
             </div>
 
             @if (!string.IsNullOrEmpty(mensaje))
@@ -66,7 +73,7 @@
 </div>
 
 @code {
-    private ChangePasswordDto Cambio = new();
+    private CambiarContraseniaDto Cambio = new();
     private string mensaje = "";
     private bool exito;
 
@@ -95,7 +102,7 @@
         }
     }
 
-    private async Task GuardarNuevaClave()
+    private async Task GuardarNuevaContrasenia()
     {
         mensaje = "";
         exito = false;
@@ -107,7 +114,7 @@
             return;
         }
 
-        var (resultado, msg) = await AuthApi.CambiarClaveAsync(Cambio);
+        var (resultado, msg) = await AuthApi.CambiarContraseniaAsync(Cambio);
 
         if (!resultado && msg.StartsWith("{"))
         {
@@ -117,15 +124,11 @@
                 if (doc.RootElement.TryGetProperty("mensaje", out var mensajeJson))
                     msg = mensajeJson.GetString() ?? msg;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+            catch { }
         }
 
         mensaje = msg;
         exito = resultado;
-
 
         if (resultado)
         {

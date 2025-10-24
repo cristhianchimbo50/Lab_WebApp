@@ -1,14 +1,13 @@
 ﻿using Lab_Contracts.Examenes;
 using Lab_APIRest.Services.Examenes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Examenes
 {
-    /// <summary>
-    /// Controlador responsable de las composiciones entre exámenes (relaciones padre-hijo).
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,laboratorista")]
     public class ExamenComposicionController : ControllerBase
     {
         private readonly IExamenComposicionService _service;
@@ -20,7 +19,6 @@ namespace Lab_APIRest.Controllers.Examenes
             _logger = logger;
         }
 
-        /// <summary>Obtiene las composiciones por examen padre.</summary>
         [HttpGet("padre/{id:int}")]
         public async Task<ActionResult<List<ExamenComposicionDto>>> ObtenerPorPadre(int id)
         {
@@ -28,7 +26,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(lista);
         }
 
-        /// <summary>Obtiene las composiciones por examen hijo.</summary>
         [HttpGet("hijo/{id:int}")]
         public async Task<ActionResult<List<ExamenComposicionDto>>> ObtenerPorHijo(int id)
         {
@@ -36,7 +33,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(lista);
         }
 
-        /// <summary>Crea una nueva composición entre exámenes.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPost]
         public async Task<IActionResult> Crear([FromBody] ExamenComposicionDto dto)
         {
@@ -53,7 +50,7 @@ namespace Lab_APIRest.Controllers.Examenes
             }
         }
 
-        /// <summary>Elimina una composición específica.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpDelete]
         public async Task<IActionResult> Eliminar([FromQuery] int idExamenPadre, [FromQuery] int idExamenHijo)
         {

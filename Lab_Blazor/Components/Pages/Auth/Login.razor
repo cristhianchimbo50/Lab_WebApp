@@ -64,7 +64,6 @@ else
                         </div>
                     }
 
-
                     <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@loginBloqueado">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
                     </button>
@@ -79,20 +78,16 @@ else
     </div>
 }
 
-
 @code {
     private LoginRequestDto loginModel = new();
     private string? error;
-    private int intentosFallidos = 0;
-    private int maxIntentos = 3;
     private bool loginBloqueado = false;
-    private int segundosEspera = 30;
-    private Timer? temporizador;
-    private string? redirectUrl;
     private bool _checkedAuth = false;
-
     private string passwordInputType = "password";
     private string passwordIcon = "bi bi-eye-slash";
+    private string? redirectUrl;
+    private Timer? temporizador;
+    private int segundosEspera = 30;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -133,12 +128,11 @@ else
 
                 if (requiereCambio)
                 {
-                    Navigation.NavigateTo($"/cambiar-contraseña?correo={usuario.CorreoUsuario}", true);
+                    Navigation.NavigateTo($"/cambiar-contrasenia?correo={usuario.CorreoUsuario}", true);
                     return;
                 }
 
                 Navigation.NavigateTo("/home", true);
-
             }
         }
         catch (Exception ex)
@@ -167,7 +161,6 @@ else
         temporizador = new Timer(async _ =>
         {
             loginBloqueado = false;
-            intentosFallidos = 0;
             error = null;
             await InvokeAsync(StateHasChanged);
         }, null, segundosEspera * 1000, Timeout.Infinite);

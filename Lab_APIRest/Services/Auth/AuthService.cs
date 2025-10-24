@@ -40,8 +40,7 @@ namespace Lab_APIRest.Services.Auth
             if (_cache.TryGetValue<int>(cacheKey, out int intentos) && intentos >= MaxIntentos)
                 return null;
 
-            var usuario = await _db.usuarios
-                .AsNoTracking()
+            var usuario = await _db.usuarios.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == email, ct);
 
             if (usuario is null)
@@ -64,11 +63,8 @@ namespace Lab_APIRest.Services.Auth
 
             if (usuario.es_contraseña_temporal == true)
             {
-                if (usuario.fecha_expira_temporal.HasValue &&
-                    usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
+                if (usuario.fecha_expira_temporal.HasValue && usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
                 {
-                    _logger.LogWarning("Contraseña temporal expirada para {Correo}", email);
-
                     return new LoginResponseDto
                     {
                         IdUsuario = usuario.id_usuario,
@@ -78,7 +74,7 @@ namespace Lab_APIRest.Services.Auth
                         EsContraseñaTemporal = true,
                         AccessToken = null,
                         ExpiresAtUtc = usuario.fecha_expira_temporal.Value,
-                        Mensaje = "La contraseña temporal ha expirado. Solicite una nueva a recepción."
+                        Mensaje = "La contraseña temporal ha expirado. Solicite una nueva."
                     };
                 }
 
@@ -94,6 +90,23 @@ namespace Lab_APIRest.Services.Auth
                     Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
                 };
             }
+
+            try
+            {
+                var usuarioActualizar = new Infrastructure.EF.Models.usuario
+                {
+                    id_usuario = usuario.id_usuario,
+                    ultimo_acceso = DateTime.UtcNow
+                };
+                _db.usuarios.Attach(usuarioActualizar);
+                _db.Entry(usuarioActualizar).Property(x => x.ultimo_acceso).IsModified = true;
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", usuario.id_usuario);
+            }
+
             (string token, DateTime exp) = _tokenService.CreateToken(
                 usuario.id_usuario,
                 usuario.correo_usuario,
@@ -123,35 +136,37 @@ namespace Lab_APIRest.Services.Auth
             _cache.Set(cacheKey, intentos, LockoutTiempo);
         }
 
-        public async Task<bool> CambiarClaveAsync(ChangePasswordDto dto, CancellationToken ct)
+        public async Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct)
         {
-            var email = (dto.CorreoUsuario ?? "").Trim().ToLowerInvariant();
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == email, ct);
+            var correo = dto.CorreoUsuario.Trim().ToLowerInvariant();
+            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
+
             if (usuario == null)
-                return false;
+                return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
             if (usuario.es_contraseña_temporal == true &&
                 usuario.fecha_expira_temporal.HasValue &&
                 usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
             {
-                _logger.LogWarning("Intento de cambio con contraseña temporal expirada para el usuario {Correo}", email);
-                throw new InvalidOperationException("La contraseña temporal ha expirado. Solicite una nueva.");
+                return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña temporal ha expirado. Solicite una nueva." };
             }
 
-            var claveOk = _hasher.VerifyHashedPassword(null!, usuario.clave_usuario, dto.ClaveActual) != PasswordVerificationResult.Failed;
-            if (!claveOk)
-                return false;
+            var verificacion = _hasher.VerifyHashedPassword(null!, usuario.clave_usuario, dto.ContraseniaActual);
+            if (verificacion == PasswordVerificationResult.Failed)
+                return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
-            var nuevaHash = _hasher.HashPassword(null!, dto.NuevaClave);
+            var nuevaHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
             usuario.clave_usuario = nuevaHash;
             usuario.es_contraseña_temporal = false;
-            usuario.estado_registro = true;
+            usuario.fecha_expira_temporal = null;
 
             await _db.SaveChangesAsync(ct);
-            return true;
+
+            return new CambiarContraseniaResponseDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }
 
-        public async Task<bool> ReenviarContraseñaTemporalAsync(string correo, CancellationToken ct)
+
+        public async Task<bool> ReenviarContraseniaTemporalAsync(string correo, CancellationToken ct)
         {
             correo = (correo ?? "").Trim().ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(correo))
@@ -193,6 +208,5 @@ namespace Lab_APIRest.Services.Auth
 
             return true;
         }
-
     }
 }

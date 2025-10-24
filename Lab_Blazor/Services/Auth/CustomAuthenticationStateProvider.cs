@@ -5,76 +5,76 @@ using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace Lab_Blazor.Services.Auth;
-
-/// <summary>
-/// Proveedor de estado de autenticación personalizado para Blazor Server.
-/// Solo maneja lógica de sesión local y claims, nunca lógica de negocio ni acceso a datos.
-/// </summary>
-public class CustomAuthenticationStateProvider : AuthenticationStateProvider
+namespace Lab_Blazor.Services.Auth
 {
-    private readonly ProtectedSessionStorage _session;
-    private readonly IJSRuntime _jsRuntime;
-
-    public CustomAuthenticationStateProvider(ProtectedSessionStorage session, IJSRuntime jsRuntime)
+    public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
-        _session = session;
-        _jsRuntime = jsRuntime;
-    }
+        private readonly ProtectedSessionStorage _session;
+        private readonly IJSRuntime _jsRuntime;
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
-    {
-        string? token = null;
-
-        try
+        public CustomAuthenticationStateProvider(ProtectedSessionStorage session, IJSRuntime jsRuntime)
         {
-            var result = await _session.GetAsync<string>("jwt");
-            token = result.Success ? result.Value : null;
-        }
-        catch
-        {
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            _session = session;
+            _jsRuntime = jsRuntime;
         }
 
-        if (string.IsNullOrWhiteSpace(token))
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-
-        try
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(token);
-            var claims = jwt.Claims.ToList();
-            var identity = new ClaimsIdentity(claims, "jwt");
-            return new AuthenticationState(new ClaimsPrincipal(identity));
+            string? token = null;
+
+            try
+            {
+                var result = await _session.GetAsync<string>("jwt");
+                token = result.Success ? result.Value : null;
+            }
+            catch
+            {
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            }
+
+            if (string.IsNullOrWhiteSpace(token))
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(token);
+                var claims = jwt.Claims.ToList();
+
+                // Si el token expira, cerrar sesión automáticamente
+                if (jwt.ValidTo < DateTime.UtcNow)
+                {
+                    await SignOutAsync();
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
+
+                var identity = new ClaimsIdentity(claims, "jwt");
+                return new AuthenticationState(new ClaimsPrincipal(identity));
+            }
+            catch
+            {
+                await SignOutAsync();
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            }
         }
-        catch
+
+        public async Task SignInAsync(LoginResponseDto session)
         {
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            if (string.IsNullOrEmpty(session.AccessToken))
+                return;
+
+            await _session.SetAsync("jwt", session.AccessToken);
+            await _session.SetAsync("usuario", session);
+
+            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
-    }
-    /// <summary>
-    /// Almacena el token de sesión y notifica el cambio de autenticación.
-    /// </summary>
-    public async Task SignInAsync(LoginResponseDto session)
-    {
-        if (string.IsNullOrEmpty(session.AccessToken))
-            return;
 
-        await _session.SetAsync("jwt", session.AccessToken);
-        await _session.SetAsync("usuario", session);
+        public async Task SignOutAsync()
+        {
+            await _session.DeleteAsync("jwt");
+            await _session.DeleteAsync("usuario");
 
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-    }
-
-    /// <summary>
-    /// Elimina el token de sesión y notifica el cambio de autenticación.
-    /// </summary>
-    public async Task SignOutAsync()
-    {
-        await _session.DeleteAsync("jwt");
-        await _session.DeleteAsync("usuario");
-
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        }
     }
 }
-

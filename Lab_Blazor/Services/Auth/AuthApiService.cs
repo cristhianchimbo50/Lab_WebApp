@@ -1,6 +1,5 @@
 ﻿using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -24,11 +23,10 @@ namespace Lab_Blazor.Services.Auth
             if (resp.IsSuccessStatusCode)
             {
                 var loginResp = await resp.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
-
                 if (loginResp is not null)
                 {
                     if (loginResp.EsContraseñaTemporal && string.IsNullOrEmpty(loginResp.AccessToken))
-                        return (true, "Debe cambiar su contraseña temporal antes de continuar.", loginResp, true);
+                        return (true, "Debe cambiar su contraseña antes de continuar.", loginResp, true);
 
                     await _session.SetAsync("jwt", loginResp.AccessToken);
                     await _session.SetAsync("usuario", loginResp);
@@ -46,7 +44,6 @@ namespace Lab_Blazor.Services.Auth
                     string? msg = null;
                     string? exp = null;
 
-                    // Soporta tanto "Mensaje" como "mensaje" (insensible a mayúsculas)
                     foreach (var prop in json.RootElement.EnumerateObject())
                     {
                         if (prop.Name.Equals("mensaje", StringComparison.OrdinalIgnoreCase))
@@ -65,7 +62,6 @@ namespace Lab_Blazor.Services.Auth
                 mensajeError = $"Error al leer la respuesta del servidor: {ex.Message}";
             }
 
-
             return (false, mensajeError, null, false);
         }
 
@@ -75,20 +71,17 @@ namespace Lab_Blazor.Services.Auth
             await _session.DeleteAsync("usuario");
         }
 
-        public async Task<(bool Exito, string Mensaje)> CambiarClaveAsync(ChangePasswordDto dto)
+        public async Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct = default)
         {
-            var response = await _http.PostAsJsonAsync("api/auth/change-password", dto);
-            if (response.IsSuccessStatusCode)
-                return (true, "Contraseña actualizada correctamente.");
+            var resp = await _http.PostAsJsonAsync("api/auth/cambiar-contrasenia", dto, ct);
+            if (resp.IsSuccessStatusCode)
+            {
+                var data = await resp.Content.ReadFromJsonAsync<CambiarContraseniaResponseDto>(cancellationToken: ct);
+                return (data?.Exito ?? true, data?.Mensaje ?? "Contraseña actualizada correctamente.");
+            }
 
-            var msg = await response.Content.ReadAsStringAsync();
-            return (false, msg);
-        }
-
-        public async Task<bool> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct = default)
-        {
-            var resp = await _http.PostAsJsonAsync("api/auth/change-password", dto, ct);
-            return resp.IsSuccessStatusCode;
+            var error = await resp.Content.ReadAsStringAsync(ct);
+            return (false, string.IsNullOrWhiteSpace(error) ? "No se pudo cambiar la contraseña." : error);
         }
 
         public async Task<bool> RegisterAsync(RegisterRequestDto dto, CancellationToken ct = default)

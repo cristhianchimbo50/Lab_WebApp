@@ -415,6 +415,17 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.rol)
                 .HasMaxLength(20)
                 .IsUnicode(false);
+
+            entity.Property(e => e.fecha_creacion)
+                .HasColumnName("fecha_creacion")
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSUTCDATETIME()")
+                .IsRequired();
+
+            entity.Property(e => e.ultimo_acceso)
+                .HasColumnName("ultimo_acceso")
+                .HasColumnType("datetime2")
+                .IsRequired(false);
         });
 
 

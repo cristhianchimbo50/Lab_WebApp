@@ -21,8 +21,11 @@ public partial class usuario
 
     public string estado { get; set; } = null!;
 
-    public DateTime? fecha_expira_temporal { get; set; }
+    public DateTime fecha_creacion { get; set; }
 
+    public DateTime? ultimo_acceso { get; set; }
+
+    public DateTime? fecha_expira_temporal { get; set; }
 
     public virtual ICollection<paciente> pacientes { get; set; } = new List<paciente>();
 
