@@ -1,6 +1,7 @@
 ﻿using Lab_Contracts.Usuarios;
 using Lab_APIRest.Services.Usuarios;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Lab_APIRest.Controllers.Usuarios
 {
@@ -46,13 +47,27 @@ namespace Lab_APIRest.Controllers.Usuarios
             return Ok();
         }
 
-        [HttpPut("{idUsuario}/estado")]
-        public async Task<ActionResult> CambiarEstado(int idUsuario, [FromBody] bool activo, CancellationToken ct)
+        [HttpPut("{id}/estado")]
+        public async Task<IActionResult> CambiarEstado(int id, [FromBody] bool activo, CancellationToken ct)
         {
-            var ok = await _service.CambiarEstadoAsync(idUsuario, activo, ct);
-            if (!ok) return NotFound();
-            return Ok();
+
+
+            var correoActual = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
+
+            try
+            {
+                var exito = await _service.CambiarEstadoAsync(id, activo, correoActual, ct);
+                if (!exito) return NotFound();
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Mensaje = ex.Message });
+            }
         }
+
+
+
 
         [HttpPut("{idUsuario}/reenviar")]
         public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporales(int idUsuario, CancellationToken ct)

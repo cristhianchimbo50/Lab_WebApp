@@ -108,19 +108,26 @@ namespace Lab_APIRest.Services.Usuarios
             usuario.correo_usuario = dto.CorreoUsuario;
             usuario.rol = dto.Rol;
             usuario.activo = dto.Activo;
+            usuario.es_contraseña_temporal = dto.EsContraseniaTemporal;
 
             await _db.SaveChangesAsync(ct);
             return true;
         }
 
-        public async Task<bool> CambiarEstadoAsync(int idUsuario, bool activo, CancellationToken ct = default)
+        public async Task<bool> CambiarEstadoAsync(int idUsuario, bool activo, string correoUsuarioActual, CancellationToken ct = default)
         {
             var usuario = await _db.usuarios.FirstOrDefaultAsync(x => x.id_usuario == idUsuario && x.rol != "paciente", ct);
             if (usuario == null) return false;
+
+            if (usuario.correo_usuario.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
+                throw new InvalidOperationException("No puedes deshabilitar tu propio usuario.");
+
+
             usuario.activo = activo;
             await _db.SaveChangesAsync(ct);
             return true;
         }
+
 
         public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int idUsuario, CancellationToken ct = default)
         {

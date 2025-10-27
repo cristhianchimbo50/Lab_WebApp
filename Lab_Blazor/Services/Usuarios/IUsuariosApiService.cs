@@ -11,4 +11,5 @@ namespace Lab_Blazor.Services.Usuarios
         Task<bool> CambiarEstadoAsync(int idUsuario, bool activo);
         Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int idUsuario);
     }
+
 }

@@ -9,6 +9,7 @@ using Lab_Blazor.Services.Pagos;
 using Lab_Blazor.Services.Perfil;
 using Lab_Blazor.Services.Reactivos;
 using Lab_Blazor.Services.Resultados;
+using Lab_Blazor.Services.Usuarios;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
@@ -40,6 +41,7 @@ builder.Services.AddScoped<IResultadosApiService, ResultadosApiService>();
 builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
 builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
 builder.Services.AddScoped<IPerfilApiService, PerfilApiService>();
+builder.Services.AddScoped<IUsuariosApiService, UsuariosApiService>();
 
 
 

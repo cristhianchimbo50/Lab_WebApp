@@ -1,5 +1,6 @@
-﻿using Lab_Contracts.Auth;
-using Lab_APIRest.Services.Auth;
+﻿using Lab_APIRest.Services.Auth;
+using Lab_Contracts.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Auth
@@ -61,6 +62,7 @@ namespace Lab_APIRest.Controllers.Auth
             }
         }
 
+        [Authorize]
         [HttpPost("cambiar-contrasenia")]
         public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto dto, CancellationToken ct)
         {
