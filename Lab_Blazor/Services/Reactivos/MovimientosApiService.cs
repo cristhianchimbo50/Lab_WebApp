@@ -1,26 +1,29 @@
 ﻿using Lab_Contracts.Reactivos;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Reactivos
 {
-    public class MovimientosApiService : IMovimientosApiService
+    public class MovimientosApiService : BaseApiService, IMovimientosApiService
     {
-        private readonly HttpClient _http;
-
-        public MovimientosApiService(IHttpClientFactory factory)
-        {
-            _http = factory.CreateClient("Api");
-        }
+        public MovimientosApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
+            : base(factory, session) { }
 
         public async Task<List<MovimientoReactivoDto>> FiltrarMovimientosAsync(MovimientoReactivoFiltroDto filtro)
         {
-            var response = await _http.PostAsJsonAsync("api/movimientos/filtrar", filtro);
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            if (!response.IsSuccessStatusCode)
-                return new();
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/movimientos/filtrar")
+            {
+                Content = JsonContent.Create(filtro)
+            };
+            AddTokenHeader(request);
 
-            var data = await response.Content.ReadFromJsonAsync<List<MovimientoReactivoDto>>();
-            return data ?? new();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<List<MovimientoReactivoDto>>() ?? new();
         }
     }
 }

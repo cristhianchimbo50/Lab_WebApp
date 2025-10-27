@@ -1,62 +1,138 @@
-﻿@using Lab_Contracts.Examenes
+﻿@rendermode InteractiveServer
+@using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IExamenComposicionApiService ExamenComposicionApiService
 @inject IExamenesApiService ExamenesApiService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
 
-<h4>Composición de Examen: @NombreExamenPadre</h4>
+<PageTitle>Composición de Exámenes</PageTitle>
 
-@if (ExamenPadre == null)
-{
-    <div class="alert alert-info">Seleccione un examen para ver su composición.</div>
-}
-else
-{
-    <div class="mb-3">
-        <label class="form-label">Agregar examen hijo:</label>
-        <select class="form-select" @bind="IdExamenHijoSeleccionado">
-            <option value="">-- Seleccionar examen --</option>
-            @foreach (var examen in ExamenesDisponibles)
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol == "administrador";
+        }
+
+        @if (!puedeVer)
+        {
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                    <div class="card-body p-4">
+                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
+                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
+                        <p class="text-muted mb-3">Solo los administradores pueden gestionar la composición de exámenes.</p>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                            <i class="bi bi-arrow-left"></i> Regresar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <h4 class="mb-4 d-flex align-items-center">
+                <i class="bi bi-diagram-3 text-primary fs-4 me-2"></i>
+                Composición de Examen: <span class="ms-2 text-dark">@NombreExamenPadre</span>
+            </h4>
+
+            @if (ExamenPadre == null)
             {
-                <option value="@examen.IdExamen">@examen.NombreExamen</option>
+                <div class="alert alert-info shadow-sm">
+                    <i class="bi bi-info-circle me-2"></i>Seleccione un examen para ver su composición.
+                </div>
             }
-        </select>
-        <button class="btn btn-primary ms-2" @onclick="AgregarComposicion">Agregar</button>
-    </div>
-
-    <h5>Exámenes hijos</h5>
-    @if (Composiciones is null || Composiciones.Count == 0)
-    {
-        <div class="alert alert-warning">No hay exámenes hijos asociados.</div>
-    }
-    else
-    {
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Nombre examen hijo</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var composicion in Composiciones)
-                {
-                    <tr>
-                        <td>@composicion.NombreExamenHijo</td>
-                        <td class="text-center">
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarComposicion(composicion)">
-                                <i class="bi bi-x-circle"></i> Quitar
+            else
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label">Agregar examen hijo</label>
+                            <select class="form-select" @bind="IdExamenHijoSeleccionado">
+                                <option value="">-- Seleccionar examen --</option>
+                                @foreach (var examen in ExamenesDisponibles)
+                                {
+                                    <option value="@examen.IdExamen">@examen.NombreExamen</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-primary px-4" @onclick="AgregarComposicion">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar
                             </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-3">
+                            <i class="bi bi-list-check text-primary me-2"></i>Exámenes hijos asociados
+                        </h5>
+
+                        @if (Composiciones == null || Composiciones.Count == 0)
+                        {
+                            <div class="alert alert-warning shadow-sm">
+                                <i class="bi bi-exclamation-triangle me-2"></i>No hay exámenes hijos asociados.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nombre Examen Hijo</th>
+                                            <th class="text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var composicion in Composiciones)
+                                        {
+                                            <tr>
+                                                <td>@composicion.NombreExamenHijo</td>
+                                                <td class="text-center">
+                                                    <button class="btn btn-danger btn-sm shadow-sm" title="Quitar"
+                                                            @onclick="() => EliminarComposicion(composicion)">
+                                                        <i class="bi bi-x-circle"></i> Quitar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card-body p-4">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
+                    <p class="text-muted mb-3">Inicie sesión con una cuenta autorizada para continuar.</p>
+                    <NavLink href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
+                    </NavLink>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter] public int? IdExamenPadre { get; set; }
+
     private ExamenDto? ExamenPadre;
     private string? NombreExamenPadre;
     private List<ExamenComposicionDto> Composiciones = new();
@@ -83,9 +159,9 @@ else
     private async Task CargarExamenesDisponibles()
     {
         var todos = await ExamenesApiService.GetExamenesAsync();
-        // Evita seleccionar el mismo examen como hijo y los que ya están asociados
         ExamenesDisponibles = todos
             .Where(x => x.IdExamen != IdExamenPadre && !Composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
+            .OrderBy(x => x.NombreExamen)
             .ToList();
     }
 
@@ -113,7 +189,7 @@ else
         else
         {
             var msg = await response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"No se pudo agregar: {msg}");
+            await JS.InvokeVoidAsync("alert", $"Error al agregar: {msg}");
         }
     }
 
@@ -133,4 +209,6 @@ else
             await JS.InvokeVoidAsync("alert", "No se pudo eliminar la relación.");
         }
     }
+
+    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

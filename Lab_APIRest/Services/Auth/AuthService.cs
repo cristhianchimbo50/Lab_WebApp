@@ -56,7 +56,7 @@ namespace Lab_APIRest.Services.Auth
                 return null;
             }
 
-            if (!string.Equals(usuario.estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+            if (!usuario.activo)
                 return null;
 
             _cache.Remove(cacheKey);
@@ -166,47 +166,49 @@ namespace Lab_APIRest.Services.Auth
         }
 
 
-        public async Task<bool> ReenviarContraseniaTemporalAsync(string correo, CancellationToken ct)
-        {
-            correo = (correo ?? "").Trim().ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(correo))
-                return false;
+        //public async Task<bool> ReenviarContraseniaTemporalAsync(string correo, CancellationToken ct)
+        //{
+        //    correo = (correo ?? "").Trim().ToLowerInvariant();
+        //    if (string.IsNullOrWhiteSpace(correo))
+        //        return false;
 
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
-            if (usuario == null)
-                return false;
+        //    var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
+        //    if (usuario == null)
+        //        return false;
 
-            if (usuario.es_contraseña_temporal != true)
-                return false;
+        //    if (usuario.es_contraseña_temporal != true)
+        //        return false;
 
-            string nuevaClave = Guid.NewGuid().ToString("N")[..8];
-            string hash = _hasher.HashPassword(null!, nuevaClave);
+        //    string nuevaClave = Guid.NewGuid().ToString("N")[..8];
+        //    string hash = _hasher.HashPassword(null!, nuevaClave);
 
-            usuario.clave_usuario = hash;
-            usuario.fecha_expira_temporal = DateTime.UtcNow.AddHours(48);
-            usuario.es_contraseña_temporal = true;
-            usuario.estado = "ACTIVO";
+        //    usuario.clave_usuario = hash;
+        //    usuario.fecha_expira_temporal = DateTime.UtcNow.AddHours(48);
+        //    usuario.es_contraseña_temporal = true;
+        //    usuario.estado = "ACTIVO";
 
-            await _db.SaveChangesAsync(ct);
+        //    await _db.SaveChangesAsync(ct);
 
-            string asunto = "Nueva Contraseña Temporal - Laboratorio Clínico";
-            string cuerpoHtml = $@"
-        <p>Hola <b>{usuario.nombre}</b>,</p>
-        <p>Se ha generado una nueva contraseña temporal para tu cuenta.</p>
-        <p><b>Contraseña temporal:</b> <span style='font-size:1.1em;color:#0d6efd'>{nuevaClave}</span></p>
-        <p>Esta contraseña expirará en <b>48 horas</b>.</p>
-        <p>Por favor, inicia sesión y cámbiala por una contraseña definitiva.</p>
-        <br/>
-        <p>Saludos,<br/><b>Laboratorio Clínico</b></p>";
+        //    string asunto = "Nueva Contraseña Temporal - Laboratorio Clínico";
+        //    string cuerpoHtml = $@"
+        //<p>Hola <b>{usuario.nombre}</b>,</p>
+        //<p>Se ha generado una nueva contraseña temporal para tu cuenta.</p>
+        //<p><b>Contraseña temporal:</b> <span style='font-size:1.1em;color:#0d6efd'>{nuevaClave}</span></p>
+        //<p>Esta contraseña expirará en <b>48 horas</b>.</p>
+        //<p>Por favor, inicia sesión y cámbiala por una contraseña definitiva.</p>
+        //<br/>
+        //<p>Saludos,<br/><b>Laboratorio Clínico</b></p>";
 
-            await _emailService.EnviarCorreoAsync(
-                usuario.correo_usuario,
-                usuario.nombre,
-                asunto,
-                cuerpoHtml
-            );
+        //    await _emailService.EnviarCorreoAsync(
+        //        usuario.correo_usuario,
+        //        usuario.nombre,
+        //        asunto,
+        //        cuerpoHtml
+        //    );
 
-            return true;
-        }
+        //    return true;
+        //}
+
+
     }
 }

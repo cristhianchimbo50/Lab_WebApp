@@ -33,7 +33,7 @@ namespace Lab_APIRest.Services.Perfil
                     Nombre = usuario.nombre,
                     Correo = usuario.correo_usuario,
                     Rol = usuario.rol,
-                    Estado = usuario.estado,
+                    Activo = usuario.activo,
                     UltimoAcceso = usuario.ultimo_acceso,
                     FechaRegistro = usuario.fecha_creacion
                 };

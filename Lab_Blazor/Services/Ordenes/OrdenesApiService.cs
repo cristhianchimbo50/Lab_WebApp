@@ -1,80 +1,151 @@
 using Lab_Contracts.Examenes;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Ordenes
 {
-    public class OrdenesApiService : IOrdenesApiService
+    public class OrdenesApiService : BaseApiService, IOrdenesApiService
     {
-        private readonly HttpClient _http;
-
-        public OrdenesApiService(IHttpClientFactory factory)
-        {
-            _http = factory.CreateClient("Api");
-        }
+        public OrdenesApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
+            : base(factory, session) { }
 
         public async Task<List<OrdenDto>> GetOrdenesAsync()
         {
-            return await _http.GetFromJsonAsync<List<OrdenDto>>("api/ordenes") ?? new();
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, "api/ordenes");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<List<OrdenDto>>() ?? new();
         }
 
         public async Task<OrdenDto?> GetOrdenPorIdAsync(int id)
         {
-            return await _http.GetFromJsonAsync<OrdenDto>($"api/ordenes/{id}");
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ordenes/{id}");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<OrdenDto>();
         }
 
         public async Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto orden)
         {
-            var resp = await _http.PostAsJsonAsync("api/ordenes", orden);
-            return await resp.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/ordenes")
+            {
+                Content = JsonContent.Create(orden)
+            };
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
         }
 
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden)
         {
-            return await _http.GetFromJsonAsync<OrdenDetalleDto>($"api/ordenes/detalle/{idOrden}");
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ordenes/detalle/{idOrden}");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<OrdenDetalleDto>();
         }
 
         public async Task<HttpResponseMessage> AnularOrdenAsync(int idOrden)
         {
-            return await _http.PutAsync($"api/ordenes/anular/{idOrden}", null);
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/ordenes/anular/{idOrden}");
+            AddTokenHeader(request);
+
+            return await _http.SendAsync(request);
         }
 
-        //PARA PRUEBASS
         public async Task<HttpResponseMessage> CrearOrdenHttpResponseAsync(OrdenCompletaDto orden)
         {
-            return await _http.PostAsJsonAsync("api/ordenes", orden);
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/ordenes")
+            {
+                Content = JsonContent.Create(orden)
+            };
+            AddTokenHeader(request);
+
+            return await _http.SendAsync(request);
         }
 
         public async Task<byte[]> ObtenerTicketOrdenPdfAsync(int idOrden)
         {
-            try
-            {
-                return await _http.GetByteArrayAsync($"api/ordenes/{idOrden}/ticket-pdf");
-            }
-            catch
-            {
-                return Array.Empty<byte>();
-            }
-        }
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-        //para resultados
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ordenes/{idOrden}/ticket-pdf");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadAsByteArrayAsync()
+                : Array.Empty<byte>();
+        }
 
         public async Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto)
         {
-            return await _http.PostAsJsonAsync("api/ordenes/ingresar-resultado", dto);
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/ordenes/ingresar-resultado")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            AddTokenHeader(request);
+
+            return await _http.SendAsync(request);
         }
 
         public async Task<List<ExamenDto>> ObtenerExamenesPorOrdenAsync(int idOrden)
         {
-            return await _http.GetFromJsonAsync<List<ExamenDto>>($"api/ordenes/{idOrden}/examenes") ?? new();
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ordenes/{idOrden}/examenes");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<List<ExamenDto>>() ?? new();
         }
 
         public async Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden)
         {
-            return await _http.PutAsync($"api/ordenes/anular-completo/{idOrden}", null);
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/ordenes/anular-completo/{idOrden}");
+            AddTokenHeader(request);
+
+            return await _http.SendAsync(request);
         }
-
     }
-
-
 }

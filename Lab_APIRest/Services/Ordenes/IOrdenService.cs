@@ -4,11 +4,11 @@ namespace Lab_APIRest.Services.Ordenes
 {
     public interface IOrdenService
     {
-        Task<List<OrdenDto>> ListarOrdenesAsync();
-        Task<OrdenDto?> ObtenerOrdenPorIdAsync(int idOrden);
+        Task<List<object>> GetOrdenesAsync();
+        Task<object?> ObtenerDetalleOrdenOriginalAsync(int id);
+        Task<bool> AnularOrdenAsync(int id);
         Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto dto);
-        Task<bool> AnularOrdenSimpleAsync(int idOrden);
+        Task<byte[]?> ObtenerTicketPdfAsync(int id);
         Task<bool> AnularOrdenCompletaAsync(int idOrden);
-        Task<byte[]?> GenerarTicketOrdenAsync(int idOrden);
     }
 }

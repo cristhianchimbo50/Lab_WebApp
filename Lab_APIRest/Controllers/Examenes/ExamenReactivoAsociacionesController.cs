@@ -1,26 +1,26 @@
 ﻿using Lab_Contracts.Examenes;
 using Lab_APIRest.Services.Examenes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Examenes
 {
-    /// <summary>
-    /// Controlador responsable de gestionar las asociaciones entre exámenes y reactivos.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,laboratorista")]
     public class ExamenReactivoAsociacionesController : ControllerBase
     {
         private readonly IExamenReactivoAsociacionService _service;
         private readonly ILogger<ExamenReactivoAsociacionesController> _logger;
 
-        public ExamenReactivoAsociacionesController(IExamenReactivoAsociacionService service, ILogger<ExamenReactivoAsociacionesController> logger)
+        public ExamenReactivoAsociacionesController(
+            IExamenReactivoAsociacionService service,
+            ILogger<ExamenReactivoAsociacionesController> logger)
         {
             _service = service;
             _logger = logger;
         }
 
-        /// <summary>Obtiene todas las asociaciones entre exámenes y reactivos.</summary>
         [HttpGet]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> ObtenerTodas()
         {
@@ -28,7 +28,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(data);
         }
 
-        /// <summary>Obtiene una asociación específica por su identificador.</summary>
         [HttpGet("{id:int}")]
         public async Task<ActionResult<AsociacionReactivoDto>> ObtenerPorId(int id)
         {
@@ -37,7 +36,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(item);
         }
 
-        /// <summary>Busca asociaciones filtrando por nombre de examen.</summary>
         [HttpGet("buscar-examen/{nombre}")]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorExamen(string nombre)
         {
@@ -45,7 +43,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(data);
         }
 
-        /// <summary>Busca asociaciones filtrando por nombre de reactivo.</summary>
         [HttpGet("buscar-reactivo/{nombre}")]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorReactivo(string nombre)
         {
@@ -53,7 +50,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(data);
         }
 
-        /// <summary>Crea una nueva asociación entre examen y reactivo.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPost]
         public async Task<ActionResult<AsociacionReactivoDto>> Crear([FromBody] AsociacionReactivoDto dto)
         {
@@ -69,7 +66,7 @@ namespace Lab_APIRest.Controllers.Examenes
             }
         }
 
-        /// <summary>Edita una asociación existente.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Editar(int id, [FromBody] AsociacionReactivoDto dto)
         {
@@ -78,7 +75,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return NoContent();
         }
 
-        /// <summary>Elimina una asociación por su identificador.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Eliminar(int id)
         {
@@ -87,7 +84,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return NoContent();
         }
 
-        /// <summary>Obtiene las asociaciones de reactivos pertenecientes a un examen.</summary>
+        [Authorize(Roles = "administrador,laboratorista")]
         [HttpGet("asociados/{idExamen:int}")]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> ObtenerAsociadosPorExamen(int idExamen)
         {
@@ -96,7 +93,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(asociados);
         }
 
-        /// <summary>Guarda o actualiza las asociaciones de reactivos para un examen.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPost("asociados/{idExamen:int}")]
         public async Task<IActionResult> GuardarAsociaciones(int idExamen, [FromBody] List<AsociacionReactivoDto> asociaciones)
         {

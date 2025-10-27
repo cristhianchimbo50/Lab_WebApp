@@ -41,14 +41,29 @@ namespace Lab_Blazor.Services.Auth
                 var jwt = handler.ReadJwtToken(token);
                 var claims = jwt.Claims.ToList();
 
-                // Si el token expira, cerrar sesión automáticamente
                 if (jwt.ValidTo < DateTime.UtcNow)
                 {
                     await SignOutAsync();
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
                 }
 
-                var identity = new ClaimsIdentity(claims, "jwt");
+                var normalizedClaims = new List<Claim>();
+
+                foreach (var c in claims)
+                {
+                    if (c.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
+                        c.Type.Equals("roles", StringComparison.OrdinalIgnoreCase) ||
+                        c.Type.Equals("rol", StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedClaims.Add(new Claim(ClaimTypes.Role, c.Value));
+                    }
+                    else
+                    {
+                        normalizedClaims.Add(c);
+                    }
+                }
+
+                var identity = new ClaimsIdentity(normalizedClaims, "jwt");
                 return new AuthenticationState(new ClaimsPrincipal(identity));
             }
             catch

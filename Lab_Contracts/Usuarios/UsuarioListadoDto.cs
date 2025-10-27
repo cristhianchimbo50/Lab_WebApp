@@ -1,0 +1,15 @@
+﻿namespace Lab_Contracts.Usuarios
+{
+    public class UsuarioListadoDto
+    {
+        public int IdUsuario { get; set; }
+        public string NombreUsuario { get; set; } = string.Empty;
+        public string CorreoUsuario { get; set; } = string.Empty;
+        public string Rol { get; set; } = string.Empty;
+        public bool Activo { get; set; }
+        public bool EsContraseniaTemporal { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? UltimoAcceso { get; set; }
+        public DateTime? FechaExpiraTemporal { get; set; }
+    }
+}

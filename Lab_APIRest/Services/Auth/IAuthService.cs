@@ -7,7 +7,7 @@ namespace Lab_APIRest.Services.Auth
     {
         Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto, CancellationToken ct);
         Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct);
-        Task<bool> ReenviarContraseniaTemporalAsync(string correo, CancellationToken ct);
+        //Task<bool> ReenviarContraseniaTemporalAsync(string correo, CancellationToken ct);
 
     }
 }

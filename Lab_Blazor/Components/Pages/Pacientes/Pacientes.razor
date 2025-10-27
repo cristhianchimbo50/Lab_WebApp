@@ -1,7 +1,6 @@
 ﻿@page "/pacientes"
 @using Lab_Blazor.Services.Pacientes
 @using Lab_Contracts.Pacientes
-
 @inject IPacientesApiService PacientesApiService
 @inject IJSRuntime JS
 
@@ -71,23 +70,23 @@ else
                 @foreach (var paciente in PacientesPaginados)
                 {
                     <tr>
-                        <td data-label="Cédula">@paciente.CedulaPaciente</td>
-                        <td data-label="Nombre">@paciente.NombrePaciente</td>
-                        <td data-label="Edad">@paciente.EdadPaciente</td>
-                        <td data-label="Dirección">@paciente.DireccionPaciente</td>
-                        <td data-label="Correo">@paciente.CorreoElectronicoPaciente</td>
-                        <td data-label="Teléfono">@paciente.TelefonoPaciente</td>
-                        <td data-label="Estado">
+                        <td>@paciente.CedulaPaciente</td>
+                        <td>@paciente.NombrePaciente</td>
+                        <td>@paciente.EdadPaciente</td>
+                        <td>@paciente.DireccionPaciente</td>
+                        <td>@paciente.CorreoElectronicoPaciente</td>
+                        <td>@paciente.TelefonoPaciente</td>
+                        <td>
                             <span class="badge bg-@(paciente.Anulado ? "danger" : "success")">
                                 @(paciente.Anulado ? "Deshabilitado" : "Activo")
                             </span>
                         </td>
-                        <td data-label="Contraseña">
+                        <td>
                             <span class="badge bg-@(paciente.EsContraseñaTemporal == true ? "warning text-dark" : "info")">
                                 @(paciente.EsContraseñaTemporal == true ? "Pendiente" : "Cambiada")
                             </span>
                         </td>
-                        <td data-label="Acciones">
+                        <td>
                             <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarPaciente(paciente)">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -104,7 +103,6 @@ else
                                 </button>
                             }
                         </td>
-
                     </tr>
                 }
             </tbody>
@@ -186,12 +184,10 @@ else
                                        readonly="@(PacienteActual.IdPaciente != 0)"
                                        disabled="@(PacienteActual.IdPaciente != 0)" />
                         </div>
-
                         <div class="col-md-6">
                             <label class="form-label">Dirección</label>
                             <InputText class="form-control" @bind-Value="PacienteActual.DireccionPaciente" />
                         </div>
-
                         @if (PacienteActual.IdPaciente != 0)
                         {
                             <div class="col-md-6">
@@ -234,27 +230,40 @@ else
     private string tipoMensaje = "info";
     private int paginaActual = 1;
     private int tamPagina = 10;
+    private bool errorNoAutorizado = false;
+    private bool alertaPendiente = false;
 
     private int TotalPaginas => (int)Math.Ceiling(ListaPacientes.Count / (double)tamPagina);
     private IEnumerable<PacienteDto> PacientesPaginados => ListaPacientes.Skip((paginaActual - 1) * tamPagina).Take(tamPagina);
 
-    protected override async Task OnInitializedAsync() => await BuscarPacientes();
-
-    private async Task BuscarPacientes()
+    protected override async Task OnInitializedAsync()
     {
         try
         {
-            ListaPacientes = string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda)
-                ? await PacientesApiService.GetPacientesAsync()
-                : await PacientesApiService.BuscarPacientesAsync(criterioBusqueda, valorBusqueda);
-
-            paginaActual = 1;
+            await BuscarPacientes();
         }
-        catch
+        catch (HttpRequestException)
         {
-            mensaje = "Error al obtener la lista de pacientes.";
-            tipoMensaje = "danger";
+            errorNoAutorizado = true;
+            alertaPendiente = true;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && alertaPendiente)
+        {
+            await JS.InvokeVoidAsync("alert", "No autorizado para acceder a pacientes.");
+            alertaPendiente = false;
+        }
+    }
+
+    private async Task BuscarPacientes()
+    {
+        ListaPacientes = string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda)
+            ? await PacientesApiService.GetPacientesAsync()
+            : await PacientesApiService.BuscarPacientesAsync(criterioBusqueda, valorBusqueda);
+        paginaActual = 1;
     }
 
     private void MostrarModalNuevo()
@@ -278,10 +287,9 @@ else
     private async Task ValidarYGuardar()
     {
         PacienteActual.EdadPaciente = CalcularEdad(PacienteActual.FechaNacPaciente);
-
         if (PacienteActual.IdPaciente == 0)
         {
-            var (exito, msg, pacienteCreado) = await PacientesApiService.CrearPacienteAsync(PacienteActual);
+            var (exito, msg, _) = await PacientesApiService.CrearPacienteAsync(PacienteActual);
             mensaje = msg;
             tipoMensaje = exito ? "success" : "danger";
             if (exito)
@@ -355,18 +363,11 @@ else
     private async Task ReenviarTemporal()
     {
         if (PacienteActual.IdPaciente == 0) return;
-
         var ok = await JS.InvokeAsync<bool>("confirm", $"¿Reenviar una nueva contraseña temporal a {PacienteActual.CorreoElectronicoPaciente}?");
         if (!ok) return;
-
         var (exito, msg) = await PacientesApiService.ReenviarTemporalAsync(PacienteActual.IdPaciente);
         mensaje = msg;
         tipoMensaje = exito ? "success" : "danger";
-
-        if (exito)
-        {
-            await BuscarPacientes();
-        }
+        if (exito) await BuscarPacientes();
     }
-
 }

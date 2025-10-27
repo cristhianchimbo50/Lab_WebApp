@@ -1,5 +1,6 @@
 ﻿using Lab_Contracts.Reactivos;
 using Lab_APIRest.Services.Reactivos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Reactivos
@@ -9,25 +10,18 @@ namespace Lab_APIRest.Controllers.Reactivos
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,laboratorista")]
     public class ReactivosController : ControllerBase
     {
         private readonly IReactivoService _service;
         private readonly ILogger<ReactivosController> _logger;
 
-        /// <summary>
-        /// Constructor del controlador de reactivos.
-        /// </summary>
-        /// <param name="service">Servicio de reactivos inyectado.</param>
-        /// <param name="logger">Logger para registrar errores y eventos.</param>
         public ReactivosController(IReactivoService service, ILogger<ReactivosController> logger)
         {
             _service = service;
             _logger = logger;
         }
 
-        /// <summary>
-        /// Obtiene todos los reactivos registrados en el sistema.
-        /// </summary>
         [HttpGet]
         public async Task<ActionResult<List<ReactivoDto>>> ObtenerReactivos()
         {
@@ -35,24 +29,15 @@ namespace Lab_APIRest.Controllers.Reactivos
             return Ok(data);
         }
 
-        /// <summary>
-        /// Obtiene la información de un reactivo específico por su identificador.
-        /// </summary>
-        /// <param name="id">Identificador del reactivo.</param>
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ReactivoDto>> ObtenerReactivoPorId(int id)
         {
             var item = await _service.GetReactivoPorIdAsync(id);
             if (item == null)
                 return NotFound("Reactivo no encontrado.");
-
             return Ok(item);
         }
 
-        /// <summary>
-        /// Registra un nuevo reactivo.
-        /// </summary>
-        /// <param name="dto">Datos del reactivo.</param>
         [HttpPost]
         public async Task<ActionResult<ReactivoDto>> RegistrarReactivo([FromBody] ReactivoDto dto)
         {
@@ -68,11 +53,6 @@ namespace Lab_APIRest.Controllers.Reactivos
             }
         }
 
-        /// <summary>
-        /// Edita la información de un reactivo existente.
-        /// </summary>
-        /// <param name="id">Identificador del reactivo.</param>
-        /// <param name="dto">Datos actualizados del reactivo.</param>
         [HttpPut("{id:int}")]
         public async Task<IActionResult> EditarReactivo(int id, [FromBody] ReactivoDto dto)
         {
@@ -86,10 +66,7 @@ namespace Lab_APIRest.Controllers.Reactivos
             return NoContent();
         }
 
-        /// <summary>
-        /// Anula (desactiva) un reactivo existente.
-        /// </summary>
-        /// <param name="id">Identificador del reactivo.</param>
+        [Authorize(Roles = "administrador")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularReactivo(int id)
         {
@@ -108,10 +85,6 @@ namespace Lab_APIRest.Controllers.Reactivos
             }
         }
 
-        /// <summary>
-        /// Registra ingresos de reactivos al inventario.
-        /// </summary>
-        /// <param name="ingresos">Lista de ingresos de reactivos.</param>
         [HttpPost("ingresos")]
         public async Task<ActionResult> RegistrarIngresos([FromBody] IEnumerable<MovimientoReactivoIngresoDto> ingresos)
         {
@@ -133,10 +106,6 @@ namespace Lab_APIRest.Controllers.Reactivos
             }
         }
 
-        /// <summary>
-        /// Registra egresos (salidas) de reactivos del inventario.
-        /// </summary>
-        /// <param name="egresos">Lista de egresos de reactivos.</param>
         [HttpPost("egresos")]
         public async Task<ActionResult> RegistrarEgresos([FromBody] IEnumerable<MovimientoReactivoEgresoDto> egresos)
         {

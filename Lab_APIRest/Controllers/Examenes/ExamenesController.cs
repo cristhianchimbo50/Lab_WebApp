@@ -1,14 +1,13 @@
 using Lab_Contracts.Examenes;
 using Lab_APIRest.Services.Examenes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Examenes
 {
-    /// <summary>
-    /// Controlador responsable de gestionar los exámenes y sus relaciones.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,laboratorista,recepcionista")]
     public class ExamenesController : ControllerBase
     {
         private readonly IExamenService _service;
@@ -20,7 +19,6 @@ namespace Lab_APIRest.Controllers.Examenes
             _logger = logger;
         }
 
-        /// <summary>Obtiene todos los exámenes registrados.</summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ExamenDto>>> ObtenerExamenes()
         {
@@ -28,7 +26,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(examenes);
         }
 
-        /// <summary>Obtiene un examen específico por su identificador.</summary>
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ExamenDto>> ObtenerExamen(int id)
         {
@@ -37,7 +34,6 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(examen);
         }
 
-        /// <summary>Busca exámenes por nombre parcial o completo.</summary>
         [HttpGet("buscar")]
         public async Task<ActionResult<List<ExamenDto>>> BuscarExamenes([FromQuery] string nombre)
         {
@@ -48,7 +44,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(examenes);
         }
 
-        /// <summary>Registra un nuevo examen.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPost]
         public async Task<ActionResult<ExamenDto>> RegistrarExamen([FromBody] ExamenDto dto)
         {
@@ -64,7 +60,7 @@ namespace Lab_APIRest.Controllers.Examenes
             }
         }
 
-        /// <summary>Edita la información de un examen existente.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> EditarExamen(int id, [FromBody] ExamenDto dto)
         {
@@ -75,7 +71,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return NoContent();
         }
 
-        /// <summary>Anula un examen (desactiva su disponibilidad).</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularExamen(int id)
         {
@@ -84,7 +80,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok();
         }
 
-        /// <summary>Obtiene los exámenes hijos asociados a un examen padre.</summary>
+        [Authorize(Roles = "administrador,laboratorista")]
         [HttpGet("{id:int}/hijos")]
         public async Task<ActionResult<List<ExamenDto>>> ObtenerHijos(int id)
         {
@@ -92,7 +88,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(hijos);
         }
 
-        /// <summary>Agrega un examen hijo a un examen padre.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpPost("{idPadre:int}/hijos/{idHijo:int}")]
         public async Task<IActionResult> AgregarHijo(int idPadre, int idHijo)
         {
@@ -101,7 +97,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok();
         }
 
-        /// <summary>Elimina la relación entre un examen padre e hijo.</summary>
+        [Authorize(Roles = "administrador")]
         [HttpDelete("{idPadre:int}/hijos/{idHijo:int}")]
         public async Task<IActionResult> EliminarHijo(int idPadre, int idHijo)
         {

@@ -1,213 +1,87 @@
 using Lab_Contracts.Pacientes;
 using Lab_APIRest.Services.Pacientes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers
 {
-    /// <summary>
-    /// Controlador responsable de gestionar la información de los pacientes.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,recepcionista")]
     public class PacientesController : ControllerBase
     {
         private readonly IPacienteService _service;
-        private readonly ILogger<PacientesController> _logger;
 
-        /// <summary>
-        /// Constructor del controlador de pacientes.
-        /// </summary>
-        /// <param name="service">Servicio de pacientes inyectado.</param>
-        /// <param name="logger">Logger para registrar errores y eventos.</param>
-        public PacientesController(IPacienteService service, ILogger<PacientesController> logger)
+        public PacientesController(IPacienteService service)
         {
             _service = service;
-            _logger = logger;
         }
 
-        /// <summary>
-        /// Obtiene todos los pacientes registrados.
-        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PacienteDto>>> ObtenerPacientes()
+        public async Task<IActionResult> ObtenerPacientes()
         {
             var pacientes = await _service.GetPacientesAsync();
             return Ok(pacientes);
         }
 
-        /// <summary>
-        /// Obtiene la información de un paciente por su identificador.
-        /// </summary>
-        /// <param name="id">Identificador del paciente.</param>
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<PacienteDto>> ObtenerPaciente(int id)
+        public async Task<IActionResult> ObtenerPaciente(int id)
         {
-            try
-            {
-                var paciente = await _service.GetPacienteByIdAsync(id);
-                if (paciente == null)
-                    return NotFound(new { mensaje = "No se encontró el paciente solicitado." });
+            var paciente = await _service.GetPacienteByIdAsync(id);
+            if (paciente == null)
+                return NotFound(new { mensaje = "No se encontró el paciente solicitado." });
 
-                return Ok(paciente);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener paciente ID {id}");
-                return StatusCode(500, new { mensaje = "Error interno al obtener el paciente." });
-            }
+            return Ok(paciente);
         }
 
-
-        /// <summary>
-        /// Busca pacientes por cédula, nombre o correo.
-        /// </summary>
-        /// <param name="campo">Campo de búsqueda (cedula, nombre, correo).</param>
-        /// <param name="valor">Valor a buscar.</param>
         [HttpGet("buscar")]
-        public async Task<ActionResult<List<PacienteDto>>> BuscarPacientes([FromQuery] string campo, [FromQuery] string valor)
+        public async Task<IActionResult> BuscarPacientes([FromQuery] string campo, [FromQuery] string valor)
         {
-            if (string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
-                return BadRequest("Debe proporcionar un campo y valor para la búsqueda.");
-
-            List<PacienteDto> pacientes = new();
-
-            try
-            {
-                switch (campo.ToLower())
-                {
-                    case "cedula":
-                        var porCedula = await _service.GetPacienteByCedulaAsync(valor);
-                        if (porCedula != null)
-                            pacientes.Add(porCedula);
-                        break;
-
-                    case "nombre":
-                        pacientes = await _service.GetPacientesPorNombreAsync(valor);
-                        break;
-
-                    case "correo":
-                        pacientes = await _service.GetPacientesPorCorreoAsync(valor);
-                        break;
-
-                    default:
-                        return BadRequest("Campo de búsqueda no soportado. Use: cedula, nombre o correo.");
-                }
-
-                return Ok(pacientes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al buscar pacientes.");
-                return StatusCode(500, "Error interno al realizar la búsqueda de pacientes.");
-            }
+            var pacientes = await _service.BuscarPacientesAsync(campo, valor);
+            if (pacientes == null)
+                return BadRequest("Campo de búsqueda no soportado. Use: cedula, nombre o correo.");
+            return Ok(pacientes);
         }
 
-        /// <summary>
-        /// Registra un nuevo paciente en el sistema.
-        /// </summary>
         [HttpPost]
-        public async Task<ActionResult<PacienteDto>> RegistrarPaciente([FromBody] PacienteDto dto)
+        public async Task<IActionResult> RegistrarPaciente([FromBody] PacienteDto dto)
         {
-            if (!ValidarCedula(dto.CedulaPaciente))
-                return BadRequest("La cédula ingresada no es válida.");
+            var resultado = await _service.RegistrarPacienteAsync(dto);
+            if (!resultado.Exito)
+                return BadRequest(new { mensaje = resultado.Mensaje });
 
-            try
-            {
-                int usuarioId = 1;
-
-                var paciente = await _service.CrearPacienteAsync(dto, usuarioId);
-
-                return CreatedAtAction(
-                    nameof(ObtenerPaciente),
-                    new { id = paciente.IdPaciente },
-                    new
-                    {
-                        mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
-                        paciente.IdPaciente,
-                        paciente.NombrePaciente,
-                        paciente.CorreoElectronicoPaciente,
-                        paciente.ContraseñaTemporal
-                    }
-                );
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Casos como "correo duplicado" o "paciente ya existe"
-                _logger.LogWarning(ex, "Error de validación al registrar paciente.");
-                return Conflict(new { mensaje = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al registrar paciente.");
-                return StatusCode(500, new { mensaje = "Ocurrió un error interno al registrar el paciente." });
-            }
+            return CreatedAtAction(
+                nameof(ObtenerPaciente),
+                new { id = resultado.Paciente!.IdPaciente },
+                new
+                {
+                    mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
+                    resultado.Paciente!.IdPaciente,
+                    resultado.Paciente!.NombrePaciente,
+                    resultado.Paciente!.CorreoElectronicoPaciente,
+                    resultado.Paciente!.ContraseñaTemporal
+                }
+            );
         }
 
-        /// <summary>
-        /// Edita la información de un paciente existente.
-        /// </summary>
-        /// <param name="id">Identificador del paciente.</param>
-        /// <param name="dto">Datos actualizados del paciente.</param>
         [HttpPut("{id:int}")]
         public async Task<IActionResult> EditarPaciente(int id, [FromBody] PacienteDto dto)
         {
-            if (id != dto.IdPaciente)
-                return BadRequest("El identificador del paciente no coincide.");
-
-            if (!ValidarCedula(dto.CedulaPaciente))
-                return BadRequest("La cédula ingresada no es válida.");
-
-            var exito = await _service.EditarPacienteAsync(id, dto);
-            if (!exito)
+            var ok = await _service.EditarPacienteAsync(id, dto);
+            if (!ok)
                 return NotFound("No se encontró el paciente a editar.");
-
             return NoContent();
         }
 
-        /// <summary>
-        /// Anula (desactiva) un paciente del sistema.
-        /// </summary>
-        /// <param name="id">Identificador del paciente.</param>
+        [Authorize(Roles = "administrador")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularPaciente(int id)
         {
-            try
-            {
-                var exito = await _service.AnularPacienteAsync(id);
-                if (!exito)
-                    return NotFound("Paciente no encontrado o ya estaba anulado.");
+            var ok = await _service.AnularPacienteAsync(id);
+            if (!ok)
+                return NotFound("Paciente no encontrado o ya estaba anulado.");
 
-                return Ok(new { mensaje = "Paciente anulado correctamente." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al anular paciente con ID {id}.");
-                return StatusCode(500, "Error interno al anular el paciente.");
-            }
-        }
-
-        /// <summary>
-        /// Valida si una cédula ecuatoriana es correcta.
-        /// </summary>
-        /// <param name="cedula">Número de cédula a validar.</param>
-        private bool ValidarCedula(string cedula)
-        {
-            if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit))
-                return false;
-
-            int suma = 0;
-            for (int i = 0; i < 9; i++)
-            {
-                int digito = int.Parse(cedula[i].ToString());
-                int coef = (i % 2 == 0) ? 2 : 1;
-                int producto = digito * coef;
-                suma += (producto >= 10) ? (producto - 9) : producto;
-            }
-
-            int ultimoDigito = int.Parse(cedula[9].ToString());
-            int digitoCalculado = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
-
-            return ultimoDigito == digitoCalculado;
+            return Ok(new { mensaje = "Paciente anulado correctamente." });
         }
 
         [HttpPost("{id:int}/reenviar-temporal")]
@@ -215,9 +89,7 @@ namespace Lab_APIRest.Controllers
         {
             var (exito, mensaje, temp) = await _service.ReenviarCredencialesTemporalesAsync(id);
             if (!exito) return BadRequest(new { mensaje });
-
             return Ok(new { mensaje, nuevaTemporal = temp });
         }
-
     }
 }

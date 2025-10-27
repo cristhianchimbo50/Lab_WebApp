@@ -1,136 +1,186 @@
 ﻿@page "/cuentasporcobrar"
 @rendermode InteractiveServer
-<PageTitle>Cuentas por Cobrar</PageTitle>
 
 @using Lab_Contracts.Pagos
 @using Lab_Contracts.Ordenes
 @using Lab_Blazor.Services.Pagos
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IPagosApiService PagosApi
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JS
 
-<h4 class="text-center mb-4 text-uppercase fw-bold border-bottom pb-2">Cuentas por Cobrar</h4>
+<PageTitle>Cuentas por Cobrar</PageTitle>
 
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Número de Orden</label>
-                <input class="form-control" @bind="filtro.NumeroOrden" placeholder="ORD-00001" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Cédula</label>
-                <input class="form-control" @bind="filtro.Cedula" placeholder="Cédula del paciente" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Nombre</label>
-                <input class="form-control" @bind="filtro.NombrePaciente" placeholder="Nombre del paciente" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Estado</label>
-                <select class="form-select" @bind="filtro.EstadoPago">
-                    <option value="">Todos</option>
-                    <option value="PENDIENTE">Pendiente</option>
-                    <option value="PAGADO">Pagado</option>
-                </select>
-            </div>
-        </div>
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "recepcionista";
+        }
 
-        <div class="row g-3 align-items-end mt-2">
-            <div class="col-md-3">
-                <label class="form-label">Desde</label>
-                <InputDate class="form-control" @bind-Value="filtro.FechaInicio" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Hasta</label>
-                <InputDate class="form-control" @bind-Value="filtro.FechaFin" />
-            </div>
-            <div class="col-md-3 d-flex align-items-center">
-                <div class="form-check me-3">
-                    <input class="form-check-input" type="checkbox" id="chkAnulados" checked="@verAnulados"
-                           @onchange="(e => CambioAnulado(true))">
-                    <label class="form-check-label" for="chkAnulados">Anulados</label>
+        @if (!puedeVer)
+        {
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                    <div class="card-body p-4">
+                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
+                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
+                        <p class="text-muted mb-3">
+                            Solo el administrador o recepcionista puede ver las cuentas por cobrar.
+                        </p>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                            <i class="bi bi-arrow-left"></i> Regresar
+                        </button>
+                    </div>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="chkNoAnulados" checked="@verNoAnulados"
-                           @onchange="(e => CambioAnulado(false))">
-                    <label class="form-check-label" for="chkNoAnulados">No Anulados</label>
+            </div>
+        }
+        else
+        {
+            <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
+                <i class="bi bi-cash-coin text-primary fs-4 me-2"></i> Cuentas por Cobrar
+            </h4>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Número de Orden</label>
+                            <InputText class="form-control" @bind-Value="filtro.NumeroOrden" placeholder="ORD-00001" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Cédula</label>
+                            <InputText class="form-control" @bind-Value="filtro.Cedula" placeholder="Cédula del paciente" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Nombre</label>
+                            <InputText class="form-control" @bind-Value="filtro.NombrePaciente" placeholder="Nombre del paciente" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" @bind="filtro.EstadoPago">
+                                <option value="">Todos</option>
+                                <option value="PENDIENTE">Pendiente</option>
+                                <option value="PAGADO">Pagado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-end mt-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Desde</label>
+                            <InputDate class="form-control" @bind-Value="filtro.FechaInicio" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Hasta</label>
+                            <InputDate class="form-control" @bind-Value="filtro.FechaFin" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center">
+                            <div class="form-check me-3">
+                                <input class="form-check-input" type="checkbox" id="chkAnulados" checked="@verAnulados" @onchange="(e => CambioAnulado(true))">
+                                <label class="form-check-label" for="chkAnulados">Anulados</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkNoAnulados" checked="@verNoAnulados" @onchange="(e => CambioAnulado(false))">
+                                <label class="form-check-label" for="chkNoAnulados">No Anulados</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-primary me-2 shadow-sm" @onclick="BuscarAsync">
+                                <i class="bi bi-search me-1"></i>Buscar
+                            </button>
+                            <button class="btn btn-secondary shadow-sm" @onclick="LimpiarFiltros">
+                                <i class="bi bi-eraser me-1"></i>Limpiar
+                            </button>
+                        </div>
+                    </div>
                 </div>
-
             </div>
-            <div class="col-md-3 text-end">
-                <button class="btn btn-primary" @onclick="BuscarAsync">
-                    <i class="bi bi-search me-1"></i>Buscar
-                </button>
-                <button class="btn btn-secondary ms-2" @onclick="LimpiarFiltros">
-                    <i class="bi bi-eraser me-1"></i>Limpiar
-                </button>
+
+            @if (ordenes == null)
+            {
+                <div class="text-center py-5 text-primary">
+                    <div class="spinner-border me-2"></div>
+                    <span>Cargando datos...</span>
+                </div>
+            }
+            else if (!ordenes.Any())
+            {
+                <div class="alert alert-warning text-center shadow-sm">
+                    <i class="bi bi-exclamation-circle me-2"></i>No se encontraron registros.
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Número</th>
+                                        <th>Fecha</th>
+                                        <th>Cédula</th>
+                                        <th>Paciente</th>
+                                        <th>Total</th>
+                                        <th>Pagado</th>
+                                        <th>Saldo</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var o in ordenes)
+                                    {
+                                        <tr>
+                                            <td>@o.NumeroOrden</td>
+                                            <td>@o.FechaOrden.ToString("dd/MM/yyyy")</td>
+                                            <td>@o.CedulaPaciente</td>
+                                            <td>@o.NombrePaciente</td>
+                                            <td>@o.Total.ToString("C")</td>
+                                            <td>@o.TotalPagado.ToString("C")</td>
+                                            <td class="fw-bold @(o.SaldoPendiente > 0 ? "text-danger" : "text-success")">@o.SaldoPendiente.ToString("C")</td>
+                                            <td>@o.EstadoPago</td>
+                                            <td>
+                                                <button class="btn btn-success btn-sm shadow-sm" @onclick="(() => IrACobro(o.CedulaPaciente))">
+                                                    <i class="bi bi-cash-coin me-1"></i> Cobrar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card-body p-4">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
+                    <p class="text-muted mb-3">Inicie sesión con una cuenta autorizada para continuar.</p>
+                    <NavLink href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
+                    </NavLink>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-@if (ordenes == null)
-{
-    <div class="alert alert-info text-center">
-        <i class="bi bi-hourglass-split me-2"></i> Cargando datos...
-    </div>
-}
-else if (!ordenes.Any())
-{
-    <div class="alert alert-warning text-center">
-        <i class="bi bi-exclamation-circle me-2"></i> No se encontraron registros.
-    </div>
-}
-else
-{
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-sm table-striped table-bordered align-middle text-center">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Número Orden</th>
-                            <th>Fecha</th>
-                            <th>Cédula</th>
-                            <th>Paciente</th>
-                            <th>Total</th>
-                            <th>Pagado</th>
-                            <th>Saldo Pendiente</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var o in ordenes)
-                        {
-                            <tr>
-                                <td>@o.NumeroOrden</td>
-                                <td>@o.FechaOrden.ToString("dd/MM/yyyy")</td>
-                                <td>@o.CedulaPaciente</td>
-                                <td>@o.NombrePaciente</td>
-                                <td>@o.Total.ToString("C")</td>
-                                <td>@o.TotalPagado.ToString("C")</td>
-                                <td class="fw-bold @(o.SaldoPendiente > 0 ? "text-danger" : "text-success")">@o.SaldoPendiente.ToString("C")</td>
-                                <td>@o.EstadoPago</td>
-                                <td>
-                                    <button class="btn btn-sm btn-success" @onclick="(() => IrACobro(o.CedulaPaciente))">
-                                        <i class="bi bi-cash me-1"></i> Cobrar
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-}
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private List<OrdenDto>? ordenes;
     private PagoFiltroDto filtro = new();
-    private bool verAnulados = false;
-    private bool verNoAnulados = false;
+    private bool verAnulados;
+    private bool verNoAnulados;
 
     protected override async Task OnInitializedAsync()
     {
@@ -154,22 +204,7 @@ else
         filtro = new PagoFiltroDto();
         verAnulados = false;
         verNoAnulados = false;
-        ordenes = new List<OrdenDto>();
-    }
-
-    private void CambioAnulado(ChangeEventArgs e)
-    {
-        if (verAnulados && verNoAnulados)
-        {
-            verAnulados = false;
-            verNoAnulados = false;
-        }
-    }
-
-    private void IrACobro(string? cedula)
-    {
-        if (!string.IsNullOrEmpty(cedula))
-            Navigation.NavigateTo($"/cobros/{cedula}");
+        ordenes = new();
     }
 
     private void CambioAnulado(bool esAnulado)
@@ -186,4 +221,11 @@ else
         }
     }
 
+    private void IrACobro(string? cedula)
+    {
+        if (!string.IsNullOrEmpty(cedula))
+            Navigation.NavigateTo($"/cobros/{cedula}");
+    }
+
+    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

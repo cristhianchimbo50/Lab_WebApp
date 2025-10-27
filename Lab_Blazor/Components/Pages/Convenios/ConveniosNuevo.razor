@@ -1,166 +1,215 @@
 ﻿@page "/convenios/nuevo"
 @rendermode InteractiveServer
-<PageTitle>Registrar Convenio</PageTitle>
 
 @using Lab_Contracts.Convenios
 @using Lab_Contracts.Medicos
 @using Lab_Blazor.Services.Convenios
 @using Lab_Blazor.Services.Medicos
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IConveniosApiService ConveniosApi
 @inject IMedicosApiService MedicosApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
 
-<h4 class="mb-4 d-flex align-items-center">
-    <i class="bi bi-handshake text-primary fs-4 me-2"></i>Registrar Nuevo Convenio
-</h4>
+<PageTitle>Registrar Convenio</PageTitle>
 
-@if (!isRendered)
-{
-    <div class="d-flex align-items-center text-primary">
-        <div class="spinner-border me-2" role="status"></div>
-        <strong>Cargando...</strong>
-    </div>
-}
-else
-{
-    <div class="card shadow-sm mb-4">
-        <div class="card-body row g-3 align-items-end">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Médico</label>
-                <select class="form-select" @bind="idMedicoSeleccionado">
-                    <option value="">Seleccione un médico</option>
-                    @foreach (var m in medicos)
-                    {
-                        <option value="@m.IdMedico">@m.NombreMedico</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label fw-semibold">Fecha Convenio</label>
-                <InputDate class="form-control" @bind-Value="fechaConvenio" />
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary w-100" @onclick="CargarOrdenes" disabled="@(!idMedicoSeleccionado.HasValue)">
-                    <i class="bi bi-search"></i> Cargar Órdenes
-                </button>
-            </div>
-        </div>
-    </div>
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "recepcionista";
+        }
 
-    @if (ordenesDisponibles.Any())
-    {
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-light fw-semibold">
-                        <i class="bi bi-list-check me-2"></i>Órdenes Disponibles
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                            <table class="table table-sm table-bordered table-hover align-middle text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>N° Orden</th>
-                                        <th>Paciente</th>
-                                        <th>Total</th>
-                                        <th>✔</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var o in ordenesDisponibles)
-                                    {
-                                        <tr>
-                                            <td>@o.NumeroOrden</td>
-                                            <td>@o.Paciente</td>
-                                            <td>@o.Total.ToString("C")</td>
-                                            <td>
-                                                <input type="checkbox" @bind="@o.Seleccionado" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="text-end fw-bold mt-2">
-                            Total: @ordenesDisponibles.Sum(o => o.Total).ToString("C")
-                        </div>
+        @if (!puedeVer)
+        {
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                    <div class="card-body p-4">
+                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
+                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
+                        <p class="text-muted mb-3">Solo el administrador o recepcionista puede registrar convenios.</p>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                            <i class="bi bi-arrow-left"></i> Regresar
+                        </button>
                     </div>
                 </div>
             </div>
+        }
+        else
+        {
+            <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
+                <i class="bi bi-handshake text-primary fs-4 me-2"></i> Registrar Nuevo Convenio
+            </h4>
 
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-light fw-semibold">
-                        <i class="bi bi-clipboard2-check me-2"></i>Órdenes Seleccionadas
-                    </div>
-                    <div class="card-body p-2">
-                        <table class="table table-sm table-bordered align-middle text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>N° Orden</th>
-                                    <th>Paciente</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var s in ordenesSeleccionadas)
+            @if (!isRendered)
+            {
+                <div class="text-center py-5 text-primary">
+                    <div class="spinner-border me-2"></div>
+                    <strong>Cargando...</strong>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-body row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Médico</label>
+                            <select class="form-select" @bind="idMedicoSeleccionado">
+                                <option value="">Seleccione un médico</option>
+                                @foreach (var m in medicos)
                                 {
-                                    <tr>
-                                        <td>@s.NumeroOrden</td>
-                                        <td>@s.Paciente</td>
-                                        <td>@s.Total.ToString("C")</td>
-                                    </tr>
+                                    <option value="@m.IdMedico">@m.NombreMedico</option>
                                 }
-                            </tbody>
-                        </table>
-                        <div class="text-end fw-bold mt-2">
-                            Total Seleccionado: @ordenesSeleccionadas.Sum(o => o.Total).ToString("C")
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Fecha Convenio</label>
+                            <InputDate class="form-control" @bind-Value="fechaConvenio" />
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" @onclick="CargarOrdenes" disabled="@(!idMedicoSeleccionado.HasValue)">
+                                <i class="bi bi-search me-1"></i> Cargar Órdenes
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="mt-4 text-end">
-            <button class="btn btn-success" @onclick="MostrarModalPago" disabled="@(ordenesSeleccionadas.Count == 0)">
-                <i class="bi bi-cash-coin me-1"></i> Calcular Pago
-            </button>
-        </div>
-    }
+                @if (ordenesDisponibles.Any())
+                {
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-light fw-semibold">
+                                    <i class="bi bi-list-check me-2"></i> Órdenes Disponibles
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-bordered table-hover align-middle text-center">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>N° Orden</th>
+                                                    <th>Paciente</th>
+                                                    <th>Total</th>
+                                                    <th>✔</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var o in ordenesDisponibles)
+                                                {
+                                                    <tr>
+                                                        <td>@o.NumeroOrden</td>
+                                                        <td>@o.Paciente</td>
+                                                        <td>@o.Total.ToString("C")</td>
+                                                        <td><input type="checkbox" @bind="@o.Seleccionado" /></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="text-end fw-bold mt-2">
+                                        Total: @ordenesDisponibles.Sum(o => o.Total).ToString("C")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-    @if (mostrarModal)
-    {
-        <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.4);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content shadow">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-calculator me-2"></i> Pago al Médico</h5>
-                        <button class="btn-close" @onclick="CerrarModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Porcentaje de Comisión (%)</label>
-                            <InputNumber class="form-control" @bind-Value="porcentajeComision" Min="0" Max="100" />
+                        <div class="col-lg-6">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-light fw-semibold">
+                                    <i class="bi bi-clipboard2-check me-2"></i> Órdenes Seleccionadas
+                                </div>
+                                <div class="card-body p-2">
+                                    <table class="table table-sm table-bordered align-middle text-center">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>N° Orden</th>
+                                                <th>Paciente</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var s in ordenesSeleccionadas)
+                                            {
+                                                <tr>
+                                                    <td>@s.NumeroOrden</td>
+                                                    <td>@s.Paciente</td>
+                                                    <td>@s.Total.ToString("C")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                    <div class="text-end fw-bold mt-2">
+                                        Total Seleccionado: @ordenesSeleccionadas.Sum(o => o.Total).ToString("C")
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Monto Total</label>
-                            <input class="form-control" value="@ordenesSeleccionadas.Sum(o => o.Total).ToString("C")" disabled />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Total a Pagar</label>
-                            <input class="form-control" value="@totalPagar.ToString("C")" disabled />
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button class="btn btn-success px-4" @onclick="MostrarModalPago" disabled="@(ordenesSeleccionadas.Count == 0)">
+                            <i class="bi bi-cash-coin me-1"></i> Calcular Pago
+                        </button>
+                    </div>
+                }
+
+                @if (mostrarModal)
+                {
+                    <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content shadow-lg">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-calculator me-2"></i> Pago al Médico
+                                    </h5>
+                                    <button class="btn-close" @onclick="CerrarModal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Porcentaje de Comisión (%)</label>
+                                        <InputNumber class="form-control" @bind-Value="porcentajeComision" Min="0" Max="100" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Monto Total</label>
+                                        <input class="form-control" value="@ordenesSeleccionadas.Sum(o => o.Total).ToString("C")" disabled />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Total a Pagar</label>
+                                        <input class="form-control" value="@totalPagar.ToString("C")" disabled />
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                                    <button class="btn btn-primary" @onclick="RegistrarConvenio">
+                                        <i class="bi bi-save me-1"></i> Registrar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
-                        <button class="btn btn-primary" @onclick="RegistrarConvenio">Registrar</button>
-                    </div>
+                }
+            }
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card-body p-4">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
+                    <p class="text-muted mb-3">Inicie sesión con una cuenta autorizada para continuar.</p>
+                    <NavLink href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
+                    </NavLink>
                 </div>
             </div>
         </div>
-    }
-}
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private List<MedicoDto> medicos = new();
@@ -168,10 +217,9 @@ else
     private List<OrdenDisponibleExtendida> ordenesSeleccionadas => ordenesDisponibles.Where(o => o.Seleccionado).ToList();
     private int? idMedicoSeleccionado;
     private DateTime fechaConvenio = DateTime.Today;
-    private decimal porcentajeComision = 0;
-    private bool isRendered = false;
-    private bool mostrarModal = false;
-
+    private decimal porcentajeComision;
+    private bool isRendered;
+    private bool mostrarModal;
     private decimal totalPagar => ordenesSeleccionadas.Sum(o => o.Total) * (porcentajeComision / 100m);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -200,15 +248,8 @@ else
         }
     }
 
-    private void MostrarModalPago()
-    {
-        mostrarModal = true;
-    }
-
-    private void CerrarModal()
-    {
-        mostrarModal = false;
-    }
+    private void MostrarModalPago() => mostrarModal = true;
+    private void CerrarModal() => mostrarModal = false;
 
     private async Task RegistrarConvenio()
     {
@@ -241,4 +282,6 @@ else
     {
         public bool Seleccionado { get; set; }
     }
+
+    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

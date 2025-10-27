@@ -1,33 +1,24 @@
 using Lab_Contracts.Medicos;
 using Lab_APIRest.Services.Medicos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Medicos
 {
-    /// <summary>
-    /// Controlador responsable de gestionar la información de los médicos.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,recepcionista")]
     public class MedicosController : ControllerBase
     {
         private readonly IMedicoService _service;
         private readonly ILogger<MedicosController> _logger;
 
-        /// <summary>
-        /// Constructor del controlador de médicos.
-        /// </summary>
-        /// <param name="service">Servicio de médicos inyectado.</param>
-        /// <param name="logger">Logger para registrar errores y eventos.</param>
         public MedicosController(IMedicoService service, ILogger<MedicosController> logger)
         {
             _service = service;
             _logger = logger;
         }
 
-        /// <summary>
-        /// Obtiene todos los médicos registrados.
-        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MedicoDto>>> ObtenerMedicos()
         {
@@ -35,10 +26,6 @@ namespace Lab_APIRest.Controllers.Medicos
             return Ok(medicos);
         }
 
-        /// <summary>
-        /// Obtiene la información de un médico específico por su identificador.
-        /// </summary>
-        /// <param name="id">Identificador del médico.</param>
         [HttpGet("{id:int}")]
         public async Task<ActionResult<MedicoDto>> ObtenerMedico(int id)
         {
@@ -49,40 +36,27 @@ namespace Lab_APIRest.Controllers.Medicos
             return Ok(medico);
         }
 
-        /// <summary>
-        /// Busca médicos por nombre, especialidad o correo electrónico.
-        /// </summary>
-        /// <param name="campo">Campo de búsqueda (nombre, especialidad, correo).</param>
-        /// <param name="valor">Valor del campo a buscar.</param>
         [HttpGet("buscar")]
         public async Task<ActionResult<List<MedicoDto>>> BuscarMedicos([FromQuery] string campo, [FromQuery] string valor)
         {
             if (string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
                 return BadRequest("Debe proporcionar un campo y valor de búsqueda.");
 
-            List<MedicoDto> medicos;
-
             try
             {
-                switch (campo.ToLower())
+                List<MedicoDto> medicos = campo.ToLower() switch
                 {
-                    case "nombre":
-                        medicos = await _service.GetMedicosPorNombreAsync(valor);
-                        break;
-
-                    case "especialidad":
-                        medicos = await _service.GetMedicosPorEspecialidadAsync(valor);
-                        break;
-
-                    case "correo":
-                        medicos = await _service.GetMedicosPorCorreoAsync(valor);
-                        break;
-
-                    default:
-                        return BadRequest("Campo de búsqueda no soportado. Use: nombre, especialidad o correo.");
-                }
+                    "nombre" => await _service.GetMedicosPorNombreAsync(valor),
+                    "especialidad" => await _service.GetMedicosPorEspecialidadAsync(valor),
+                    "correo" => await _service.GetMedicosPorCorreoAsync(valor),
+                    _ => throw new ArgumentException("Campo de búsqueda no soportado. Use: nombre, especialidad o correo.")
+                };
 
                 return Ok(medicos);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -91,9 +65,7 @@ namespace Lab_APIRest.Controllers.Medicos
             }
         }
 
-        /// <summary>
-        /// Registra un nuevo médico.
-        /// </summary>
+        [Authorize(Roles = "administrador,recepcionista")]
         [HttpPost]
         public async Task<ActionResult<MedicoDto>> RegistrarMedico([FromBody] MedicoDto dto)
         {
@@ -109,11 +81,7 @@ namespace Lab_APIRest.Controllers.Medicos
             }
         }
 
-        /// <summary>
-        /// Actualiza los datos de un médico existente.
-        /// </summary>
-        /// <param name="id">Identificador del médico.</param>
-        /// <param name="dto">Datos actualizados del médico.</param>
+        [Authorize(Roles = "administrador,recepcionista")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> EditarMedico(int id, [FromBody] MedicoDto dto)
         {
@@ -126,10 +94,7 @@ namespace Lab_APIRest.Controllers.Medicos
             return NoContent();
         }
 
-        /// <summary>
-        /// Anula un médico (lo desactiva sin eliminarlo físicamente).
-        /// </summary>
-        /// <param name="id">Identificador del médico.</param>
+        [Authorize(Roles = "administrador")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularMedico(int id)
         {

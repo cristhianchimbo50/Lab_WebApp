@@ -1,122 +1,189 @@
 ﻿@page "/reactivos"
+@rendermode InteractiveServer
+<PageTitle>Gestión de Reactivos</PageTitle>
+
 @using Lab_Contracts.Reactivos
 @using Lab_Blazor.Services.Reactivos
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IReactivosApiService ReactivosApiService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
 
-<h3 class="mb-4">
-    <i class="bi bi-droplet-half me-2 text-primary"></i>Gestión de Reactivos
-</h3>
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "laboratorista";
+            bool puedeGestionar = rol is "administrador";
+        }
 
-<div class="card mb-3 shadow-sm">
-    <div class="card-body row g-3">
-        <div class="col-md-6">
-            <label class="form-label">Buscar por nombre</label>
-            <InputText class="form-control" @bind-Value="valorBusqueda" />
-        </div>
-        <div class="col-md-6 d-flex align-items-end gap-2 justify-content-md-end">
-            <button class="btn btn-primary" @onclick="BuscarReactivos">
-                <i class="bi bi-search"></i>
-            </button>
-            <button class="btn btn-success" @onclick="MostrarModalNuevo">
-                <i class="bi bi-plus-circle"></i>
-            </button>
-        </div>
-    </div>
-</div>
+        @if (!puedeVer)
+        {
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                    <div class="card-body p-4">
+                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">
+                            No tienes permisos para acceder a la gestión de reactivos.
+                        </p>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                            <i class="bi bi-arrow-left"></i> Regresar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <h3 class="mb-4">
+                <i class="bi bi-droplet-half me-2 text-primary"></i>Gestión de Reactivos
+            </h3>
 
-@if (ListaReactivos is null || ListaReactivos.Count == 0)
-{
-    <div class="alert alert-warning">No se encontraron reactivos.</div>
-}
-else
-{
-    <div class="table-responsive shadow-sm" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Nombre</th>
-                    <th>Fabricante</th>
-                    <th>Unidad</th>
-                    <th>Cantidad</th>
-                    <th>Estado</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var reactivo in ListaReactivos)
-                {
-                    <tr>
-                        <td>@reactivo.NombreReactivo</td>
-                        <td>@reactivo.Fabricante</td>
-                        <td>@reactivo.Unidad</td>
-                        <td>@reactivo.CantidadDisponible</td>
-                        <td>
-                            <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
-                                @(reactivo.Anulado ? "Anulado" : "Activo")
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <button class="btn btn-warning btn-sm me-1 shadow-sm" title="Editar" @onclick="() => EditarReactivo(reactivo)">
-                                <i class="bi bi-pencil-square text-black"></i>
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Buscar por nombre</label>
+                        <InputText class="form-control" @bind-Value="valorBusqueda" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end gap-2 justify-content-md-end">
+                        <button class="btn btn-primary" @onclick="BuscarReactivos">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        @if (puedeGestionar)
+                        {
+                            <button class="btn btn-success" @onclick="MostrarModalNuevo">
+                                <i class="bi bi-plus-circle"></i>
                             </button>
-                            @if (!reactivo.Anulado)
-                            {
-                                <button class="btn btn-danger btn-sm shadow-sm" title="Anular" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
-                                    <i class="bi bi-x-circle-fill"></i>
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
+                        }
+                    </div>
+                </div>
+            </div>
 
-<div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <EditForm Model="@ReactivoActual" OnValidSubmit="ValidarYGuardar">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-flask me-2"></i>
-                        @(ReactivoActual.IdReactivo == 0 ? "Nuevo Reactivo" : "Editar Reactivo")
-                    </h5>
-                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+            @if (ListaReactivos is null || ListaReactivos.Count == 0)
+            {
+                <div class="alert alert-warning">No se encontraron reactivos.</div>
+            }
+            else
+            {
+                <div class="table-responsive shadow-sm" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
+                    <table class="table table-hover table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Fabricante</th>
+                                <th>Unidad</th>
+                                <th>Cantidad</th>
+                                <th>Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var reactivo in ListaReactivos)
+                            {
+                                <tr>
+                                    <td>@reactivo.NombreReactivo</td>
+                                    <td>@reactivo.Fabricante</td>
+                                    <td>@reactivo.Unidad</td>
+                                    <td>@reactivo.CantidadDisponible</td>
+                                    <td>
+                                        <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
+                                            @(reactivo.Anulado ? "Anulado" : "Activo")
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (puedeGestionar)
+                                        {
+                                            <button class="btn btn-warning btn-sm me-1 shadow-sm" title="Editar" @onclick="() => EditarReactivo(reactivo)">
+                                                <i class="bi bi-pencil-square text-black"></i>
+                                            </button>
+                                            @if (!reactivo.Anulado)
+                                            {
+                                                <button class="btn btn-danger btn-sm shadow-sm" title="Anular" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </button>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Sin acciones</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-body">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                    <div class="mb-2">
-                        <label class="form-label">Nombre</label>
-                        <InputText class="form-control" @bind-Value="ReactivoActual.NombreReactivo" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Fabricante</label>
-                        <InputText class="form-control" @bind-Value="ReactivoActual.Fabricante" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Unidad</label>
-                        <InputText class="form-control" @bind-Value="ReactivoActual.Unidad" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Cantidad Disponible</label>
-                        <InputNumber class="form-control" @bind-Value="ReactivoActual.CantidadDisponible" />
+            }
+
+            @if (modalVisible)
+            {
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <EditForm Model="@ReactivoActual" OnValidSubmit="ValidarYGuardar">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-flask me-2"></i>
+                                        @(ReactivoActual.IdReactivo == 0 ? "Nuevo Reactivo" : "Editar Reactivo")
+                                    </h5>
+                                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <DataAnnotationsValidator />
+                                    <ValidationSummary />
+                                    <div class="mb-2">
+                                        <label class="form-label">Nombre</label>
+                                        <InputText class="form-control" @bind-Value="ReactivoActual.NombreReactivo" />
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Fabricante</label>
+                                        <InputText class="form-control" @bind-Value="ReactivoActual.Fabricante" />
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Unidad</label>
+                                        <InputText class="form-control" @bind-Value="ReactivoActual.Unidad" />
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Cantidad Disponible</label>
+                                        <InputNumber class="form-control" @bind-Value="ReactivoActual.CantidadDisponible" />
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save-fill me-1"></i> Guardar
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                                        <i class="bi bi-x-lg me-1"></i> Cancelar
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save-fill me-1"></i> Guardar
-                    </button>
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
-                        <i class="bi bi-x-lg me-1"></i> Cancelar
-                    </button>
+            }
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card-body p-4">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
+                    <p class="text-muted mb-3">
+                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
+                    </p>
+                    <NavLink href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
+                    </NavLink>
                 </div>
-            </EditForm>
+            </div>
         </div>
-    </div>
-</div>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private List<ReactivoDto> ListaReactivos = new();
@@ -126,7 +193,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await BuscarReactivos();
+        try
+        {
+            await BuscarReactivos();
+        }
+        catch (HttpRequestException)
+        {
+            await JS.InvokeVoidAsync("alert", "No autorizado para ver reactivos.");
+        }
     }
 
     private async Task BuscarReactivos()
@@ -163,41 +237,55 @@ else
 
     private async Task ValidarYGuardar()
     {
-        HttpResponseMessage result;
-        if (ReactivoActual.IdReactivo == 0)
-            result = await ReactivosApiService.CrearReactivoAsync(ReactivoActual);
-        else
-            result = await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
+        try
+        {
+            HttpResponseMessage result;
+            if (ReactivoActual.IdReactivo == 0)
+                result = await ReactivosApiService.CrearReactivoAsync(ReactivoActual);
+            else
+                result = await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
 
-        if (result.IsSuccessStatusCode)
-        {
-            await JS.InvokeVoidAsync("alert", "Reactivo guardado correctamente.");
-            ReactivoActual = new ReactivoDto();
-            await BuscarReactivos();
-            modalVisible = false;
+            if (result.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Reactivo guardado correctamente.");
+                ReactivoActual = new ReactivoDto();
+                await BuscarReactivos();
+                modalVisible = false;
+            }
+            else
+            {
+                var msg = await result.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Error al guardar: {result.StatusCode}\n{msg}");
+            }
         }
-        else
+        catch (HttpRequestException)
         {
-            var msg = await result.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al guardar: {result.StatusCode} \n{msg}");
+            await JS.InvokeVoidAsync("alert", "No autorizado para crear o editar reactivos.");
         }
     }
 
     private async Task ConfirmarAnulacion(int id)
     {
         var confirm = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?");
-        if (confirm)
+        if (!confirm) return;
+        try
         {
             var result = await ReactivosApiService.AnularReactivoAsync(id);
             if (result.IsSuccessStatusCode)
             {
                 await BuscarReactivos();
-                await JS.InvokeVoidAsync("alert", "Reactivo anulado.");
+                await JS.InvokeVoidAsync("alert", "Reactivo anulado correctamente.");
             }
             else
             {
                 await JS.InvokeVoidAsync("alert", $"Error: {result.StatusCode}");
             }
         }
+        catch (HttpRequestException)
+        {
+            await JS.InvokeVoidAsync("alert", "No autorizado para anular reactivos.");
+        }
     }
+
+    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

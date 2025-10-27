@@ -48,10 +48,11 @@
                         <div class="col-md-6">
                             <label class="form-label text-secondary fw-semibold small text-uppercase">Estado</label>
                             <div class="form-control-plaintext fs-6">
-                                <i class="bi @(perfil.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase) ? "bi-check-circle text-success" : "bi-x-circle text-danger") me-1"></i>
-                                @perfil.Estado
+                                <i class="bi @(perfil.Activo ? "bi-check-circle text-success" : "bi-x-circle text-danger") me-1"></i>
+                                @(perfil.Activo ? "ACTIVO" : "INACTIVO")
                             </div>
                         </div>
+
 
                         @if (perfil.Rol.Equals("Paciente", StringComparison.OrdinalIgnoreCase))
                         {

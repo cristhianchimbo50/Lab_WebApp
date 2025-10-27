@@ -386,35 +386,39 @@ public partial class LabDbContext : DbContext
         modelBuilder.Entity<usuario>(entity =>
         {
             entity.HasKey(e => e.id_usuario).HasName("PK__usuario__4E3E04AD8F3B8033");
-
             entity.ToTable("usuario");
 
             entity.HasIndex(e => e.correo_usuario, "UQ__usuario__CD54AB1C29B4F762").IsUnique();
-
             entity.HasIndex(e => e.correo_usuario, "UQ_usuario_correo_usuario")
                 .IsUnique()
                 .HasFilter("([correo_usuario] IS NOT NULL)");
-
-            entity.Property(e => e.fecha_expira_temporal).HasColumnType("datetime");
 
             entity.HasIndex(e => e.correo_usuario, "idx_usuario_correo");
 
             entity.Property(e => e.clave_usuario)
                 .HasMaxLength(256)
                 .IsUnicode(false);
+
             entity.Property(e => e.correo_usuario)
                 .HasMaxLength(100)
                 .IsUnicode(false);
-            entity.Property(e => e.es_contraseña_temporal).HasDefaultValue(true);
-            entity.Property(e => e.estado)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasDefaultValue("ACTIVO");
-            entity.Property(e => e.estado_registro).HasDefaultValue(false);
-            entity.Property(e => e.nombre).HasMaxLength(255);
+
+            entity.Property(e => e.es_contraseña_temporal)
+                .HasDefaultValue(true);
+
+            entity.Property(e => e.activo)
+                .HasColumnName("activo")
+                .HasDefaultValue(true);
+
+            entity.Property(e => e.nombre)
+                .HasMaxLength(255);
+
             entity.Property(e => e.rol)
                 .HasMaxLength(20)
                 .IsUnicode(false);
+
+            entity.Property(e => e.fecha_expira_temporal)
+                .HasColumnType("datetime");
 
             entity.Property(e => e.fecha_creacion)
                 .HasColumnName("fecha_creacion")

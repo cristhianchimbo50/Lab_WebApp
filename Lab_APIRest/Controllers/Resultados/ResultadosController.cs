@@ -1,11 +1,13 @@
 ﻿using Lab_APIRest.Services.Resultados;
 using Lab_Contracts.Resultados;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers.Resultados
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "administrador,recepcionista,laboratorista")]
     public class ResultadosController : ControllerBase
     {
         private readonly IResultadoService _resultadoService;
@@ -86,6 +88,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
+        [Authorize(Roles = "administrador,laboratorista")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> Anular(int id)
         {

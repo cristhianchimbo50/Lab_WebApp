@@ -65,31 +65,30 @@ namespace Lab_APIRest.Controllers.Auth
         public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { Mensaje = "Datos inválidos en la solicitud." });
+                return BadRequest(new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Datos inválidos en la solicitud." });
 
             try
             {
                 var resultado = await _authService.CambiarContraseniaAsync(dto, ct);
 
                 if (!resultado.Exito)
-                    return BadRequest(new { Mensaje = resultado.Mensaje });
+                    return BadRequest(resultado);
 
-                return Ok(new { Mensaje = resultado.Mensaje });
+                return Ok(resultado);
             }
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning(ex, "Error de validación al cambiar la contraseña.");
-                return BadRequest(new { Mensaje = ex.Message });
+                return BadRequest(new CambiarContraseniaResponseDto { Exito = false, Mensaje = ex.Message });
             }
-            catch (KeyNotFoundException ex)
+            catch (KeyNotFoundException)
             {
-                _logger.LogWarning(ex, "Usuario no encontrado al cambiar contraseña.");
-                return NotFound(new { Mensaje = "Usuario no encontrado." });
+                return NotFound(new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al cambiar la contraseña.");
-                return StatusCode(500, new { Mensaje = "Error interno del servidor." });
+                return StatusCode(500, new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Error interno del servidor." });
             }
         }
     }
