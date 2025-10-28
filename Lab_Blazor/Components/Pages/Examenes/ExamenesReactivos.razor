@@ -21,8 +21,14 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
+
+            bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "laboratorista";
+            bool puedeAnular = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -31,8 +37,8 @@
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
-                        <p class="text-muted mb-3">Solo el administrador o laboratorista puede asociar reactivos a exámenes.</p>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -51,19 +57,18 @@
             }
             else
             {
-                <h3 class="mb-4 d-flex align-items-center">
+                <h3 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
                     <i class="bi bi-link-45deg text-primary fs-4 me-2"></i>Asociar Reactivos a Examen
                 </h3>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body row g-3">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-body row g-3 align-items-end">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Examen Seleccionado</label>
-                            <input class="form-control" value="@examenSeleccionado?.NombreExamen"
-                                   disabled placeholder="Seleccione un examen..." />
+                            <input class="form-control" value="@examenSeleccionado?.NombreExamen" disabled placeholder="Seleccione un examen..." />
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button class="btn btn-primary w-100" @onclick="MostrarModalExamen">
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100 shadow-sm" @onclick="MostrarModalExamen">
                                 <i class="bi bi-search me-1"></i> Buscar Examen
                             </button>
                         </div>
@@ -113,13 +118,11 @@
                                     <tr>
                                         <td class="text-start">@item.NombreReactivo</td>
                                         <td>
-                                            <input type="number" step="0.01" class="form-control form-control-sm text-end"
-                                                   @bind="item.CantidadUsada" />
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="item.CantidadUsada" />
                                         </td>
                                         <td>@item.Unidad</td>
                                         <td>
-                                            <button class="btn btn-danger btn-sm shadow-sm"
-                                                    @onclick="@(() => QuitarReactivo(item))" title="Quitar reactivo">
+                                            <button class="btn btn-danger btn-sm shadow-sm" @onclick="@(() => QuitarReactivo(item))" title="Quitar reactivo">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -164,25 +167,18 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content shadow">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-search me-2"></i>Buscar Examen
-                    </h5>
-                    <button class="btn-close" @onclick="() => mostrarModalExamen = false"></button>
+                    <h5 class="modal-title"><i class="bi bi-search me-2"></i>Buscar Examen</h5>
+                    <button class="btn-close" @onclick="CerrarModalExamen"></button>
                 </div>
                 <div class="modal-body">
                     <div class="input-group mb-3">
                         <InputText class="form-control" @bind-Value="valorBusquedaExamen" placeholder="Buscar por nombre..." />
-                        <button class="btn btn-primary" @onclick="BuscarExamenes">
-                            <i class="bi bi-search"></i>
-                        </button>
+                        <button class="btn btn-primary" @onclick="BuscarExamenes"><i class="bi bi-search"></i></button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover table-bordered align-middle text-center">
                             <thead class="table-light">
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Estudio</th>
-                                </tr>
+                                <tr><th>Nombre</th><th>Estudio</th></tr>
                             </thead>
                             <tbody>
                                 @foreach (var ex in examenesEncontrados)
@@ -197,9 +193,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="() => mostrarModalExamen = false">
-                        <i class="bi bi-x-lg"></i> Cerrar
-                    </button>
+                    <button class="btn btn-secondary" @onclick="CerrarModalExamen"><i class="bi bi-x-lg"></i> Cerrar</button>
                 </div>
             </div>
         </div>
@@ -212,26 +206,18 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content shadow">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-vial me-2"></i>Buscar Reactivo
-                    </h5>
-                    <button class="btn-close" @onclick="() => mostrarModalReactivo = false"></button>
+                    <h5 class="modal-title"><i class="bi bi-vial me-2"></i>Buscar Reactivo</h5>
+                    <button class="btn-close" @onclick="CerrarModalReactivo"></button>
                 </div>
                 <div class="modal-body">
                     <div class="input-group mb-3">
                         <InputText class="form-control" @bind-Value="valorBusquedaReactivo" placeholder="Buscar por nombre..." />
-                        <button class="btn btn-primary" @onclick="BuscarReactivos">
-                            <i class="bi bi-search"></i>
-                        </button>
+                        <button class="btn btn-primary" @onclick="BuscarReactivos"><i class="bi bi-search"></i></button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover table-bordered align-middle text-center">
                             <thead class="table-light">
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Fabricante</th>
-                                    <th>Unidad</th>
-                                </tr>
+                                <tr><th>Nombre</th><th>Fabricante</th><th>Unidad</th></tr>
                             </thead>
                             <tbody>
                                 @foreach (var r in reactivosEncontrados)
@@ -247,9 +233,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="() => mostrarModalReactivo = false">
-                        <i class="bi bi-x-lg"></i> Cerrar
-                    </button>
+                    <button class="btn btn-secondary" @onclick="CerrarModalReactivo"><i class="bi bi-x-lg"></i> Cerrar</button>
                 </div>
             </div>
         </div>
@@ -274,14 +258,31 @@
     {
         if (firstRender && !isRendered)
         {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                isRendered = true;
+                StateHasChanged();
+                return;
+            }
+
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "laboratorista";
+
+            if (puedeVer)
+            {
+                var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                var idParam = query.Get("idExamen");
+                if (!string.IsNullOrWhiteSpace(idParam) && int.TryParse(idParam, out var id))
+                    await SeleccionarExamenPorId(id);
+                else if (idExamen is not null)
+                    await SeleccionarExamenPorId(idExamen.Value);
+            }
+
             isRendered = true;
-            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            var idParam = query.Get("idExamen");
-            if (!string.IsNullOrWhiteSpace(idParam) && int.TryParse(idParam, out var id))
-                await SeleccionarExamenPorId(id);
-            else if (idExamen is not null)
-                await SeleccionarExamenPorId(idExamen.Value);
             StateHasChanged();
         }
     }
@@ -292,11 +293,18 @@
         reactivosAsociados = await AsociacionesApi.ObtenerPorExamenIdAsync(id) ?? new();
     }
 
-    private void MostrarModalExamen()
+    private async Task MostrarModalExamen()
     {
         examenesEncontrados = new();
         valorBusquedaExamen = "";
         mostrarModalExamen = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+    }
+
+    private async Task CerrarModalExamen()
+    {
+        mostrarModalExamen = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task BuscarExamenes()
@@ -313,15 +321,23 @@
     {
         examenSeleccionado = examen;
         mostrarModalExamen = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
         reactivosAsociados = await AsociacionesApi.ObtenerPorExamenIdAsync(examen.IdExamen) ?? new();
         CurrentPage = 1;
     }
 
-    private void MostrarModalReactivo()
+    private async Task MostrarModalReactivo()
     {
         reactivosEncontrados = new();
         valorBusquedaReactivo = "";
         mostrarModalReactivo = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+    }
+
+    private async Task CerrarModalReactivo()
+    {
+        mostrarModalReactivo = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task BuscarReactivos()
@@ -381,6 +397,7 @@
             }
         }
     }
+
     private int CurrentPage = 1;
     private int TotalPages => (int)Math.Ceiling(reactivosAsociados.Count / (double)PageSize);
     private IEnumerable<AsociacionReactivoDto> PaginatedReactivos =>

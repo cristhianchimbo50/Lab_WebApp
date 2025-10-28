@@ -16,7 +16,7 @@
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
             bool puedeVer = rol is "administrador" or "laboratorista";
-            bool puedeGestionar = rol is "administrador";
+            bool puedeGestionar = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -26,9 +26,7 @@
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">
-                            No tienes permisos para acceder a la gestión de reactivos.
-                        </p>
+                        <p class="text-muted mb-3">No tienes permisos para acceder a la gestión de reactivos.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -38,38 +36,62 @@
         }
         else
         {
-            <h3 class="mb-4">
-                <i class="bi bi-droplet-half me-2 text-primary"></i>Gestión de Reactivos
-            </h3>
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-droplet-half text-primary fs-4 me-2"></i>Gestión de Reactivos</span>
+                @if (puedeGestionar)
+                {
+                    <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevo">
+                        <i class="bi bi-plus-circle me-1"></i>Nuevo Reactivo
+                    </button>
+                }
+            </h4>
 
-            <div class="card mb-3 shadow-sm">
-                <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Buscar por nombre</label>
-                        <InputText class="form-control" @bind-Value="valorBusqueda" />
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Buscar por</label>
+                        <InputSelect @bind-Value="criterioBusqueda" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="nombre">Nombre</option>
+                            <option value="fabricante">Fabricante</option>
+                        </InputSelect>
                     </div>
-                    <div class="col-md-6 d-flex align-items-end gap-2 justify-content-md-end">
-                        <button class="btn btn-primary" @onclick="BuscarReactivos">
-                            <i class="bi bi-search"></i>
-                        </button>
-                        @if (puedeGestionar)
-                        {
-                            <button class="btn btn-success" @onclick="MostrarModalNuevo">
-                                <i class="bi bi-plus-circle"></i>
-                            </button>
-                        }
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Valor</label>
+                        <InputText class="form-control" @bind-Value="valorBusqueda" placeholder="Ingrese valor a buscar"
+                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarReactivos(); })" />
+                    </div>
+                    <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                        <button class="btn btn-primary" @onclick="BuscarReactivos"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
 
-            @if (ListaReactivos is null || ListaReactivos.Count == 0)
+            @if (!string.IsNullOrEmpty(mensaje))
             {
-                <div class="alert alert-warning">No se encontraron reactivos.</div>
+                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
+                    @mensaje
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (ListaReactivos == null)
+            {
+                <div class="alert alert-info text-center shadow-sm">
+                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
+                </div>
+            }
+            else if (ListaReactivos.Count == 0)
+            {
+                <div class="alert alert-warning text-center shadow-sm">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron reactivos registrados.
+                </div>
             }
             else
             {
-                <div class="table-responsive shadow-sm" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
-                    <table class="table table-hover table-bordered align-middle">
+                <div class="table-responsive shadow-sm rounded">
+                    <table class="table table-striped table-hover align-middle text-center">
                         <thead class="table-light">
                             <tr>
                                 <th>Nombre</th>
@@ -77,38 +99,44 @@
                                 <th>Unidad</th>
                                 <th>Cantidad</th>
                                 <th>Estado</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var reactivo in ListaReactivos)
+                            @foreach (var reactivo in ReactivosPaginados)
                             {
                                 <tr>
                                     <td>@reactivo.NombreReactivo</td>
                                     <td>@reactivo.Fabricante</td>
                                     <td>@reactivo.Unidad</td>
-                                    <td>@reactivo.CantidadDisponible</td>
+                                    <td>@reactivo.CantidadDisponible.ToString("N2")</td>
                                     <td>
                                         <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
                                             @(reactivo.Anulado ? "Anulado" : "Activo")
                                         </span>
                                     </td>
-                                    <td class="text-center">
+                                    <td>
                                         @if (puedeGestionar)
                                         {
-                                            <button class="btn btn-warning btn-sm me-1 shadow-sm" title="Editar" @onclick="() => EditarReactivo(reactivo)">
-                                                <i class="bi bi-pencil-square text-black"></i>
+                                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarReactivo(reactivo)">
+                                                <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            @if (!reactivo.Anulado)
+                                            @if (reactivo.Anulado)
                                             {
-                                                <button class="btn btn-danger btn-sm shadow-sm" title="Anular" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
+                                                <button class="btn btn-success btn-sm" @onclick="() => ReactivarReactivo(reactivo)">
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
                                                     <i class="bi bi-x-circle-fill"></i>
                                                 </button>
                                             }
                                         }
                                         else
                                         {
-                                            <span class="text-muted">Sin acciones</span>
+                                            <span class="text-muted small">Sin permisos</span>
                                         }
                                     </td>
                                 </tr>
@@ -116,112 +144,150 @@
                         </tbody>
                     </table>
                 </div>
-            }
 
-            @if (modalVisible)
-            {
-                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <EditForm Model="@ReactivoActual" OnValidSubmit="ValidarYGuardar">
-                                <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title">
-                                        <i class="bi bi-flask me-2"></i>
-                                        @(ReactivoActual.IdReactivo == 0 ? "Nuevo Reactivo" : "Editar Reactivo")
-                                    </h5>
-                                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <DataAnnotationsValidator />
-                                    <ValidationSummary />
-                                    <div class="mb-2">
-                                        <label class="form-label">Nombre</label>
-                                        <InputText class="form-control" @bind-Value="ReactivoActual.NombreReactivo" />
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Fabricante</label>
-                                        <InputText class="form-control" @bind-Value="ReactivoActual.Fabricante" />
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Unidad</label>
-                                        <InputText class="form-control" @bind-Value="ReactivoActual.Unidad" />
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Cantidad Disponible</label>
-                                        <InputNumber class="form-control" @bind-Value="ReactivoActual.CantidadDisponible" />
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-save-fill me-1"></i> Guardar
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
-                                        <i class="bi bi-x-lg me-1"></i> Cancelar
-                                    </button>
-                                </div>
-                            </EditForm>
-                        </div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                    <div class="text-muted small">
+                        Mostrando @((paginaActual - 1) * tamPagina + 1) - @(Math.Min(paginaActual * tamPagina, ListaReactivos.Count)) de @ListaReactivos.Count registros
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small">Registros por página:</label>
+                        <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="PrevPagina">&laquo;</button>
+                                </li>
+                                @for (int i = 1; i <= TotalPaginas; i++)
+                                {
+                                    <li class="page-item @(paginaActual == i ? "active" : "")">
+                                        <button class="page-link" @onclick="@(() => IrAPagina(i))">@i</button>
+                                    </li>
+                                }
+                                <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
+                                    <button class="page-link" @onclick="NextPagina">&raquo;</button>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             }
-        }
-    </Authorized>
 
-    <NotAuthorized>
-        <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
-                <div class="card-body p-4">
-                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
-                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
-                    <p class="text-muted mb-3">
-                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
-                    </p>
-                    <NavLink href="/login" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
-                    </NavLink>
+            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content shadow-lg border-0">
+                        <EditForm Model="@ReactivoActual" OnValidSubmit="ValidarYGuardar">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-flask me-2"></i>@(ReactivoActual.IdReactivo == 0 ? "Nuevo Reactivo" : "Editar Reactivo")
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre</label>
+                                        <InputText class="form-control text-uppercase" @bind-Value="ReactivoActual.NombreReactivo"
+                                                   @oninput="(e => ReactivoActual.NombreReactivo = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Fabricante</label>
+                                        <InputText class="form-control text-uppercase" @bind-Value="ReactivoActual.Fabricante"
+                                                   @oninput="(e => ReactivoActual.Fabricante = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Unidad</label>
+                                        <InputText class="form-control text-uppercase" @bind-Value="ReactivoActual.Unidad" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Cantidad Disponible</label>
+                                        <InputNumber class="form-control text-end" @bind-Value="ReactivoActual.CantidadDisponible" Min="0" Step="0.01" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary px-3">
+                                    <i class="bi bi-save me-1"></i>Guardar
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                                    <i class="bi bi-x-lg me-1"></i>Cancelar
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
                 </div>
             </div>
-        </div>
-    </NotAuthorized>
+        }
+    </Authorized>
 </AuthorizeView>
 
 @code {
-    private List<ReactivoDto> ListaReactivos = new();
+    private List<ReactivoDto>? ListaReactivos;
     private ReactivoDto ReactivoActual = new();
-    private bool modalVisible = false;
+    private bool modalVisible;
+    private string criterioBusqueda = "";
     private string valorBusqueda = "";
+    private string mensaje = "";
+    private string tipoMensaje = "info";
+    private int paginaActual = 1;
+    private int tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((ListaReactivos?.Count ?? 1) / (double)tamPagina);
+    private IEnumerable<ReactivoDto> ReactivosPaginados => ListaReactivos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<ReactivoDto>();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        try
+        if (firstRender)
         {
-            await BuscarReactivos();
-        }
-        catch (HttpRequestException)
-        {
-            await JS.InvokeVoidAsync("alert", "No autorizado para ver reactivos.");
+            try
+            {
+                await BuscarReactivos();
+            }
+            catch (HttpRequestException)
+            {
+                await JS.InvokeVoidAsync("alert", "No autorizado para ver reactivos.");
+            }
         }
     }
 
     private async Task BuscarReactivos()
     {
-        if (string.IsNullOrWhiteSpace(valorBusqueda))
-            ListaReactivos = await ReactivosApiService.GetReactivosAsync();
+        var data = await ReactivosApiService.GetReactivosAsync();
+        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
+            ListaReactivos = data;
         else
-            ListaReactivos = (await ReactivosApiService.GetReactivosAsync())
-                .Where(x => x.NombreReactivo.Contains(valorBusqueda, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+        {
+            valorBusqueda = valorBusqueda.ToLower();
+            ListaReactivos = criterioBusqueda switch
+            {
+                "nombre" => data.Where(x => x.NombreReactivo.ToLower().Contains(valorBusqueda)).ToList(),
+                "fabricante" => data.Where(x => x.Fabricante?.ToLower().Contains(valorBusqueda) ?? false).ToList(),
+                _ => data
+            };
+        }
+        paginaActual = 1;
     }
 
-    private void MostrarModalNuevo()
+    private async Task MostrarModalNuevo()
     {
         ReactivoActual = new ReactivoDto();
         modalVisible = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private void CerrarModal() => modalVisible = false;
+    private async Task CerrarModal()
+    {
+        modalVisible = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+        mensaje = string.Empty;
+    }
 
-    private void EditarReactivo(ReactivoDto reactivo)
+    private async Task EditarReactivo(ReactivoDto reactivo)
     {
         ReactivoActual = new ReactivoDto
         {
@@ -233,29 +299,29 @@
             Anulado = reactivo.Anulado
         };
         modalVisible = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task ValidarYGuardar()
     {
         try
         {
-            HttpResponseMessage result;
-            if (ReactivoActual.IdReactivo == 0)
-                result = await ReactivosApiService.CrearReactivoAsync(ReactivoActual);
-            else
-                result = await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
+            HttpResponseMessage result = ReactivoActual.IdReactivo == 0
+                ? await ReactivosApiService.CrearReactivoAsync(ReactivoActual)
+                : await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
 
             if (result.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Reactivo guardado correctamente.");
-                ReactivoActual = new ReactivoDto();
-                await BuscarReactivos();
+                mensaje = "Reactivo guardado correctamente.";
+                tipoMensaje = "success";
                 modalVisible = false;
+                await JS.InvokeVoidAsync("marcarModalCerrado");
+                await BuscarReactivos();
             }
             else
             {
-                var msg = await result.Content.ReadAsStringAsync();
-                await JS.InvokeVoidAsync("alert", $"Error al guardar: {result.StatusCode}\n{msg}");
+                mensaje = "Error al guardar reactivo.";
+                tipoMensaje = "danger";
             }
         }
         catch (HttpRequestException)
@@ -266,26 +332,43 @@
 
     private async Task ConfirmarAnulacion(int id)
     {
-        var confirm = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?");
-        if (!confirm) return;
-        try
+        if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?"))
         {
             var result = await ReactivosApiService.AnularReactivoAsync(id);
             if (result.IsSuccessStatusCode)
             {
+                mensaje = "Reactivo anulado correctamente.";
+                tipoMensaje = "success";
                 await BuscarReactivos();
-                await JS.InvokeVoidAsync("alert", "Reactivo anulado correctamente.");
             }
-            else
-            {
-                await JS.InvokeVoidAsync("alert", $"Error: {result.StatusCode}");
-            }
-        }
-        catch (HttpRequestException)
-        {
-            await JS.InvokeVoidAsync("alert", "No autorizado para anular reactivos.");
         }
     }
 
+    private async Task ReactivarReactivo(ReactivoDto reactivo)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el reactivo {reactivo.NombreReactivo}?"))
+        {
+            reactivo.Anulado = false;
+            var result = await ReactivosApiService.EditarReactivoAsync(reactivo.IdReactivo, reactivo);
+            if (result.IsSuccessStatusCode)
+            {
+                mensaje = "Reactivo reactivado correctamente.";
+                tipoMensaje = "success";
+                await BuscarReactivos();
+            }
+        }
+    }
+
+    private async Task LimpiarBusqueda()
+    {
+        criterioBusqueda = "";
+        valorBusqueda = "";
+        ListaReactivos = null;
+    }
+
+    private void IrAPagina(int pagina) => paginaActual = pagina;
+    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
+    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
+    private void CambiarTamPagina() => paginaActual = 1;
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

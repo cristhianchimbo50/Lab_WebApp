@@ -38,21 +38,21 @@
         }
         else
         {
-            <h4 class="mb-4 d-flex align-items-center justify-content-between">
-                <span>
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="d-flex align-items-center">
                     <i class="bi bi-arrow-left-right text-primary fs-5 me-2"></i> Movimientos de Reactivos
                 </span>
-                <div>
-                    <button class="btn btn-success me-2" @onclick='() => Navigation.NavigateTo("/reactivos/ingreso-stock")'>
+                <div class="text-end">
+                    <button class="btn btn-success me-2 shadow-sm" @onclick='() => Navigation.NavigateTo("/reactivos/ingreso-stock")'>
                         <i class="bi bi-box-arrow-in-down me-1"></i> Registrar Ingreso
                     </button>
-                    <button class="btn btn-danger" @onclick='() => Navigation.NavigateTo("/reactivos/egreso-stock")'>
+                    <button class="btn btn-danger shadow-sm" @onclick='() => Navigation.NavigateTo("/reactivos/egreso-stock")'>
                         <i class="bi bi-box-arrow-up me-1"></i> Registrar Egreso
                     </button>
                 </div>
             </h4>
 
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
@@ -111,14 +111,14 @@
             }
             else
             {
-                <div class="card shadow-sm">
+                <div class="card shadow-sm border-0">
                     <div class="card-header bg-light fw-semibold">
                         <i class="bi bi-table me-2"></i> Resultados de Movimientos
                     </div>
                     <div class="card-body p-2">
                         <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-                            <table class="table table-sm table-hover table-bordered align-middle">
-                                <thead class="table-light text-center">
+                            <table class="table table-sm table-hover table-bordered align-middle text-center">
+                                <thead class="table-light">
                                     <tr>
                                         <th>No. Movimiento</th>
                                         <th>Reactivo</th>
@@ -135,9 +135,9 @@
                                         @foreach (var m in movimientos)
                                         {
                                             <tr>
-                                                <td class="text-center">@m.IdMovimientoReactivo</td>
+                                                <td>@m.IdMovimientoReactivo</td>
                                                 <td>@m.NombreReactivo</td>
-                                                <td class="text-center">
+                                                <td>
                                                     @if (m.TipoMovimiento == "INGRESO")
                                                     {
                                                         <span class="badge bg-success">INGRESO</span>
@@ -148,9 +148,9 @@
                                                     }
                                                 </td>
                                                 <td class="text-end">@m.Cantidad.ToString("N2")</td>
-                                                <td class="text-center">@m.FechaMovimiento.ToString("dd/MM/yyyy")</td>
+                                                <td>@m.FechaMovimiento.ToString("dd/MM/yyyy")</td>
                                                 <td>@m.Observacion</td>
-                                                <td class="text-center">
+                                                <td>
                                                     @if (!string.IsNullOrEmpty(m.NumeroResultado))
                                                     {
                                                         <span class="badge bg-info text-dark">@m.NumeroResultado</span>
@@ -199,28 +199,34 @@
 </AuthorizeView>
 
 @code {
-    private bool cargado = false;
+    private bool cargado;
     private MovimientoReactivoFiltroDto filtro = new();
     private List<MovimientoReactivoDto> movimientos = new();
     private string filtroSeleccionado = "reactivo";
     private string valorFiltro = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (!user.Identity?.IsAuthenticated ?? true)
+        if (firstRender && !cargado)
         {
-            cargado = false;
-            return;
+            try
+            {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+                if (user.Identity?.IsAuthenticated ?? false)
+                {
+                    var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                    if (rol is "administrador" or "laboratorista")
+                        await FiltrarMovimientosAsync();
+                }
+            }
+            catch (HttpRequestException)
+            {
+                await JS.InvokeVoidAsync("alert", "No autorizado para ver movimientos.");
+            }
+            cargado = true;
+            StateHasChanged();
         }
-        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        bool puedeVer = rol is "administrador" or "laboratorista";
-        if (puedeVer)
-        {
-            await FiltrarMovimientosAsync();
-        }
-        cargado = true;
     }
 
     private async Task FiltrarMovimientosAsync()
@@ -231,12 +237,20 @@
             filtro.IdMovimientoReactivo = null;
             filtro.NombreReactivo = null;
             filtro.Observacion = null;
+
             switch (filtroSeleccionado)
             {
-                case "numero": filtro.IdMovimientoReactivo = valorFiltro; break;
-                case "reactivo": filtro.NombreReactivo = valorFiltro; break;
-                case "observacion": filtro.Observacion = valorFiltro; break;
+                case "numero":
+                    filtro.IdMovimientoReactivo = valorFiltro;
+                    break;
+                case "reactivo":
+                    filtro.NombreReactivo = valorFiltro;
+                    break;
+                case "observacion":
+                    filtro.Observacion = valorFiltro;
+                    break;
             }
+
             movimientos = await MovimientosApi.FiltrarMovimientosAsync(filtro);
         }
         catch (HttpRequestException)

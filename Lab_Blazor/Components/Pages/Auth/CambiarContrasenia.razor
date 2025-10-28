@@ -6,7 +6,7 @@
 @using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Auth
 @using Microsoft.AspNetCore.Components.Authorization
-
+@using System.Security.Claims
 
 @inject IAuthApiService AuthApi
 @inject NavigationManager Navigation
@@ -15,68 +15,107 @@
 
 <PageTitle>Cambiar Contraseña</PageTitle>
 
-<div class="container d-flex align-items-center justify-content-center vh-100">
-    <div class="card shadow-lg p-4" style="max-width: 450px; width: 100%;">
-        <div class="text-center mb-3">
-            <i class="bi bi-shield-lock text-primary" style="font-size: 3rem;"></i>
-            <h4 class="mt-2 text-primary fw-bold">Cambio de Contraseña</h4>
-            <p class="text-muted mb-0">Ingrese su contraseña actual y la nueva contraseña</p>
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+        }
+
+        @if (!puedeVer)
+        {
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                    <div class="card-body p-4">
+                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">
+                            No tienes permisos suficientes para acceder a este módulo.
+                        </p>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                            <i class="bi bi-arrow-left"></i> Regresar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="container d-flex align-items-center justify-content-center vh-100">
+                <div class="card shadow-lg p-4" style="max-width: 450px; width: 100%;">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-shield-lock text-primary" style="font-size: 3rem;"></i>
+                        <h4 class="mt-2 text-primary fw-bold">Cambio de Contraseña</h4>
+                        <p class="text-muted mb-0">Ingrese su contraseña actual y la nueva contraseña</p>
+                    </div>
+                    <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaContrasenia">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label class="form-label">Correo Electrónico</label>
+                            <InputText class="form-control" @bind-Value="Cambio.CorreoUsuario" readonly />
+                        </div>
+                        <div class="mb-3 position-relative">
+                            <label class="form-label">Contraseña Actual</label>
+                            <div class="input-group">
+                                <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña actual" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordActual">
+                                    <i class="@passwordIconActual"></i>
+                                </button>
+                            </div>
+                            <ValidationMessage For="@(() => Cambio.ContraseniaActual)" />
+                        </div>
+                        <div class="mb-3 position-relative">
+                            <label class="form-label">Nueva Contraseña</label>
+                            <div class="input-group">
+                                <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordNueva">
+                                    <i class="@passwordIconNueva"></i>
+                                </button>
+                            </div>
+                            <ValidationMessage For="@(() => Cambio.NuevaContrasenia)" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(mensaje))
+                        {
+                            <div class="alert alert-@(exito ? "success" : "danger") mt-2" role="alert">
+                                <i class="bi @(exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@mensaje
+                            </div>
+                        }
+                        <button type="submit" class="btn btn-primary w-100 mt-3">
+                            <i class="bi bi-save me-1"></i>Guardar Nueva Contraseña
+                        </button>
+                        <button type="button" class="btn btn-link text-secondary w-100 mt-2" @onclick="@(() => Navigation.NavigateTo("/login", true))">
+                            <i class="bi bi-arrow-left-circle me-1"></i>Volver al inicio de sesión
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card-body p-4">
+                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
+                    <p class="text-muted mb-3">
+                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
+                    </p>
+                    <NavLink href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
+                    </NavLink>
+                </div>
+            </div>
         </div>
-
-        <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaContrasenia">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-
-            <div class="mb-3">
-                <label class="form-label">Correo Electrónico</label>
-                <InputText class="form-control" @bind-Value="Cambio.CorreoUsuario" readonly />
-            </div>
-
-            <div class="mb-3 position-relative">
-                <label class="form-label">Contraseña Actual</label>
-                <div class="input-group">
-                    <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña actual" />
-                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordActual">
-                        <i class="@passwordIconActual"></i>
-                    </button>
-                </div>
-                <ValidationMessage For="@(() => Cambio.ContraseniaActual)" />
-            </div>
-
-            <div class="mb-3 position-relative">
-                <label class="form-label">Nueva Contraseña</label>
-                <div class="input-group">
-                    <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
-                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordNueva">
-                        <i class="@passwordIconNueva"></i>
-                    </button>
-                </div>
-                <ValidationMessage For="@(() => Cambio.NuevaContrasenia)" />
-            </div>
-
-            @if (!string.IsNullOrEmpty(mensaje))
-            {
-                <div class="alert alert-@(exito ? "success" : "danger") mt-2" role="alert">
-                    <i class="bi @(exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@mensaje
-                </div>
-            }
-
-            <button type="submit" class="btn btn-primary w-100 mt-3">
-                <i class="bi bi-save me-1"></i>Guardar Nueva Contraseña
-            </button>
-
-            <button type="button" class="btn btn-link text-secondary w-100 mt-2" @onclick="@(() => Navigation.NavigateTo("/login", true))">
-                <i class="bi bi-arrow-left-circle me-1"></i>Volver al inicio de sesión
-            </button>
-        </EditForm>
-    </div>
-</div>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private CambiarContraseniaDto Cambio = new();
     private string mensaje = "";
     private bool exito;
-
     private string passwordInputTypeActual = "password";
     private string passwordIconActual = "bi bi-eye-slash";
     private string passwordInputTypeNueva = "password";
@@ -86,7 +125,6 @@
     {
         var uri = new Uri(Navigation.Uri);
         var correoQuery = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("correo");
-
         if (!string.IsNullOrWhiteSpace(correoQuery))
         {
             Cambio.CorreoUsuario = correoQuery;
@@ -106,16 +144,13 @@
     {
         mensaje = "";
         exito = false;
-
         if (string.IsNullOrWhiteSpace(Cambio.CorreoUsuario))
         {
             await JS.InvokeVoidAsync("alert", "No se pudo identificar el usuario. Inicie sesión nuevamente.");
             Navigation.NavigateTo("/login", true);
             return;
         }
-
         var (resultado, msg) = await AuthApi.CambiarContraseniaAsync(Cambio);
-
         if (!resultado && msg.StartsWith("{"))
         {
             try
@@ -126,10 +161,8 @@
             }
             catch { }
         }
-
         mensaje = msg;
         exito = resultado;
-
         if (resultado)
         {
             await JS.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
@@ -164,4 +197,6 @@
             passwordIconNueva = "bi bi-eye-slash";
         }
     }
+
+    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

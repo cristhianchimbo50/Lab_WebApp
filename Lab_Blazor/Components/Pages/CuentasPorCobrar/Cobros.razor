@@ -17,8 +17,14 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
+
+            bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeAnular = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -27,10 +33,8 @@
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
-                        <p class="text-muted mb-3">
-                            Solo el administrador o recepcionista puede gestionar cobros de pacientes.
-                        </p>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -41,10 +45,10 @@
         else
         {
             <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
-                <i class="bi bi-cash-coin text-primary fs-4 me-2"></i> Cobros de Pacientes
+                <i class="bi bi-cash-coin text-primary fs-4 me-2"></i>Cobros de Pacientes
             </h4>
 
-            @if (ordenesPorCobrar is null)
+            @if (!datosCargados)
             {
                 <div class="text-center py-5 text-primary">
                     <div class="spinner-border me-2"></div>
@@ -183,7 +187,7 @@
 
             @if (mostrarModalCobro)
             {
-                <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+                <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content shadow-lg">
                             <div class="modal-header bg-primary text-white">
@@ -267,8 +271,23 @@
     {
         if (firstRender && !datosCargados)
         {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                datosCargados = true;
+                StateHasChanged();
+                return;
+            }
+
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "recepcionista";
+
+            if (puedeVer)
+                await CargarOrdenesAsync();
+
             datosCargados = true;
-            await CargarOrdenesAsync();
             StateHasChanged();
         }
     }
@@ -326,8 +345,17 @@
     private void CalcularSaldoSeleccionado() => totalSaldoSeleccionado = ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
     private decimal totalCobro => dineroEfectivo + transferencia;
 
-    private void MostrarModalCobro() => mostrarModalCobro = true;
-    private void CerrarModalCobro() => mostrarModalCobro = false;
+    private async Task MostrarModalCobro()
+    {
+        mostrarModalCobro = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+    }
+
+    private async Task CerrarModalCobro()
+    {
+        mostrarModalCobro = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+    }
 
     private async Task RegistrarCobroAsync()
     {
@@ -347,14 +375,7 @@
         foreach (var orden in ordenesSeleccionadas)
         {
             pagoDto.IdOrden = orden.IdOrden;
-            var pagoUnitario = new PagoDto
-            {
-                IdOrden = orden.IdOrden,
-                DineroEfectivo = pagoDto.DineroEfectivo,
-                Transferencia = pagoDto.Transferencia,
-                Observacion = pagoDto.Observacion
-            };
-            var response = await PagosApi.RegistrarCobroCuentaPorCobrarAsync(pagoUnitario);
+            var response = await PagosApi.RegistrarCobroCuentaPorCobrarAsync(pagoDto);
             if (response == null) errores = true;
             if (cobroTotal <= 0) break;
         }

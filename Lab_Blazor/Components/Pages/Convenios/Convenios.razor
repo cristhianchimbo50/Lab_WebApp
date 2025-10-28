@@ -16,8 +16,14 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
+
+            bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeAnular = rol is "administrador";
         }
 
         @if (!puedeVer)
@@ -26,8 +32,8 @@
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
-                        <p class="text-muted mb-3">Solo el administrador o recepcionista puede gestionar convenios.</p>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -38,7 +44,7 @@
         else
         {
             <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
-                <i class="bi bi-handshake text-primary fs-4 me-2"></i> Gestión de Convenios
+                <i class="bi bi-handshake text-primary fs-4 me-2"></i>Gestión de Convenios
             </h4>
 
             @if (!isRendered)
@@ -153,7 +159,7 @@
                                                 <button class="btn btn-sm btn-primary" @onclick="() => VerDetalle(c.IdConvenio)">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                @if (c.Anulado != true && rol == "administrador")
+                                                @if (c.Anulado != true && puedeAnular)
                                                 {
                                                     <button class="btn btn-sm btn-danger" @onclick="() => AnularConvenio(c.IdConvenio)">
                                                         <i class="bi bi-x-circle"></i>
@@ -172,7 +178,7 @@
             @if (mostrarModal && convenioDetalle != null)
             {
                 var totalMedico = Math.Round(convenioDetalle.MontoTotal * convenioDetalle.PorcentajeComision / 100, 2);
-                <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+                <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                     <div class="modal-dialog modal-lg modal-dialog-centered">
                         <div class="modal-content shadow-lg">
                             <div class="modal-header bg-primary text-white">
@@ -260,11 +266,33 @@
     {
         if (firstRender)
         {
-            convenios = await ConveniosApi.ObtenerConveniosAsync();
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                isRendered = true;
+                StateHasChanged();
+                return;
+            }
+
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+                ?? user.FindFirst("role")?.Value
+                ?? user.FindFirst("roles")?.Value
+                ?? "";
+
+            bool puedeVer = rol is "administrador" or "recepcionista";
+
+            if (puedeVer)
+            {
+                convenios = await ConveniosApi.ObtenerConveniosAsync();
+            }
+
             isRendered = true;
             StateHasChanged();
         }
     }
+
 
     private async Task FiltrarConvenios()
     {
@@ -295,12 +323,16 @@
     {
         convenioDetalle = await ConveniosApi.ObtenerDetalleAsync(id);
         mostrarModal = convenioDetalle != null;
+
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+        StateHasChanged();
     }
 
-    private void CerrarModal()
+    private async Task CerrarModal()
     {
         mostrarModal = false;
         convenioDetalle = null;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task AnularConvenio(int id)
@@ -318,6 +350,8 @@
         {
             await JS.InvokeVoidAsync("alert", "No se pudo anular el convenio.");
         }
+
+        StateHasChanged();
     }
 
     private void IrARegistrarConvenio()

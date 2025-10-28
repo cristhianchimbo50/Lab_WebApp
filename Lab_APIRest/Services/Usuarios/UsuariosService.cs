@@ -89,7 +89,7 @@ namespace Lab_APIRest.Services.Usuarios
             await _emailService.EnviarCorreoAsync(
                 usuario.correo_usuario,
                 usuario.nombre,
-                "Credenciales de acceso al sistema",
+                "Credenciales de acceso al la aplicación web",
                 $@"<h2>Bienvenido(a) {usuario.nombre}</h2>
                 <p>Tu usuario: <b>{usuario.correo_usuario}</b></p>
                 <p>Contraseña temporal: <b>{nuevaTemporal}</b></p>

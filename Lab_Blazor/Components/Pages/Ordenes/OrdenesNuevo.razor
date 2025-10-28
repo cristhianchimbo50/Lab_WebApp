@@ -24,11 +24,16 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
 
+<PageTitle>Registrar Orden</PageTitle>
+
 <AuthorizeView>
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
             bool puedeVer = rol is "administrador" or "recepcionista";
         }
 
@@ -50,7 +55,7 @@
         else
         {
             <h4 class="mb-4 d-flex align-items-center">
-                <i class="fas fa-file-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden
+                <i class="bi bi-file-earmark-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden
             </h4>
 
             @if (!cargado)
@@ -64,39 +69,38 @@
             {
                 <EditForm Model="orden" OnValidSubmit="MostrarPagoModal">
                     <div class="card shadow-sm mb-4">
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Fecha de la Orden</label>
-                                    <InputDate class="form-control" @bind-Value="FechaOrdenSeleccionada" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Cédula del Paciente</label>
-                                    <div class="input-group">
-                                        <InputText class="form-control" @bind-Value="Cedula" />
-                                        <button class="btn btn-info" @onclick="BuscarPorCedula">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                    </div>
+                        <div class="card-body row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Fecha de la Orden</label>
+                                <InputDate class="form-control" @bind-Value="FechaOrdenSeleccionada" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Cédula del Paciente</label>
+                                <div class="input-group">
+                                    <InputText class="form-control" @bind-Value="Cedula" placeholder="Ingrese cédula" />
+                                    <button class="btn btn-outline-primary" @onclick="BuscarPorCedula">
+                                        <i class="bi bi-search"></i>
+                                    </button>
                                 </div>
                             </div>
-                            @if (PacienteActual is not null)
-                            {
-                                <hr />
-                                <div class="row g-3 mt-2">
-                                    <div class="col-md-3"><label>Nombre</label><input class="form-control" value="@PacienteActual.NombrePaciente" disabled /></div>
-                                    <div class="col-md-2"><label>Edad</label><input class="form-control" value="@PacienteActual.EdadPaciente" disabled /></div>
-                                    <div class="col-md-4"><label>Dirección</label><input class="form-control" value="@PacienteActual.DireccionPaciente" disabled /></div>
-                                    <div class="col-md-3"><label>Teléfono</label><input class="form-control" value="@PacienteActual.TelefonoPaciente" disabled /></div>
-                                    <div class="col-md-6"><label>Correo</label><input class="form-control" value="@PacienteActual.CorreoElectronicoPaciente" disabled /></div>
-                                </div>
-                            }
                         </div>
+
+                        @if (PacienteActual is not null)
+                        {
+                            <hr />
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-3"><label>Nombre</label><input class="form-control" value="@PacienteActual.NombrePaciente" disabled /></div>
+                                <div class="col-md-2"><label>Edad</label><input class="form-control" value="@PacienteActual.EdadPaciente" disabled /></div>
+                                <div class="col-md-4"><label>Dirección</label><input class="form-control" value="@PacienteActual.DireccionPaciente" disabled /></div>
+                                <div class="col-md-3"><label>Teléfono</label><input class="form-control" value="@PacienteActual.TelefonoPaciente" disabled /></div>
+                                <div class="col-md-6"><label>Correo</label><input class="form-control" value="@PacienteActual.CorreoElectronicoPaciente" disabled /></div>
+                            </div>
+                        }
                     </div>
 
                     <div class="card shadow-sm mb-4">
                         <div class="card-body">
-                            <label class="form-label">Médico</label>
+                            <label class="form-label fw-semibold">Médico</label>
                             <div class="input-group">
                                 <select class="form-select" @bind="MedicoIdSeleccionado">
                                     <option value="">-- Seleccione un médico --</option>
@@ -106,7 +110,7 @@
                                     }
                                 </select>
                                 <button class="btn btn-secondary" type="button" @onclick="AbrirModalNuevoMedico">
-                                    <i class="fas fa-user-md"></i> Nuevo
+                                    <i class="bi bi-person-plus"></i> Nuevo
                                 </button>
                             </div>
                         </div>
@@ -114,7 +118,7 @@
 
                     <div class="mb-3">
                         <button class="btn btn-success" type="button" @onclick="() => MostrarModalExamen = true">
-                            <i class="fas fa-vial me-1"></i> Agregar Examen
+                            <i class="bi bi-plus-circle me-1"></i> Agregar Examen
                         </button>
                     </div>
 
@@ -133,7 +137,7 @@
                                                 <td>@ex.NombreExamen</td>
                                                 <td>@ex.Estudio</td>
                                                 <td>@ex.Precio.ToString("C")</td>
-                                                <td><button class="btn btn-sm btn-danger" @onclick="() => QuitarExamen(ex)"><i class="fas fa-trash-alt"></i></button></td>
+                                                <td><button class="btn btn-sm btn-danger" @onclick="() => QuitarExamen(ex)"><i class="bi bi-trash"></i></button></td>
                                             </tr>
                                         }
                                     </tbody>
@@ -143,8 +147,8 @@
                     }
 
                     <div class="text-end mb-4">
-                        <button class="btn btn-success px-4" type="submit">
-                            <i class="fas fa-save me-1"></i> Guardar Orden
+                        <button class="btn btn-primary px-4" type="submit">
+                            <i class="bi bi-save me-1"></i> Guardar Orden
                         </button>
                     </div>
                 </EditForm>
@@ -169,23 +173,23 @@
 </AuthorizeView>
 
 @code {
-    private bool cargado = false;
+    private bool cargado;
     private string Cedula = "";
     private PacienteDto? PacienteActual;
     private List<MedicoDto> Medicos = new();
     private MedicoDto? MedicoActual;
     private MedicoDto NuevoMedico = new();
-    private bool MostrarModalMedico = false;
-    private bool MostrarModalExamen = false;
-    private bool MostrarModalPago = false;
+    private bool MostrarModalMedico;
+    private bool MostrarModalExamen;
+    private bool MostrarModalPago;
     private string TextoBuscarExamen = "";
     private List<ExamenDto> ExamenesDisponibles = new();
     private List<ExamenDto> ExamenesSeleccionados = new();
     private DateOnly FechaOrdenSeleccionada = DateOnly.FromDateTime(DateTime.Now);
     private OrdenDto orden = new();
     private PagoDto PagoActual = new();
-    private decimal Efectivo = 0;
-    private decimal Transferencia = 0;
+    private decimal Efectivo;
+    private decimal Transferencia;
 
     private int? MedicoIdSeleccionado
     {
@@ -193,29 +197,34 @@
         set => MedicoActual = Medicos.FirstOrDefault(m => m.IdMedico == value);
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        Medicos = await MedicosApi.ListarMedicosAsync();
-        cargado = true;
+        if (firstRender && !cargado)
+        {
+            Medicos = await MedicosApi.ListarMedicosAsync();
+            cargado = true;
+            StateHasChanged();
+        }
     }
 
     private async Task BuscarPorCedula()
     {
         if (string.IsNullOrWhiteSpace(Cedula)) return;
         var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(Cedula);
-        if (paciente != null) PacienteActual = paciente;
+        if (paciente != null)
+            PacienteActual = paciente;
         else
         {
             PacienteActual = null;
             await JS.InvokeVoidAsync("alert", "No se encontró paciente con esa cédula.");
         }
-        StateHasChanged();
     }
 
-    private void AbrirModalNuevoMedico()
+    private async Task AbrirModalNuevoMedico()
     {
         NuevoMedico = new MedicoDto();
         MostrarModalMedico = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task GuardarNuevoMedico()
@@ -226,20 +235,16 @@
             Medicos = await MedicosApi.ListarMedicosAsync();
             MedicoActual = Medicos.FirstOrDefault(m => m.NombreMedico == NuevoMedico.NombreMedico);
             MostrarModalMedico = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
         }
         else
         {
-            var errorMsg = await res.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"No se pudo crear el médico. {errorMsg}");
+            var msg = await res.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al crear médico: {msg}");
         }
     }
 
-    private void CerrarModalNuevoMedico() => MostrarModalMedico = false;
-
-    private async Task BuscarExamenes()
-    {
-        ExamenesDisponibles = await ExamenesApi.ListarExamenesAsync(TextoBuscarExamen);
-    }
+    private async Task BuscarExamenes() => ExamenesDisponibles = await ExamenesApi.ListarExamenesAsync(TextoBuscarExamen);
 
     private void SeleccionarExamen(ExamenDto examen)
     {
@@ -250,34 +255,21 @@
 
     private void QuitarExamen(ExamenDto examen) => ExamenesSeleccionados.Remove(examen);
 
-    private void CerrarModalExamen() => MostrarModalExamen = false;
-
     private void MostrarPagoModal()
     {
-        if (PacienteActual == null || MedicoActual == null || !ExamenesSeleccionados.Any()) return;
+        if (PacienteActual == null || MedicoActual == null || !ExamenesSeleccionados.Any())
+        {
+            JS.InvokeVoidAsync("alert", "Debe seleccionar paciente, médico y al menos un examen.");
+            return;
+        }
         Efectivo = 0;
         Transferencia = 0;
         PagoActual = new PagoDto();
         MostrarModalPago = true;
     }
 
-    private void CerrarModalPago() => MostrarModalPago = false;
-
     private decimal CalcularTotal() => ExamenesSeleccionados.Sum(e => e.Precio);
-
-    private decimal ObtenerCambio()
-    {
-        var total = CalcularTotal();
-        var pagado = Efectivo + Transferencia;
-        return pagado > total ? pagado - total : 0;
-    }
-
-    private decimal ObtenerSaldoPendiente()
-    {
-        var total = CalcularTotal();
-        var pagado = Efectivo + Transferencia;
-        return pagado < total ? total - pagado : 0;
-    }
+    private decimal ObtenerSaldoPendiente() => Math.Max(0, CalcularTotal() - (Efectivo + Transferencia));
 
     private async Task GuardarPago()
     {
@@ -298,35 +290,35 @@
         orden.Detalles = ExamenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
 
         var dto = new OrdenCompletaDto { Orden = orden, IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList() };
-        var httpResponse = await OrdenApi.CrearOrdenHttpResponseAsync(dto);
+        var response = await OrdenApi.CrearOrdenHttpResponseAsync(dto);
 
-        if (httpResponse.IsSuccessStatusCode)
+        if (response.IsSuccessStatusCode)
         {
-            var resp = await httpResponse.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
+            var resp = await response.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
             if (resp != null && resp.IdOrden > 0)
             {
-                var observacionPago = string.IsNullOrWhiteSpace(PagoActual.Observacion) ? "PAGO DESDE ORDEN" : PagoActual.Observacion;
-                var pagoDto = new PagoDto
+                var observacion = string.IsNullOrWhiteSpace(PagoActual.Observacion) ? "PAGO DESDE ORDEN" : PagoActual.Observacion;
+                var pago = new PagoDto
                 {
                     IdOrden = resp.IdOrden,
                     FechaPago = DateTime.Now,
                     MontoPagado = pagado,
-                    Observacion = observacionPago,
+                    Observacion = observacion,
                     DetallePagos = new List<DetallePagoDto>
                     {
-                        new DetallePagoDto { TipoPago = "EFECTIVO", Monto = Efectivo },
-                        new DetallePagoDto { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
+                        new() { TipoPago = "EFECTIVO", Monto = Efectivo },
+                        new() { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
                     }
                 };
-                await PagosApi.RegistrarPagoAsync(pagoDto);
+                await PagosApi.RegistrarPagoAsync(pago);
                 Navigation.NavigateTo("/ordenes");
             }
             else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
         }
         else
         {
-            var errorJson = await httpResponse.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al registrar la orden:\n{errorJson}");
+            var msg = await response.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {msg}");
         }
     }
 

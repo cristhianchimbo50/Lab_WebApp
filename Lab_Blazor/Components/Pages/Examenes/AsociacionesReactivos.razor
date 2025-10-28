@@ -18,8 +18,14 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
+
+            bool esPaciente = rol == "paciente";
             bool puedeVer = rol == "administrador";
+            bool puedeAnular = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -28,8 +34,8 @@
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
-                        <p class="text-muted mb-3">Solo los administradores pueden gestionar asociaciones.</p>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -39,9 +45,8 @@
         }
         else
         {
-            <h3 class="mb-4 d-flex align-items-center">
-                <i class="bi bi-link-45deg fs-3 text-primary me-2"></i>
-                Asociaciones Exámenes - Reactivos
+            <h3 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
+                <i class="bi bi-link-45deg fs-3 text-primary me-2"></i>Asociaciones Exámenes - Reactivos
             </h3>
 
             @if (cargando)
@@ -55,15 +60,15 @@
             {
                 @if (errorCarga)
                 {
-                    <div class="alert alert-danger">
-                        Error al cargar asociaciones.
+                    <div class="alert alert-danger shadow-sm text-center">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Error al cargar asociaciones.
                     </div>
                 }
 
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-body row g-3">
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body row g-3 align-items-end">
                         <div class="col-md-4">
-                            <label class="form-label">Buscar por</label>
+                            <label class="form-label fw-semibold">Buscar por</label>
                             <InputSelect class="form-select" @bind-Value="criterioBusqueda">
                                 <option value="">-- Seleccione --</option>
                                 <option value="examen">Examen</option>
@@ -72,15 +77,15 @@
                             </InputSelect>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label">Valor</label>
+                            <label class="form-label fw-semibold">Valor</label>
                             <InputText class="form-control" @bind-Value="valorBusqueda" />
                         </div>
-                        <div class="col-md-3 d-flex align-items-end justify-content-md-end gap-2">
-                            <button class="btn btn-primary" @onclick="BuscarAsociaciones">
-                                <i class="bi bi-search me-1"></i> Buscar
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-primary me-2 shadow-sm" @onclick="BuscarAsociaciones">
+                                <i class="bi bi-search me-1"></i>Buscar
                             </button>
-                            <button class="btn btn-success" @onclick="IrAVinculoReactivos">
-                                <i class="bi bi-plus-circle me-1"></i> Vincular Reactivos
+                            <button class="btn btn-success shadow-sm" @onclick="IrAVinculoReactivos">
+                                <i class="bi bi-plus-circle me-1"></i>Vincular Reactivos
                             </button>
                         </div>
                     </div>
@@ -109,10 +114,10 @@
                                         <td>@item.Unidad</td>
                                         <td>
                                             <div class="d-flex justify-content-center gap-2">
-                                                <button class="btn btn-warning btn-sm shadow-sm" title="Editar" @onclick="() => IrAEditar(item.IdExamen)">
+                                                <button class="btn btn-warning btn-sm shadow-sm" @onclick="() => IrAEditar(item.IdExamen)" title="Editar">
                                                     <i class="bi bi-pencil-square text-dark"></i>
                                                 </button>
-                                                <button class="btn btn-danger btn-sm shadow-sm" title="Eliminar" @onclick="() => EliminarAsociacion(item.IdExamenReactivo)">
+                                                <button class="btn btn-danger btn-sm shadow-sm" @onclick="() => EliminarAsociacion(item.IdExamenReactivo)" title="Eliminar">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -126,8 +131,7 @@
                 else
                 {
                     <div class="alert alert-warning d-flex align-items-center mt-4 shadow-sm" role="alert">
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                        No hay asociaciones registradas.
+                        <i class="bi bi-info-circle-fill me-2"></i>No hay asociaciones registradas.
                     </div>
                 }
             }
@@ -158,30 +162,48 @@
     private string valorBusqueda = "";
     private bool errorCarga = false;
     private bool mostroError = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            asociaciones = await AsociacionesApi.ObtenerTodasAsync();
-            asociacionesFiltradas = asociaciones.ToList();
-        }
-        catch
-        {
-            errorCarga = true;
-        }
-        finally
-        {
-            cargando = false;
-        }
-    }
+    private bool datosCargados;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && errorCarga && !mostroError)
+        if (firstRender && !datosCargados)
         {
-            mostroError = true;
-            await JS.InvokeVoidAsync("alert", "Error al cargar asociaciones.");
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                cargando = false;
+                datosCargados = true;
+                StateHasChanged();
+                return;
+            }
+
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol == "administrador";
+
+            if (puedeVer)
+            {
+                try
+                {
+                    asociaciones = await AsociacionesApi.ObtenerTodasAsync();
+                    asociacionesFiltradas = asociaciones.ToList();
+                }
+                catch
+                {
+                    errorCarga = true;
+                }
+            }
+
+            cargando = false;
+            datosCargados = true;
+
+            if (errorCarga && !mostroError)
+            {
+                mostroError = true;
+                await JS.InvokeVoidAsync("alert", "Error al cargar asociaciones.");
+            }
+
             StateHasChanged();
         }
     }
@@ -195,13 +217,13 @@
         }
 
         var valor = valorBusqueda.Trim().ToLower();
-        asociacionesFiltradas = (criterioBusqueda switch
+        asociacionesFiltradas = criterioBusqueda switch
         {
             "examen" => asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
             "reactivo" => asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
             "unidad" => asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
             _ => asociaciones.ToList()
-        }).ToList();
+        };
     }
 
     private void IrAEditar(int idExamen)

@@ -64,7 +64,7 @@ builder.Services.AddControllers()
 
         opt.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
-builder.Services.AddEndpointsApiExplorer(); 
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<Lab_APIRest.Infrastructure.Services.TokenService>();

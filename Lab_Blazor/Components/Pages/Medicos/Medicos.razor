@@ -1,12 +1,11 @@
 ﻿@page "/medicos"
 @rendermode InteractiveServer
+<PageTitle>Gestión de Médicos</PageTitle>
 
 @using Lab_Contracts.Medicos
 @using Lab_Blazor.Services.Medicos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
-@using System.Linq
-
 @inject IMedicosApiService MedicosApiService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
@@ -17,6 +16,7 @@
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
             bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeModificar = rol is "administrador";
         }
 
         @if (!puedeVer)
@@ -26,7 +26,7 @@
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">No tienes permisos para acceder a la gestión de médicos.</p>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -36,15 +36,18 @@
         }
         else
         {
-            <h3 class="mb-4">
-                <i class="fas fa-user-md me-2 text-primary"></i>Gestión de Médicos
-            </h3>
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-person-badge text-primary fs-4 me-2"></i>Gestión de Médicos</span>
+                <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevo">
+                    <i class="bi bi-person-plus-fill me-1"></i>Nuevo Médico
+                </button>
+            </h4>
 
-            <div class="card mb-3 shadow-sm">
-                <div class="card-body row g-3">
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label">Buscar por</label>
-                        <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                        <label class="form-label fw-semibold">Buscar por</label>
+                        <InputSelect @bind-Value="criterioBusqueda" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="especialidad">Especialidad</option>
@@ -52,28 +55,41 @@
                         </InputSelect>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label">Valor</label>
-                        <InputText class="form-control" @bind-Value="valorBusqueda" />
+                        <label class="form-label fw-semibold">Valor</label>
+                        <InputText class="form-control" @bind-Value="valorBusqueda" placeholder="Ingrese valor a buscar"
+                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarMedicos(); })" />
                     </div>
-                    <div class="col-md-4 d-flex align-items-end gap-2 flex-wrap justify-content-md-end">
-                        <button class="btn btn-primary" @onclick="BuscarMedicos" title="Buscar">
-                            <i class="bi bi-search"></i>
-                        </button>
-                        <button class="btn btn-success" @onclick="MostrarModalNuevo" title="Nuevo médico">
-                            <i class="bi bi-person-plus-fill"></i>
-                        </button>
+                    <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                        <button class="btn btn-primary" @onclick="BuscarMedicos"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
 
-            @if (ListaMedicos == null || ListaMedicos.Count == 0)
+            @if (!string.IsNullOrEmpty(mensaje))
             {
-                <div class="alert alert-warning shadow-sm">No se encontraron médicos.</div>
+                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
+                    @mensaje
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (ListaMedicos == null)
+            {
+                <div class="alert alert-info text-center shadow-sm">
+                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
+                </div>
+            }
+            else if (ListaMedicos.Count == 0)
+            {
+                <div class="alert alert-warning text-center shadow-sm">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron médicos registrados.
+                </div>
             }
             else
             {
-                <div class="table-responsive shadow-sm rounded" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
-                    <table class="table table-hover table-bordered align-middle text-center">
+                <div class="table-responsive shadow-sm rounded">
+                    <table class="table table-striped table-hover align-middle text-center">
                         <thead class="table-light">
                             <tr>
                                 <th>Nombre</th>
@@ -85,7 +101,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var medico in ListaMedicos)
+                            @foreach (var medico in MedicosPaginados)
                             {
                                 <tr>
                                     <td>@medico.NombreMedico</td>
@@ -94,45 +110,80 @@
                                     <td>@medico.Telefono</td>
                                     <td>
                                         <span class="badge bg-@(medico.Anulado ? "danger" : "success")">
-                                            @(medico.Anulado ? "Deshabilitado" : "Habilitado")
+                                            @(medico.Anulado ? "Deshabilitado" : "Activo")
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <button class="btn btn-warning btn-sm shadow-sm" title="Editar" @onclick="() => EditarMedico(medico)">
+                                        @if (puedeModificar)
+                                        {
+                                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarMedico(medico)">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             @if (medico.Anulado)
                                             {
-                                                <button class="btn btn-success btn-sm shadow-sm" title="Habilitar" @onclick="() => ConfirmarReactivacion(medico)">
+                                                <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(medico)">
                                                     <i class="bi bi-check-circle-fill"></i>
                                                 </button>
                                             }
                                             else
                                             {
-                                                <button class="btn btn-danger btn-sm shadow-sm" title="Deshabilitar" @onclick="() => ConfirmarAnulacion(medico.IdMedico)">
+                                                <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(medico.IdMedico)">
                                                     <i class="bi bi-x-circle-fill"></i>
                                                 </button>
                                             }
-                                        </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Sin permisos</span>
+                                        }
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                    <div class="text-muted small">
+                        Mostrando @((paginaActual - 1) * tamPagina + 1) - @(Math.Min(paginaActual * tamPagina, ListaMedicos.Count)) de @ListaMedicos.Count registros
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small">Registros por página:</label>
+                        <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="PrevPagina">&laquo;</button>
+                                </li>
+                                @for (int i = 1; i <= TotalPaginas; i++)
+                                {
+                                    <li class="page-item @(paginaActual == i ? "active" : "")">
+                                        <button class="page-link" @onclick="@(() => IrAPagina(i))">@i</button>
+                                    </li>
+                                }
+                                <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
+                                    <button class="page-link" @onclick="NextPagina">&raquo;</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             }
 
-            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content shadow">
+                    <div class="modal-content shadow-lg border-0">
                         <EditForm Model="@MedicoActual" OnValidSubmit="ValidarYGuardar">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">
-                                    <i class="bi bi-person-circle me-2"></i>
-                                    @(MedicoActual.IdMedico == 0 ? "Nuevo Médico" : "Editar Médico")
+                                    <i class="bi bi-person-circle me-2"></i>@(MedicoActual.IdMedico == 0 ? "Nuevo Médico" : "Editar Médico")
                                 </h5>
-                                <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
                             </div>
                             <div class="modal-body">
                                 <DataAnnotationsValidator />
@@ -140,14 +191,14 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Nombre</label>
-                                        <InputText class="form-control" @bind-Value="MedicoActual.NombreMedico" />
+                                        <InputText class="form-control text-uppercase" @bind-Value="MedicoActual.NombreMedico" @oninput="(e => MedicoActual.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Especialidad</label>
-                                        <InputText class="form-control" @bind-Value="MedicoActual.Especialidad" />
+                                        <InputText class="form-control text-uppercase" @bind-Value="MedicoActual.Especialidad" @oninput="(e => MedicoActual.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Correo</label>
+                                        <label class="form-label">Correo Electrónico</label>
                                         <InputText class="form-control" @bind-Value="MedicoActual.Correo" />
                                     </div>
                                     <div class="col-md-6">
@@ -158,10 +209,10 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary px-3">
-                                    <i class="bi bi-save-fill me-1"></i> Guardar
+                                    <i class="bi bi-save me-1"></i>Guardar
                                 </button>
                                 <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
-                                    <i class="bi bi-x-lg me-1"></i> Cancelar
+                                    <i class="bi bi-x-lg me-1"></i>Cancelar
                                 </button>
                             </div>
                         </EditForm>
@@ -170,59 +221,64 @@
             </div>
         }
     </Authorized>
-
-    <NotAuthorized>
-        <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
-                <div class="card-body p-4">
-                    <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
-                    <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
-                    <p class="text-muted mb-3">Inicie sesión con una cuenta autorizada para continuar.</p>
-                    <NavLink href="/login" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
-                    </NavLink>
-                </div>
-            </div>
-        </div>
-    </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private List<MedicoDto> ListaMedicos = new();
+    private List<MedicoDto>? ListaMedicos;
     private MedicoDto MedicoActual = new();
-    private bool modalVisible = false;
+    private bool modalVisible;
     private string criterioBusqueda = "";
     private string valorBusqueda = "";
+    private string mensaje = "";
+    private string tipoMensaje = "info";
+    private int paginaActual = 1;
+    private int tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((ListaMedicos?.Count ?? 1) / (double)tamPagina);
+    private IEnumerable<MedicoDto> MedicosPaginados => ListaMedicos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<MedicoDto>();
 
-    protected override async Task OnInitializedAsync() => await BuscarMedicos();
+    protected override Task OnInitializedAsync() => Task.CompletedTask;
 
     private async Task BuscarMedicos()
     {
-        ListaMedicos = string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda)
-            ? await MedicosApiService.GetMedicosAsync()
-            : await MedicosApiService.BuscarMedicosAsync(criterioBusqueda, valorBusqueda);
+        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
+        {
+            ListaMedicos = await MedicosApiService.GetMedicosAsync();
+        }
+        else
+        {
+            ListaMedicos = await MedicosApiService.BuscarMedicosAsync(criterioBusqueda, valorBusqueda);
+        }
+
+        paginaActual = 1;
     }
 
-    private void MostrarModalNuevo()
+    private async Task MostrarModalNuevo()
     {
         MedicoActual = new MedicoDto();
         modalVisible = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private void CerrarModal() => modalVisible = false;
-
-    private void EditarMedico(MedicoDto medico)
+    private async Task CerrarModal()
     {
-        MedicoActual = new MedicoDto
+        modalVisible = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+        mensaje = string.Empty;
+    }
+
+    private async Task EditarMedico(MedicoDto medico)
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        if (rol != "administrador")
         {
-            IdMedico = medico.IdMedico,
-            NombreMedico = medico.NombreMedico,
-            Especialidad = medico.Especialidad,
-            Correo = medico.Correo,
-            Telefono = medico.Telefono,
-            Anulado = medico.Anulado
-        };
+            await JS.InvokeVoidAsync("alert", "No tienes permisos para editar médicos.");
+            return;
+        }
+
+        MedicoActual = medico;
         modalVisible = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task ValidarYGuardar()
@@ -233,14 +289,16 @@
 
         if (result.IsSuccessStatusCode)
         {
-            await JS.InvokeVoidAsync("alert", "Médico guardado correctamente.");
+            mensaje = "Médico guardado correctamente.";
+            tipoMensaje = "success";
             modalVisible = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
             await BuscarMedicos();
         }
         else
         {
-            var msg = await result.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al guardar: {msg}");
+            mensaje = "Error al guardar médico.";
+            tipoMensaje = "danger";
         }
     }
 
@@ -251,10 +309,10 @@
             var result = await MedicosApiService.AnularMedicoAsync(id);
             if (result.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Médico deshabilitado correctamente.");
+                mensaje = "Médico deshabilitado correctamente.";
+                tipoMensaje = "success";
                 await BuscarMedicos();
             }
-            else await JS.InvokeVoidAsync("alert", $"Error: {result.StatusCode}");
         }
     }
 
@@ -263,15 +321,26 @@
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?"))
         {
             medico.Anulado = false;
-            var resultado = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
-            if (resultado.IsSuccessStatusCode)
+            var result = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
+            if (result.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Médico reactivado correctamente.");
+                mensaje = "Médico reactivado correctamente.";
+                tipoMensaje = "success";
                 await BuscarMedicos();
             }
-            else await JS.InvokeVoidAsync("alert", $"Error al reactivar médico: {resultado.StatusCode}");
         }
     }
 
+    private async Task LimpiarBusqueda()
+    {
+        criterioBusqueda = "";
+        valorBusqueda = "";
+        ListaMedicos = null;
+    }
+
+    private void IrAPagina(int pagina) => paginaActual = pagina;
+    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
+    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
+    private void CambiarTamPagina() => paginaActual = 1;
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

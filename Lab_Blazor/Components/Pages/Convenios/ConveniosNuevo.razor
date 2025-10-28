@@ -19,8 +19,14 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("role")?.Value
+            ?? user.FindFirst("roles")?.Value
+            ?? "";
+
+            bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeAnular = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -29,8 +35,8 @@
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso restringido</h5>
-                        <p class="text-muted mb-3">Solo el administrador o recepcionista puede registrar convenios.</p>
+                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -41,7 +47,7 @@
         else
         {
             <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
-                <i class="bi bi-handshake text-primary fs-4 me-2"></i> Registrar Nuevo Convenio
+                <i class="bi bi-handshake text-primary fs-4 me-2"></i>Registrar Nuevo Convenio
             </h4>
 
             @if (!isRendered)
@@ -83,7 +89,7 @@
                         <div class="col-lg-6">
                             <div class="card shadow-sm border-0 h-100">
                                 <div class="card-header bg-light fw-semibold">
-                                    <i class="bi bi-list-check me-2"></i> Órdenes Disponibles
+                                    <i class="bi bi-list-check me-2"></i>Órdenes Disponibles
                                 </div>
                                 <div class="card-body p-2">
                                     <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
@@ -119,7 +125,7 @@
                         <div class="col-lg-6">
                             <div class="card shadow-sm border-0 h-100">
                                 <div class="card-header bg-light fw-semibold">
-                                    <i class="bi bi-clipboard2-check me-2"></i> Órdenes Seleccionadas
+                                    <i class="bi bi-clipboard2-check me-2"></i>Órdenes Seleccionadas
                                 </div>
                                 <div class="card-body p-2">
                                     <table class="table table-sm table-bordered align-middle text-center">
@@ -158,12 +164,12 @@
 
                 @if (mostrarModal)
                 {
-                    <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+                    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content shadow-lg">
                                 <div class="modal-header bg-primary text-white">
                                     <h5 class="modal-title">
-                                        <i class="bi bi-calculator me-2"></i> Pago al Médico
+                                        <i class="bi bi-calculator me-2"></i>Pago al Médico
                                     </h5>
                                     <button class="btn-close" @onclick="CerrarModal"></button>
                                 </div>
@@ -226,7 +232,28 @@
     {
         if (firstRender)
         {
-            medicos = await MedicosApi.ListarMedicosAsync();
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                isRendered = true;
+                StateHasChanged();
+                return;
+            }
+
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+                ?? user.FindFirst("role")?.Value
+                ?? user.FindFirst("roles")?.Value
+                ?? "";
+
+            bool puedeVer = rol is "administrador" or "recepcionista";
+
+            if (puedeVer)
+            {
+                medicos = await MedicosApi.ListarMedicosAsync();
+            }
+
             isRendered = true;
             StateHasChanged();
         }
@@ -248,8 +275,17 @@
         }
     }
 
-    private void MostrarModalPago() => mostrarModal = true;
-    private void CerrarModal() => mostrarModal = false;
+    private async Task MostrarModalPago()
+    {
+        mostrarModal = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+    }
+
+    private async Task CerrarModal()
+    {
+        mostrarModal = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+    }
 
     private async Task RegistrarConvenio()
     {
