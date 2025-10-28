@@ -46,6 +46,9 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<v_paciente> v_pacientes { get; set; }
 
+    public virtual DbSet<recuperacion_contrasenias> recuperacion_contrasenias { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<convenio>(entity =>
@@ -454,8 +457,65 @@ public partial class LabDbContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<recuperacion_contrasenias>(entity =>
+        {
+            entity.HasKey(e => e.id_recuperacion).HasName("PK_recuperacion_contrasenias");
+
+            entity.ToTable("recuperacion_contrasenias");
+
+            entity.Property(e => e.id_recuperacion)
+                .HasColumnName("id_recuperacion");
+
+            entity.Property(e => e.id_usuario)
+                .HasColumnName("id_usuario");
+
+            entity.Property(e => e.token_hash)
+                .HasColumnName("token_hash")
+                .HasColumnType("varbinary(32)");
+
+            entity.Property(e => e.fecha_solicitud)
+                .HasColumnName("fecha_solicitud")
+                .HasColumnType("datetime2(0)")
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+
+            entity.Property(e => e.fecha_expiracion)
+                .HasColumnName("fecha_expiracion")
+                .HasColumnType("datetime2(0)");
+
+            entity.Property(e => e.usado)
+                .HasColumnName("usado")
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.usado_en)
+                .HasColumnName("usado_en")
+                .HasColumnType("datetime2(0)");
+
+            entity.Property(e => e.ip_solicitud)
+                .HasColumnName("ip_solicitud")
+                .HasMaxLength(45);
+
+            entity.Property(e => e.user_agent)
+                .HasColumnName("user_agent")
+                .HasMaxLength(256);
+
+            entity.HasIndex(e => new { e.id_usuario, e.usado })
+                .HasDatabaseName("IX_recup_usuario_usado");
+
+            entity.HasIndex(e => e.fecha_expiracion)
+                .HasDatabaseName("IX_recup_expiracion");
+
+            entity.HasOne(d => d.Usuario)
+                .WithMany()
+                .HasForeignKey(d => d.id_usuario)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_recup_usuario");
+        });
+
+
         OnModelCreatingPartial(modelBuilder);
     }
+
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

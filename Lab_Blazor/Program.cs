@@ -42,6 +42,8 @@ builder.Services.AddScoped<IConveniosApiService, ConveniosApiService>();
 builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
 builder.Services.AddScoped<IPerfilApiService, PerfilApiService>();
 builder.Services.AddScoped<IUsuariosApiService, UsuariosApiService>();
+builder.Services.AddScoped<IRecuperacionApiService, RecuperacionApiService>();
+
 
 
 
