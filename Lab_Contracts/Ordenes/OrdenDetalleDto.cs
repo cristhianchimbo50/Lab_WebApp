@@ -26,6 +26,10 @@ namespace Lab_Contracts.Ordenes
 
         public bool? Anulado { get; set; }
 
+        public decimal Total { get; set; }
+        public decimal TotalPagado { get; set; }
+        public decimal SaldoPendiente { get; set; }
+
         public List<ExamenDetalleDto> Examenes { get; set; } = new();
     }
 

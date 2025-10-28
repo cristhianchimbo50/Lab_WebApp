@@ -20,7 +20,9 @@
         @{
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista";
+            var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+            bool esPaciente = rol == "paciente";
+            bool puedeVer = rol is "administrador" or "recepcionista" or "paciente";
         }
 
         @if (!puedeVer)
@@ -43,7 +45,8 @@
         else
         {
             <h4 class="mb-4">
-                <i class="fas fa-file-medical me-2 text-primary"></i>Gestión de Órdenes
+                <i class="fas fa-file-medical me-2 text-primary"></i>
+                @(esPaciente ? "Mis Órdenes" : "Gestión de Órdenes")
             </h4>
 
             @if (!isRendered)
@@ -57,28 +60,68 @@
             {
                 <div class="card mb-3 shadow-sm">
                     <div class="card-body row g-3">
-                        <div class="col-md-3 col-12">
-                            <label class="form-label">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
-                                <option value="">-- Seleccione --</option>
-                                <option value="numero">Número de Orden</option>
-                                <option value="cedula">Cédula</option>
-                                <option value="nombre">Nombre</option>
-                                <option value="estadoPago">Estado de Pago</option>
-                            </InputSelect>
-                        </div>
-                        <div class="col-md-5 col-12">
-                            <label class="form-label">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusqueda" />
-                        </div>
-                        <div class="col-md-4 col-12 d-flex align-items-end gap-2 flex-wrap justify-content-md-end">
-                            <button class="btn btn-primary" @onclick="BuscarOrdenes" title="Buscar">
-                                <i class="fas fa-search"></i>
-                            </button>
-                            <button class="btn btn-success" @onclick="IrANuevaOrden">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
+                        @if (esPaciente)
+                        {
+                            <div class="col-md-3 col-12">
+                                <label class="form-label">Número de Orden</label>
+                                <InputText @bind-Value="valorBusqueda" class="form-control" placeholder="Ej. ORD-00001" />
+                            </div>
+
+                            <div class="col-md-3 col-12">
+                                <label class="form-label">Desde</label>
+                                <InputDate @bind-Value="fechaDesde" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3 col-12">
+                                <label class="form-label">Hasta</label>
+                                <InputDate @bind-Value="fechaHasta" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3 col-12">
+                                <label class="form-label">Estado de Pago</label>
+                                <div class="d-flex flex-column ps-2">
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="filtroPagado" class="form-check-input" id="chkPagado" />
+                                        <label class="form-check-label" for="chkPagado">Pagado</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="filtroPendiente" class="form-check-input" id="chkPendiente" />
+                                        <label class="form-check-label" for="chkPendiente">Pendiente</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 col-12 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" @onclick="BuscarOrdenes" title="Filtrar">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-md-3 col-12">
+                                <label class="form-label">Buscar por</label>
+                                <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                                    <option value="">-- Seleccione --</option>
+                                    <option value="numero">Número de Orden</option>
+                                    <option value="cedula">Cédula</option>
+                                    <option value="nombre">Nombre</option>
+                                    <option value="estadoPago">Estado de Pago</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-5 col-12">
+                                <label class="form-label">Valor</label>
+                                <InputText class="form-control" @bind-Value="valorBusqueda" />
+                            </div>
+                            <div class="col-md-4 col-12 d-flex align-items-end gap-2 flex-wrap justify-content-md-end">
+                                <button class="btn btn-primary" @onclick="BuscarOrdenes" title="Buscar">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="btn btn-success" @onclick="IrANuevaOrden">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -118,8 +161,11 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Número</th>
-                                    <th>Cédula</th>
-                                    <th>Nombre</th>
+                                    @if (!esPaciente)
+                                    {
+                                        <th>Cédula</th>
+                                        <th>Nombre</th>
+                                    }
                                     <th>Fecha</th>
                                     <th>Total</th>
                                     <th>Pagado</th>
@@ -134,8 +180,11 @@
                                 {
                                     <tr>
                                         <td>@orden.NumeroOrden</td>
-                                        <td>@orden.CedulaPaciente</td>
-                                        <td>@orden.NombrePaciente</td>
+                                        @if (!esPaciente)
+                                        {
+                                            <td>@orden.CedulaPaciente</td>
+                                            <td>@orden.NombrePaciente</td>
+                                        }
                                         <td>@orden.FechaOrden.ToShortDateString()</td>
                                         <td>@orden.Total.ToString("C")</td>
                                         <td>@orden.TotalPagado.ToString("C")</td>
@@ -168,116 +217,136 @@
 
             @if (mostrarDetalleOrden && DetalleActual is not null)
             {
-                <div class="modal fade show d-block" style="background-color: transparent; z-index:1050;">
-                    <div class="modal-dialog modal-xl">
-                        <div class="modal-content shadow">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-info-circle me-2"></i>Detalle de Orden
-                                    <span class="badge bg-light text-dark">@DetalleActual.NumeroOrden</span>
-                                </h5>
-                                <button class="btn-close" @onclick="CerrarDetalle"></button>
-                            </div>
-                            <div class="modal-body">
-                                @if (DetalleActual.Anulado ?? false)
-                                {
-                                    <div class="alert alert-danger text-center fw-bold">
-                                        Esta orden ha sido anulada.
-                                    </div>
-                                }
-
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-3 col-6 mb-2">
-                                        <label><strong>Fecha de Orden</strong></label>
-                                        <input class="form-control" value="@DetalleActual.FechaOrden.ToString("dd/MM/yyyy")" disabled />
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-2">
-                                        <label><strong>Cédula</strong></label>
-                                        <input class="form-control" value="@DetalleActual.CedulaPaciente" disabled />
-                                    </div>
-                                    <div class="col-md-6 col-12 mb-2">
-                                        <label><strong>Nombre del Paciente</strong></label>
-                                        <input class="form-control" value="@DetalleActual.NombrePaciente" disabled />
-                                    </div>
-                                    <div class="col-md-6 col-12 mb-2">
-                                        <label><strong>Dirección</strong></label>
-                                        <input class="form-control" value="@DetalleActual.DireccionPaciente" disabled />
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-2">
-                                        <label><strong>Teléfono</strong></label>
-                                        <input class="form-control" value="@DetalleActual.TelefonoPaciente" disabled />
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-2">
-                                        <label><strong>Correo</strong></label>
-                                        <input class="form-control" value="@DetalleActual.CorreoPaciente" disabled />
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-2">
-                                        <label><strong>Estado de Pago</strong></label>
-                                        <input class="form-control" value="@DetalleActual.EstadoPago" disabled />
-                                    </div>
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content shadow-lg border-0">
+                            @if (!string.IsNullOrEmpty(pdfUrl))
+                            {
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-file-pdf me-2"></i>Visualización de Documento
+                                    </h5>
+                                    <button class="btn-close btn-close-white" @onclick="CerrarPdf"></button>
                                 </div>
-
-                                <h5 class="mt-4 mb-3"><i class="fas fa-vials me-2"></i>Exámenes</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-bordered align-middle text-center">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Seleccionar</th>
-                                                <th>Nombre del Examen</th>
-                                                <th>Estudio</th>
-                                                <th>Número de Resultado</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @for (int i = 0; i < DetalleActual.Examenes.Count; i++)
-                                            {
-                                                var ex = DetalleActual.Examenes[i];
+                                <div class="modal-body p-0">
+                                    <iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-info-circle me-2"></i>Detalle de Orden
+                                        <span class="badge bg-light text-dark">@DetalleActual.NumeroOrden</span>
+                                    </h5>
+                                    <button class="btn-close" @onclick="CerrarDetalle"></button>
+                                </div>
+                                <div class="modal-body">
+                                    @if (DetalleActual.Anulado ?? false)
+                                    {
+                                        <div class="alert alert-danger text-center fw-bold">
+                                            Esta orden ha sido anulada.
+                                        </div>
+                                    }
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Fecha de Orden</strong></label>
+                                            <input class="form-control" value="@DetalleActual.FechaOrden.ToString("dd/MM/yyyy")" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Cédula</strong></label>
+                                            <input class="form-control" value="@DetalleActual.CedulaPaciente" disabled />
+                                        </div>
+                                        <div class="col-md-6 col-12 mb-2">
+                                            <label><strong>Nombre del Paciente</strong></label>
+                                            <input class="form-control" value="@DetalleActual.NombrePaciente" disabled />
+                                        </div>
+                                        <div class="col-md-6 col-12 mb-2">
+                                            <label><strong>Dirección</strong></label>
+                                            <input class="form-control" value="@DetalleActual.DireccionPaciente" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Teléfono</strong></label>
+                                            <input class="form-control" value="@DetalleActual.TelefonoPaciente" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Correo</strong></label>
+                                            <input class="form-control" value="@DetalleActual.CorreoPaciente" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Estado de Pago</strong></label>
+                                            <input class="form-control" value="@DetalleActual.EstadoPago" disabled />
+                                        </div>
+                                    </div>
+                                    <h5 class="mt-4 mb-3"><i class="fas fa-vials me-2"></i>Exámenes</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered align-middle text-center">
+                                            <thead class="table-light">
                                                 <tr>
-                                                    <td>
-                                                        <input type="checkbox"
-                                                               @bind="@ex.Seleccionado"
-                                                               disabled="@(DetalleActual.Anulado == true || ex.IdResultado.HasValue)" />
-                                                    </td>
-                                                    <td>@ex.NombreExamen</td>
-                                                    <td>@ex.NombreEstudio</td>
-                                                    <td>
-                                                        @if (ex.IdResultado.HasValue)
-                                                        {
-                                                            <span class="badge bg-success">@ex.NumeroResultado</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">Pendiente</span>
-                                                        }
-                                                    </td>
+                                                    @if (!esPaciente)
+                                                    {
+                                                        <th>Seleccionar</th>
+                                                    }
+                                                    <th>Nombre del Examen</th>
+                                                    <th>Estudio</th>
+                                                    <th>Número de Resultado</th>
                                                 </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                @if (!(DetalleActual.Anulado ?? false))
-                                {
-                                    <div class="d-flex flex-wrap gap-2 justify-content-start mt-3">
-                                        <button class="btn btn-secondary" @onclick="VisualizarTicketOrden">
-                                            <i class="fas fa-receipt me-1"></i> Imprimir Orden
-                                        </button>
-                                        <button class="btn btn-success"
-                                                @onclick="IrAIngresarResultados"
-                                                disabled="@(DetalleActual.Examenes.All(x => x.IdResultado.HasValue) || !DetalleActual.Examenes.Any(x => !x.IdResultado.HasValue))">
-                                            <i class="fas fa-flask me-1"></i> Ingresar Resultados
-                                        </button>
-                                        <button class="btn btn-primary"
-                                                @onclick="ImprimirResultados"
-                                                disabled="@(DetalleActual.Examenes.Any(x => !x.IdResultado.HasValue))">
-                                            <i class="fas fa-file-pdf me-1"></i> Imprimir Resultados
-                                        </button>
-                                        <button class="btn btn-danger" @onclick="AnularOrden">
-                                            <i class="fas fa-ban me-1"></i> Anular Orden
-                                        </button>
+                                            </thead>
+                                            <tbody>
+                                                @for (int i = 0; i < DetalleActual.Examenes.Count; i++)
+                                                {
+                                                    var ex = DetalleActual.Examenes[i];
+                                                    <tr>
+                                                        @if (!esPaciente)
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox" @bind="@ex.Seleccionado"
+                                                                       disabled="@(DetalleActual.Anulado == true || ex.IdResultado.HasValue)" />
+                                                            </td>
+                                                        }
+                                                        <td>@ex.NombreExamen</td>
+                                                        <td>@ex.NombreEstudio</td>
+                                                        <td>
+                                                            @if (ex.IdResultado.HasValue)
+                                                            {
+                                                                <span class="badge bg-success">@ex.NumeroResultado</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">Pendiente</span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
                                     </div>
-                                }
-                            </div>
+                                    @if (!(DetalleActual.Anulado ?? false))
+                                    {
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start mt-3">
+                                            <button class="btn btn-secondary" @onclick="VisualizarTicketOrden">
+                                                <i class="fas fa-receipt me-1"></i> Imprimir Orden
+                                            </button>
+                                            <button class="btn btn-primary"
+                                                    @onclick="ImprimirResultados"
+                                                    disabled="@(DetalleActual.Examenes.Any(x => !x.IdResultado.HasValue))">
+                                                <i class="fas fa-file-pdf me-1"></i> Imprimir Resultados
+                                            </button>
+                                            @if (!esPaciente)
+                                            {
+                                                <button class="btn btn-success"
+                                                        @onclick="IrAIngresarResultados"
+                                                        disabled="@(DetalleActual.Examenes.All(x => x.IdResultado.HasValue) || !DetalleActual.Examenes.Any(x => !x.IdResultado.HasValue))">
+                                                    <i class="fas fa-flask me-1"></i> Ingresar Resultados
+                                                </button>
+                                                <button class="btn btn-danger" @onclick="AnularOrden">
+                                                    <i class="fas fa-ban me-1"></i> Anular Orden
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -310,11 +379,15 @@
     private bool isRendered = false;
     private string criterioBusqueda = "";
     private string valorBusqueda = "";
+    private DateOnly? fechaDesde;
+    private DateOnly? fechaHasta;
     private int _pageSize = 10;
     private int PageSize { get => _pageSize; set { if (_pageSize != value) { _pageSize = value; CurrentPage = 1; } } }
     private int CurrentPage = 1;
     private int TotalPages => (int)Math.Ceiling(ordenes.Count / (double)PageSize);
     private IEnumerable<OrdenDto> PaginatedOrdenes => ordenes.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+
+    private string? pdfUrl;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -335,39 +408,75 @@
 
     private async Task CargarOrdenes()
     {
-        ordenes = (await OrdenesApi.GetOrdenesAsync()).OrderByDescending(o => o.IdOrden).ToList();
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+
+        if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
+            ordenes = await OrdenesApi.GetOrdenesPacienteAsync(idPaciente);
+        else
+            ordenes = await OrdenesApi.GetOrdenesAsync();
+
+        ordenes = ordenes.OrderByDescending(o => o.IdOrden).ToList();
     }
 
     private async Task BuscarOrdenes()
     {
-        var todas = await OrdenesApi.GetOrdenesAsync();
-        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
-            ordenes = todas.OrderByDescending(o => o.IdOrden).ToList();
-        else
+        IEnumerable<OrdenDto> filtradas = ordenes;
+
+        if (fechaDesde.HasValue)
+            filtradas = filtradas.Where(o => o.FechaOrden >= fechaDesde.Value);
+        if (fechaHasta.HasValue)
+            filtradas = filtradas.Where(o => o.FechaOrden <= fechaHasta.Value);
+
+        if (!string.IsNullOrWhiteSpace(valorBusqueda))
         {
             var val = valorBusqueda.Trim().ToLower();
-            ordenes = (criterioBusqueda switch
-            {
-                "numero" => todas.Where(o => o.NumeroOrden?.ToLower().Contains(val) == true).ToList(),
-                "cedula" => todas.Where(o => o.CedulaPaciente?.ToLower().Contains(val) == true).ToList(),
-                "nombre" => todas.Where(o => o.NombrePaciente?.ToLower().Contains(val) == true).ToList(),
-                "estadoPago" => todas.Where(o => o.EstadoPago?.ToLower().Contains(val) == true).ToList(),
-                _ => todas
-            }).OrderByDescending(o => o.IdOrden).ToList();
-
+            filtradas = filtradas.Where(o => o.NumeroOrden?.ToLower().Contains(val) == true);
         }
-    }
 
+        if (filtroPagado && !filtroPendiente)
+            filtradas = filtradas.Where(o => o.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase));
+        else if (!filtroPagado && filtroPendiente)
+            filtradas = filtradas.Where(o => !o.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase));
+        else if (!filtroPagado && !filtroPendiente)
+            filtradas = Enumerable.Empty<OrdenDto>();
+
+        ordenes = filtradas.OrderByDescending(o => o.IdOrden).ToList();
+    }
     private void IrANuevaOrden() => Navigation.NavigateTo("/ordenes/nuevo", true);
 
     private async Task VerDetalleOrden(int idOrden)
     {
-        DetalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+
+        if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
+        {
+            var result = await OrdenesApi.ObtenerDetalleOrdenPacienteAsync(idPaciente, idOrden);
+            DetalleActual = result.Detalle;
+
+            if (result.TieneSaldoPendiente)
+            {
+                await JS.InvokeVoidAsync("alert",
+                    "Tiene un saldo pendiente. Por favor acérquese al laboratorio para completar su pago antes de visualizar los resultados.");
+            }
+        }
+        else
+        {
+            DetalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+        }
+
         if (DetalleActual?.Examenes != null)
             foreach (var ex in DetalleActual.Examenes)
                 ex.Seleccionado = false;
+
         mostrarDetalleOrden = true;
     }
+
 
     private void CerrarDetalle() => mostrarDetalleOrden = false;
 
@@ -381,7 +490,7 @@
             return;
         }
         var base64Pdf = Convert.ToBase64String(pdfBytes);
-        await JS.InvokeVoidAsync("mostrarModalPdfDesdeBytes", $"data:application/pdf;base64,{base64Pdf}");
+        pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }
 
     private async Task IrAIngresarResultados()
@@ -426,7 +535,13 @@
             return;
         }
         var base64Pdf = Convert.ToBase64String(pdfBytes);
-        await JS.InvokeVoidAsync("mostrarModalPdfDesdeBytes", $"data:application/pdf;base64,{base64Pdf}");
+        pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
+    }
+
+
+    private void CerrarPdf()
+    {
+        pdfUrl = null;
     }
 
     private async Task AnularOrden()
@@ -449,4 +564,10 @@
     }
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+
+    private bool filtroPagado;
+    private bool filtroPendiente;
+
+
+
 }

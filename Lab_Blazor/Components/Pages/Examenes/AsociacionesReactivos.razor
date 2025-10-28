@@ -53,6 +53,13 @@
             }
             else
             {
+                @if (errorCarga)
+                {
+                    <div class="alert alert-danger">
+                        Error al cargar asociaciones.
+                    </div>
+                }
+
                 <div class="card mb-3 shadow-sm">
                     <div class="card-body row g-3">
                         <div class="col-md-4">
@@ -149,6 +156,8 @@
     private bool cargando = true;
     private string criterioBusqueda = "";
     private string valorBusqueda = "";
+    private bool errorCarga = false;
+    private bool mostroError = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -159,11 +168,21 @@
         }
         catch
         {
-            await JS.InvokeVoidAsync("alert", "Error al cargar asociaciones.");
+            errorCarga = true;
         }
         finally
         {
             cargando = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && errorCarga && !mostroError)
+        {
+            mostroError = true;
+            await JS.InvokeVoidAsync("alert", "Error al cargar asociaciones.");
+            StateHasChanged();
         }
     }
 

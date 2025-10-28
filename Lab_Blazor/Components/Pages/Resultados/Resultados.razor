@@ -19,10 +19,12 @@
             ?? user.FindFirst("roles")?.Value
             ?? "";
 
-            bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista";
+            bool esPaciente = rol == "paciente";
+            bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista" or "paciente";
             bool puedeAnular = rol is "administrador" or "laboratorista";
-        }
 
+        }
+        @* Poner esto a todos! *@
         @if (!puedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
@@ -46,57 +48,54 @@
                 <i class="fas fa-file-medical me-2 text-primary"></i>Gestión de Resultados
             </h4>
 
-            <div class="card mb-3 shadow-sm">
-                <div class="card-body row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label">Buscar por</label>
-                        <InputSelect class="form-select" @bind-Value="criterioBusqueda" @onchange="CambioCriterioBusqueda">
-                            <option value="">-- Seleccione --</option>
-                            <option value="numero">Número de Resultado</option>
-                            <option value="cedula">Cédula</option>
-                            <option value="nombre">Nombre</option>
-                        </InputSelect>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Valor</label>
-                        <InputText class="form-control"
-                                   @bind-Value="valorBusqueda"
-                                   placeholder="@SampleTextBusqueda" />
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Fecha desde</label>
-                        <InputDate class="form-control" @bind-Value="fechaDesde" />
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Fecha hasta</label>
-                        <InputDate class="form-control" @bind-Value="fechaHasta" />
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   checked="@mostrarNoAnulados"
-                                   @onchange="CambioCheckNoAnulados" />
-                            <label class="form-check-label">No anulados</label>
+            @if (!esPaciente)
+            {
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Buscar por</label>
+                            <InputSelect class="form-select" @bind-Value="criterioBusqueda" @onchange="CambioCriterioBusqueda">
+                                <option value="">-- Seleccione --</option>
+                                <option value="numero">Número de Resultado</option>
+                                <option value="cedula">Cédula</option>
+                                <option value="nombre">Nombre</option>
+                            </InputSelect>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   checked="@mostrarAnulados"
-                                   @onchange="CambioCheckAnulados" />
-                            <label class="form-check-label">Anulados</label>
+                        <div class="col-md-5">
+                            <label class="form-label">Valor</label>
+                            <InputText class="form-control"
+                                       @bind-Value="valorBusqueda"
+                                       placeholder="@SampleTextBusqueda" />
                         </div>
-                    </div>
-                    <div class="col-md-2 d-flex gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarResultados" title="Buscar">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <button class="btn btn-secondary" @onclick="LimpiarFiltros" title="Limpiar">
-                            <i class="fas fa-eraser"></i>
-                        </button>
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha desde</label>
+                            <InputDate class="form-control" @bind-Value="fechaDesde" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha hasta</label>
+                            <InputDate class="form-control" @bind-Value="fechaHasta" />
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked="@mostrarNoAnulados" @onchange="CambioCheckNoAnulados" />
+                                <label class="form-check-label">No anulados</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked="@mostrarAnulados" @onchange="CambioCheckAnulados" />
+                                <label class="form-check-label">Anulados</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <button class="btn btn-primary" @onclick="BuscarResultados" title="Buscar">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="btn btn-secondary" @onclick="LimpiarFiltros" title="Limpiar">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
 
             @if (cargando)
             {
@@ -208,18 +207,44 @@
                                 </div>
 
                                 <div class="d-flex gap-2 mt-3">
-                                    <button class="btn btn-danger"
-                                            @onclick="AnularResultado"
-                                            disabled="@(DetalleActual.Anulado || !puedeAnular)">
-                                        <i class="fas fa-ban me-1"></i> Anular Resultado
-                                    </button>
-                                    <button class="btn btn-secondary" @onclick="ImprimirResultado">
-                                        <i class="fas fa-print me-1"></i> Imprimir
-                                    </button>
+                                    <div class="d-flex gap-2 mt-3">
+                                        @if (puedeAnular)
+                                        {
+                                            <button class="btn btn-danger"
+                                                    @onclick="AnularResultado"
+                                                    disabled="@DetalleActual.Anulado">
+                                                <i class="fas fa-ban me-1"></i> Anular Resultado
+                                            </button>
+                                        }
+                                        <button class="btn btn-secondary" @onclick="ImprimirResultado">
+                                            <i class="fas fa-print me-1"></i> Imprimir
+                                        </button>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    @if (!string.IsNullOrEmpty(pdfUrl))
+                    {
+                        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                <div class="modal-content shadow-lg border-0">
+                                    <div class="modal-header bg-dark text-white">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-file-pdf me-2"></i>Visualización de Resultado
+                                        </h5>
+                                        <button class="btn-close btn-close-white" @onclick="CerrarPdf"></button>
+                                    </div>
+                                    <div class="modal-body p-0">
+                                        <iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
                 </div>
             }
         }
@@ -256,6 +281,15 @@
     private DateTime? fechaHasta;
     private bool primerRender = true;
 
+    private async Task CerrarPdf()
+    {
+        pdfUrl = null;
+
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+    }
+
+
+
     private string SampleTextBusqueda => criterioBusqueda switch
     {
         "numero" => "RES-00001",
@@ -285,12 +319,23 @@
         }
 
         var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+        if (rol == "paciente")
+        {
+            cargando = true;
+            resultados = await ResultadosApi.GetResultadosPacienteAsync();
+            cargando = false;
+            StateHasChanged();
+            return;
+        }
+
         bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista";
         if (puedeVer)
             await BuscarResultados();
         else
             cargando = false;
     }
+
 
     private async Task BuscarResultados()
     {
@@ -364,12 +409,30 @@
 
     private async Task VerDetalleResultado(int idResultado)
     {
-        DetalleActual = await ResultadosApi.GetDetalleResultadoAsync(idResultado);
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+        if (rol == "paciente")
+            DetalleActual = await ResultadosApi.GetDetalleResultadoPacienteAsync(idResultado);
+        else
+            DetalleActual = await ResultadosApi.GetDetalleResultadoAsync(idResultado);
+
         mostrarDetalle = true;
+
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+
         StateHasChanged();
     }
 
-    private void CerrarDetalle() => mostrarDetalle = false;
+
+
+    private async Task CerrarDetalle()
+    {
+        mostrarDetalle = false;
+
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+    }
 
     private async Task AnularResultado()
     {
@@ -395,22 +458,30 @@
         StateHasChanged();
     }
 
+    private string? pdfUrl;
+
     private async Task ImprimirResultado()
     {
-        if (DetalleActual is null)
+        if (DetalleActual == null) return;
+
+        if (DetalleActual.Anulado)
+        {
+            await JS.InvokeVoidAsync("alert", "El resultado está anulado. No se puede imprimir.");
             return;
+        }
 
         var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(new List<int> { DetalleActual.IdResultado });
-        if (pdfBytes.Length == 0)
+        if (pdfBytes == null || pdfBytes.Length == 0)
         {
-            await JS.InvokeVoidAsync("alert", "Error al generar el PDF.");
+            await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
             return;
         }
 
         var base64Pdf = Convert.ToBase64String(pdfBytes);
-        var pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
-        await JS.InvokeVoidAsync("mostrarModalPdfDesdeBytes", pdfUrl);
+        pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }
+
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

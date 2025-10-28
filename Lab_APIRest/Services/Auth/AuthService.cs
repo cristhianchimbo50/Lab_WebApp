@@ -107,12 +107,22 @@ namespace Lab_APIRest.Services.Auth
                 _logger.LogWarning(ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", usuario.id_usuario);
             }
 
+            int? idPaciente = null;
+            if (usuario.rol == "paciente")
+            {
+                var paciente = await _db.pacientes.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.id_usuario == usuario.id_usuario, ct);
+                if (paciente != null)
+                    idPaciente = paciente.id_paciente;
+            }
+
             (string token, DateTime exp) = _tokenService.CreateToken(
                 usuario.id_usuario,
                 usuario.correo_usuario,
                 usuario.nombre,
                 usuario.rol,
-                false
+                false,
+                idPaciente
             );
 
             return new LoginResponseDto

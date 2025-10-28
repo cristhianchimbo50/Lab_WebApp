@@ -69,7 +69,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold"><i class="fas fa-calendar-alt me-1"></i> Fecha Resultado</label>
-                                    <InputDate class="form-control" @bind-Value="fechaResultado" />
+                                    <InputDate class="form-control" @bind-Value="fechaResultado" readonly />
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"><i class="fas fa-user-md me-1"></i> Médico</label>
@@ -203,11 +203,13 @@
             var resultados = ExamenesSeleccionados.Select(ex => new ResultadoExamenDto
             {
                 IdExamen = ex.IdExamen,
+                NombreExamen = ex.NombreExamen ?? "",
                 Valor = ValoresIngresados.GetValueOrDefault(ex.IdExamen) ?? "",
-                Unidad = ex.Unidad,
-                ValorReferencia = ex.ValorReferencia,
+                Unidad = ex.Unidad ?? "",
+                ValorReferencia = ex.ValorReferencia ?? "",
                 Observacion = ""
             }).ToList();
+
 
             var dto = new ResultadoGuardarDto
             {
@@ -218,7 +220,12 @@
                 ObservacionesGenerales = observacionesGenerales
             };
 
+            var json = System.Text.Json.JsonSerializer.Serialize(dto);
+            await JS.InvokeVoidAsync("alert", $"JSON enviado:\n{json}");
+
             var response = await OrdenesApi.GuardarResultadosAsync(dto);
+
+
             var resultadoJson = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -228,12 +235,31 @@
             }
             else
             {
-                var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(resultadoJson);
-                var mensaje = errorObj != null && errorObj.ContainsKey("mensaje")
-                    ? errorObj["mensaje"]
-                    : "Error al guardar el resultado.";
-                await JS.InvokeVoidAsync("alert", mensaje);
+                try
+                {
+                    var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(resultadoJson);
+                    var mensaje = errorObj != null && errorObj.ContainsKey("mensaje")
+                        ? errorObj["mensaje"]?.ToString()
+                        : "Error desconocido.";
+
+                    if (errorObj != null && errorObj.ContainsKey("errores"))
+                    {
+                        var errores = errorObj["errores"]?.ToString();
+                        mensaje += $"\nDetalles: {errores}";
+                    }
+                    else if (errorObj != null && errorObj.ContainsKey("detalle"))
+                    {
+                        mensaje += $"\nDetalle técnico: {errorObj["detalle"]}";
+                    }
+
+                    await JS.InvokeVoidAsync("alert", mensaje);
+                }
+                catch
+                {
+                    await JS.InvokeVoidAsync("alert", $"Error inesperado: {resultadoJson}");
+                }
             }
+
         }
         catch (HttpRequestException)
         {

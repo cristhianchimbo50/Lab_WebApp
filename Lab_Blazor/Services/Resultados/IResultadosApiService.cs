@@ -8,5 +8,8 @@ namespace Lab_Blazor.Services.Resultados
         Task<ResultadoDetalleDto?> GetDetalleResultadoAsync(int idResultado);
         Task<byte[]> ObtenerResultadosPdfAsync(List<int> idsResultados);
         Task<bool> AnularResultadoAsync(int idResultado);
+        Task<List<ResultadoListadoDto>> GetResultadosPacienteAsync();
+        Task<ResultadoDetalleDto?> GetDetalleResultadoPacienteAsync(int idResultado);
+
     }
 }

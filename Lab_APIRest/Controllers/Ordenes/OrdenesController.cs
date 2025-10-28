@@ -9,7 +9,6 @@ namespace Lab_APIRest.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,recepcionista,laboratorista")]
     public class OrdenesController : ControllerBase
     {
         private readonly IOrdenService _ordenService;
@@ -21,6 +20,7 @@ namespace Lab_APIRest.Controllers
             _resultadoService = resultadoService;
         }
 
+        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet]
         public async Task<IActionResult> GetOrdenes()
         {
@@ -28,6 +28,7 @@ namespace Lab_APIRest.Controllers
             return Ok(data);
         }
 
+        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet("detalle/{id}")]
         public async Task<IActionResult> ObtenerDetalleOrden(int id)
         {
@@ -35,6 +36,7 @@ namespace Lab_APIRest.Controllers
             if (dto == null) return NotFound();
             return Ok(dto);
         }
+
 
         [Authorize(Roles = "administrador,recepcionista")]
         [HttpPost]
@@ -54,6 +56,7 @@ namespace Lab_APIRest.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
         [HttpGet("{id}/ticket-pdf")]
         public async Task<IActionResult> ObtenerTicketPdf(int id)
         {
@@ -68,11 +71,37 @@ namespace Lab_APIRest.Controllers
         [HttpPost("ingresar-resultado")]
         public async Task<IActionResult> IngresarResultado([FromBody] ResultadoGuardarDto dto)
         {
-            var ok = await _resultadoService.GuardarResultadosAsync(dto);
-            if (ok)
-                return Ok(new { mensaje = "Resultados guardados correctamente." });
-            else
-                return BadRequest(new { mensaje = "No se pudo guardar los resultados." });
+            if (!ModelState.IsValid)
+            {
+                var errores = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+
+                return BadRequest(new
+                {
+                    mensaje = "Modelo inválido o datos mal formateados.",
+                    errores
+                });
+            }
+
+            try
+            {
+                var ok = await _resultadoService.GuardarResultadosAsync(dto);
+                if (ok)
+                    return Ok(new { mensaje = "Resultados guardados correctamente." });
+                else
+                    return BadRequest(new { mensaje = "No se pudo guardar los resultados en la base de datos." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensaje = "Error interno en el servidor.",
+                    detalle = ex.Message,
+                    stack = ex.StackTrace
+                });
+            }
         }
 
         [Authorize(Roles = "administrador")]
@@ -85,5 +114,42 @@ namespace Lab_APIRest.Controllers
 
             return Ok(new { mensaje = "Orden anulada correctamente junto con sus detalles, pagos y resultados." });
         }
+
+        //Para pacientes
+
+        [Authorize(Roles = "paciente")]
+        [HttpGet("paciente/{idPaciente}")]
+        public async Task<IActionResult> GetOrdenesPorPaciente(int idPaciente)
+        {
+            var userId = User.FindFirst("IdPaciente")?.Value;
+            if (userId == null || userId != idPaciente.ToString())
+                return Forbid();
+
+            var data = await _ordenService.GetOrdenesPorPacienteAsync(idPaciente);
+            return Ok(data);
+        }
+
+        [Authorize(Roles = "paciente")]
+        [HttpGet("paciente/{idPaciente}/detalle/{idOrden}")]
+        public async Task<IActionResult> ObtenerDetalleOrdenPaciente(int idPaciente, int idOrden)
+        {
+            var userId = User.FindFirst("IdPaciente")?.Value;
+            if (userId == null || userId != idPaciente.ToString())
+                return Forbid();
+
+            var dto = await _ordenService.ObtenerDetalleOrdenOriginalAsync(idOrden);
+            if (dto == null)
+                return NotFound();
+
+            var tieneSaldoPendiente = dto.SaldoPendiente > 0;
+            return Ok(new
+            {
+                dto,
+                TieneSaldoPendiente = tieneSaldoPendiente
+            });
+        }
+
+
+
     }
 }

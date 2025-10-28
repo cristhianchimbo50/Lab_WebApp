@@ -19,6 +19,11 @@ namespace Lab_Blazor.Services.Ordenes
         Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);
 
         Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden);
+
+        Task<List<OrdenDto>> GetOrdenesPacienteAsync(int idPaciente);
+
+        Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPacienteAsync(int idPaciente, int idOrden);
+
     }
 
 }

@@ -21,9 +21,10 @@ namespace Lab_APIRest.Infrastructure.Services
             string correoUsuario,
             string nombre,
             string rol,
-            bool esContraseñaTemporal)
+            bool esContraseñaTemporal,
+            int? idPaciente = null)
         {
-            var claims = new[]
+            var claimsList = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, idUsuario.ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, idUsuario.ToString()),
@@ -32,6 +33,9 @@ namespace Lab_APIRest.Infrastructure.Services
                 new Claim(ClaimTypes.Role, rol ?? ""),
                 new Claim("temp_pwd", esContraseñaTemporal ? "1" : "0")
             };
+
+            if (rol == "paciente" && idPaciente.HasValue)
+                claimsList.Add(new Claim("IdPaciente", idPaciente.Value.ToString()));
 
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
@@ -42,9 +46,9 @@ namespace Lab_APIRest.Infrastructure.Services
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
-                claims: claims,
+                claims: claimsList,
                 notBefore: DateTime.UtcNow,
-                expires: DateTime.UtcNow.AddHours(4),
+                expires: expires,
                 signingCredentials: creds
             );
 

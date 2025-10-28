@@ -114,3 +114,13 @@ window.mostrarModalPdfDesdeBytes = function (pdfUrl) {
 };
 
 console.log("site.js cargado correctamente (Sidebar funcional)");
+
+///
+window.marcarModalAbierto = function () {
+    document.body.classList.add("modal-activo");
+};
+
+window.marcarModalCerrado = function () {
+    document.body.classList.remove("modal-activo");
+};
+

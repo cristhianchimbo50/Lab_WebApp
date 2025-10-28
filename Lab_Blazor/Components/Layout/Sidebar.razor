@@ -145,9 +145,8 @@
                         </li>
                     }
 
-                    @if (user.IsInRole("administrador") || user.IsInRole("recepcionista") || user.IsInRole("laboratorista"))
+                    @if (user.IsInRole("administrador") || user.IsInRole("recepcionista") || user.IsInRole("laboratorista") || user.IsInRole("paciente"))
                     {
-                        <!-- Órdenes -->
                         <li class="mb-1">
                             <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                                     data-bs-target="#grpOrdenes"
@@ -155,21 +154,40 @@
                                     title="Órdenes Médicas"
                                     data-rail-tooltip="true">
                                 <i class="bi bi-file-earmark-medical me-2"></i>
-                                <span class="nav-text">Órdenes Médicas</span>
+                                <span class="nav-text">
+                                    @(user.IsInRole("paciente") ? "Mis Órdenes" : "Órdenes Médicas")
+                                </span>
                             </button>
                             <div class="collapse" id="grpOrdenes">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes" title="Órdenes" data-rail-tooltip="true">Órdenes</NavLink></li>
+                                    <li>
+                                        <NavLink class="link-light nav-link py-1 px-0"
+                                                 activeClass="active"
+                                                 href="/ordenes"
+                                                 title="@(user.IsInRole("paciente") ? "Mis Órdenes" : "Órdenes")"
+                                                 data-rail-tooltip="true">
+                                            @(user.IsInRole("paciente") ? "Mis Órdenes" : "Órdenes")
+                                        </NavLink>
+                                    </li>
 
                                     @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
                                     {
-                                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cuentasporcobrar" title="Cuentas por Cobrar" data-rail-tooltip="true">Cuentas por Cobrar</NavLink></li>
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/cuentasporcobrar"
+                                                     title="Cuentas por Cobrar"
+                                                     data-rail-tooltip="true">
+                                                Cuentas por Cobrar
+                                            </NavLink>
+                                        </li>
                                     }
                                 </ul>
                             </div>
                         </li>
 
                         <!-- Resultados -->
+
                         <li class="mb-1">
                             <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
                                     data-bs-target="#grpResultados"
@@ -177,11 +195,21 @@
                                     title="Resultados"
                                     data-rail-tooltip="true">
                                 <i class="bi bi-clipboard-check me-2"></i>
-                                <span class="nav-text">Resultados</span>
+                                <span class="nav-text">
+                                    @(user.IsInRole("paciente") ? "Mis Resultados" : "Resultados")
+                                </span>
                             </button>
                             <div class="collapse" id="grpResultados">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados" title="Listado" data-rail-tooltip="true">Listado</NavLink></li>
+                                    <li>
+                                        <NavLink class="link-light nav-link py-1 px-0"
+                                                 activeClass="active"
+                                                 href="/resultados"
+                                                 title="@(user.IsInRole("paciente") ? "Mis Resultados" : "Resultados")"
+                                                 data-rail-tooltip="true">
+                                            @(user.IsInRole("paciente") ? "Mis Resultados" : "Resultados")
+                                        </NavLink>
+                                    </li>
                                 </ul>
                             </div>
                         </li>

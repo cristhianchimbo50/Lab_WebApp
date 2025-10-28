@@ -15,5 +15,6 @@ namespace Lab_Contracts.Resultados
         public DateTime FechaResultado { get; set; }
         public bool Anulado { get; set; }
         public string Observaciones { get; set; } = "";
+        public int IdPaciente { get; set; }
     }
 }

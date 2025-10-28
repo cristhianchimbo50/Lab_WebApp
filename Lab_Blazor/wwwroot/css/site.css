@@ -793,3 +793,42 @@ main.content-with-sidebar .content-inner {
     }
 }
 
+.modal.show,
+.modal.d-block {
+    z-index: 1060 !important;
+}
+
+    .modal.show ~ .sidebar,
+    .modal.d-block ~ .sidebar,
+    body.modal-open .sidebar {
+        pointer-events: none !important;
+        filter: grayscale(100%) brightness(0.7) !important;
+        opacity: 0.8 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .modal.show ~ .sidebar,
+    .modal.d-block ~ .sidebar,
+    body.modal-open .sidebar {
+        backdrop-filter: blur(2px) !important;
+    }
+
+.modal {
+    z-index: 1060 !important;
+}
+
+.modal-backdrop {
+    z-index: 1055 !important;
+}
+
+.sidebar {
+    z-index: 1030 !important;
+}
+
+body.modal-activo .sidebar {
+    pointer-events: none !important;
+    filter: grayscale(100%) brightness(0.7) !important;
+    opacity: 0.8 !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(2px) !important;
+}

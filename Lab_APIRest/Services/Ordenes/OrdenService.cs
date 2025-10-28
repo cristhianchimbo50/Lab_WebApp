@@ -40,7 +40,7 @@ namespace Lab_APIRest.Services.Ordenes
             return data.Cast<object>().ToList();
         }
 
-        public async Task<object?> ObtenerDetalleOrdenOriginalAsync(int id)
+        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int id)
         {
             var orden = await _context.ordens
                 .Include(o => o.id_pacienteNavigation)
@@ -54,25 +54,22 @@ namespace Lab_APIRest.Services.Ordenes
             if (orden == null)
                 return null;
 
-            var dto = new
+            var dto = new OrdenDetalleDto
             {
                 IdOrden = orden.id_orden,
-                IdPaciente = orden.id_paciente,
                 NumeroOrden = orden.numero_orden,
                 FechaOrden = orden.fecha_orden,
                 EstadoPago = orden.estado_pago,
+                IdPaciente = (int)orden.id_paciente,
                 CedulaPaciente = orden.id_pacienteNavigation?.cedula_paciente,
                 NombrePaciente = orden.id_pacienteNavigation?.nombre_paciente,
                 DireccionPaciente = orden.id_pacienteNavigation?.direccion_paciente,
                 CorreoPaciente = orden.id_pacienteNavigation?.correo_electronico_paciente,
                 TelefonoPaciente = orden.id_pacienteNavigation?.telefono_paciente,
-                Anulado = orden.anulado ?? false,
-                TotalOrden = orden.total,
-                TotalPagado = orden.total_pagado ?? 0,
-                SaldoPendiente = orden.saldo_pendiente ?? 0,
-                NombreMedico = orden.id_medicoNavigation?.nombre_medico,
                 IdMedico = orden.id_medico,
-                Examenes = orden.detalle_ordens.Select(d => new
+                NombreMedico = orden.id_medicoNavigation?.nombre_medico,
+                Anulado = orden.anulado ?? false,
+                Examenes = orden.detalle_ordens.Select(d => new ExamenDetalleDto
                 {
                     IdExamen = d.id_examen ?? 0,
                     NombreExamen = d.id_examenNavigation!.nombre_examen,
@@ -241,5 +238,34 @@ namespace Lab_APIRest.Services.Ordenes
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<List<object>> GetOrdenesPorPacienteAsync(int idPaciente)
+        {
+            var data = await _context.ordens
+                .Include(o => o.id_pacienteNavigation)
+                .Where(o => o.id_paciente == idPaciente)
+                .Select(o => new
+                {
+                    IdOrden = o.id_orden,
+                    NumeroOrden = o.numero_orden,
+                    FechaOrden = o.fecha_orden,
+                    Total = o.total,
+                    TotalPagado = o.total_pagado ?? 0,
+                    SaldoPendiente = o.saldo_pendiente ?? 0,
+                    EstadoPago = o.estado_pago,
+                    Anulado = o.anulado ?? false
+                })
+                .OrderByDescending(x => x.IdOrden)
+                .ToListAsync();
+
+            return data.Cast<object>().ToList();
+        }
+
+        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden)
+        {
+            return await ObtenerDetalleOrdenOriginalAsync(idOrden);
+        }
+
+
     }
 }

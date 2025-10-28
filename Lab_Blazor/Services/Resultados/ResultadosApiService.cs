@@ -85,5 +85,34 @@ namespace Lab_Blazor.Services.Resultados
             var response = await _http.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<List<ResultadoListadoDto>> GetResultadosPacienteAsync()
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, "api/resultados/mis-resultados");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<List<ResultadoListadoDto>>() ?? new();
+        }
+
+        public async Task<ResultadoDetalleDto?> GetDetalleResultadoPacienteAsync(int idResultado)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/mi-detalle/{idResultado}");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<ResultadoDetalleDto>();
+        }
+
     }
 }

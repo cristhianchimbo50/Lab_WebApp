@@ -32,7 +32,7 @@ namespace Lab_APIRest.Services.Resultados
                 {
                     numero_resultado = numero,
                     id_paciente = dto.IdPaciente,
-                    fecha_resultado = dto.FechaResultado,
+                    fecha_resultado = (DateTime)dto.FechaResultado,
                     observaciones = dto.ObservacionesGenerales,
                     id_orden = dto.IdOrden,
                     anulado = false
@@ -53,11 +53,11 @@ namespace Lab_APIRest.Services.Resultados
                         anulado = false
                     };
                     _context.detalle_resultados.Add(det);
-                    await _context.SaveChangesAsync();
 
                     var detOrden = await _context.detalle_ordens
                         .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == ex.IdExamen);
-                    if (detOrden != null) detOrden.id_resultado = res.id_resultado;
+                    if (detOrden != null)
+                        detOrden.id_resultado = res.id_resultado;
 
                     var examReactivos = await _context.examen_reactivos
                         .Where(er => er.id_examen == ex.IdExamen)
@@ -72,15 +72,15 @@ namespace Lab_APIRest.Services.Resultados
                         if (reactivo.cantidad_disponible < er.cantidad_usada)
                             throw new InvalidOperationException($"Stock insuficiente para {reactivo.nombre_reactivo}");
 
-                        await _context.movimiento_reactivos.AddAsync(new movimiento_reactivo
+                        var movimiento = new movimiento_reactivo
                         {
                             id_reactivo = reactivo.id_reactivo,
                             tipo_movimiento = "EGRESO",
                             cantidad = er.cantidad_usada,
-                            fecha_movimiento = dto.FechaResultado,
-                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}",
-                            id_detalle_resultado = det.id_detalle_resultado
-                        });
+                            fecha_movimiento = (DateTime)dto.FechaResultado,
+                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}"
+                        };
+                        _context.movimiento_reactivos.Add(movimiento);
 
                         reactivo.cantidad_disponible -= er.cantidad_usada;
                     }
@@ -93,9 +93,12 @@ namespace Lab_APIRest.Services.Resultados
             catch (Exception ex)
             {
                 await trx.RollbackAsync();
-                _logger.LogError(ex, "Error guardando resultados.");
+                Console.WriteLine($"[ERROR RESULTADO] {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+                _logger.LogError(ex, $"Error guardando resultados de orden {dto.IdOrden} - paciente {dto.IdPaciente}");
                 return false;
             }
+
         }
 
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto f)
@@ -124,6 +127,7 @@ namespace Lab_APIRest.Services.Resultados
                     NombrePaciente = r.id_pacienteNavigation.nombre_paciente,
                     FechaResultado = r.fecha_resultado,
                     Anulado = r.anulado ?? false,
+                    IdPaciente = (int)r.id_paciente,
                     Observaciones = r.observaciones
                 }).ToListAsync();
         }
@@ -144,6 +148,7 @@ namespace Lab_APIRest.Services.Resultados
                 CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
                 NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
                 FechaResultado = r.fecha_resultado,
+                IdPaciente = r.id_paciente ?? 0,
                 Observaciones = r.observaciones,
                 Anulado = r.anulado ?? false,
                 Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
