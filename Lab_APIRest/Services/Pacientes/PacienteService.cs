@@ -106,7 +106,6 @@ namespace Lab_APIRest.Services.Pacientes
                 return (false, "Ya existe un paciente con la misma cédula o correo.", null);
 
             string contraseñaTemporal = GenerarContraseñaTemporal();
-
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
             string hashClave = hasher.HashPassword(null!, contraseñaTemporal);
 
@@ -141,21 +140,23 @@ namespace Lab_APIRest.Services.Pacientes
             await _context.SaveChangesAsync();
 
             var cuerpoCorreo = $@"
-                <h2>Bienvenido al Laboratorio Clínico</h2>
-                <p>Estimado(a) <b>{dto.NombrePaciente}</b>, su cuenta ha sido creada exitosamente.</p>
-                <p><b>Usuario:</b> {dto.CorreoElectronicoPaciente}</p>
-                <p><b>Contraseña temporal:</b> {contraseñaTemporal}</p>
-                <p>Por motivos de seguridad, cambie su contraseña al iniciar sesión.</p>";
+        <h2>Bienvenido al Laboratorio Clínico <strong>'La Inmaculada'</strong></h2>
+        <p>Estimado(a) <b>{dto.NombrePaciente}</b>, su cuenta ha sido creada exitosamente.</p>
+        <p><b>Usuario:</b> {dto.CorreoElectronicoPaciente}</p>
+        <p><b>Contraseña temporal:</b> {contraseñaTemporal}</p>
+        <p>Por motivos de seguridad, cambie su contraseña al iniciar sesión.</p>";
 
             await _emailService.EnviarCorreoAsync(
                 dto.CorreoElectronicoPaciente,
                 dto.NombrePaciente,
-                "Credenciales de acceso - Laboratorio Clínico",
+                "Credenciales de acceso - Laboratorio Clínico <strong>'La Inmaculada'</strong>",
                 cuerpoCorreo
             );
-
+            
             dto.IdPaciente = paciente.id_paciente;
+            dto.EdadPaciente = CalcularEdad(dto.FechaNacPaciente);
             dto.ContraseñaTemporal = contraseñaTemporal;
+
             return (true, "Paciente registrado correctamente.", dto);
         }
 
@@ -215,7 +216,7 @@ namespace Lab_APIRest.Services.Pacientes
             await _emailService.EnviarCorreoAsync(
                 paciente.correo_electronico_paciente,
                 paciente.nombre_paciente,
-                "Nueva contraseña temporal - Laboratorio Clínico",
+                "Nueva contraseña temporal - Laboratorio Clínico <strong>'La Inmaculada'</strong>",
                 cuerpo
             );
 
@@ -257,19 +258,21 @@ namespace Lab_APIRest.Services.Pacientes
             return edad;
         }
 
-        private static PacienteDto MapPaciente(paciente p) =>
-            new()
-            {
-                IdPaciente = p.id_paciente,
-                CedulaPaciente = p.cedula_paciente,
-                NombrePaciente = p.nombre_paciente,
-                FechaNacPaciente = p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-                DireccionPaciente = p.direccion_paciente,
-                CorreoElectronicoPaciente = p.correo_electronico_paciente,
-                TelefonoPaciente = p.telefono_paciente,
-                FechaRegistro = p.fecha_registro,
-                Anulado = p.anulado ?? false,
-                IdUsuario = p.id_usuario
-            };
+        private PacienteDto MapPaciente(paciente p) =>
+        new()
+        {
+            IdPaciente = p.id_paciente,
+            CedulaPaciente = p.cedula_paciente,
+            NombrePaciente = p.nombre_paciente,
+            FechaNacPaciente = p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
+            EdadPaciente = CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)), // 🔹 agregado
+            DireccionPaciente = p.direccion_paciente,
+            CorreoElectronicoPaciente = p.correo_electronico_paciente,
+            TelefonoPaciente = p.telefono_paciente,
+            FechaRegistro = p.fecha_registro,
+            Anulado = p.anulado ?? false,
+            IdUsuario = p.id_usuario
+        };
+
     }
 }

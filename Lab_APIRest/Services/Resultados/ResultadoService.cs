@@ -4,6 +4,7 @@ using Lab_APIRest.Services.PDF;
 using Lab_Contracts.Resultados;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Lab_APIRest.Services.Resultados
 {
@@ -53,16 +54,41 @@ namespace Lab_APIRest.Services.Resultados
                         anulado = false
                     };
                     _context.detalle_resultados.Add(det);
+                    await _context.SaveChangesAsync();
 
-                    var detOrden = await _context.detalle_ordens
-                        .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == ex.IdExamen);
-                    if (detOrden != null)
-                        detOrden.id_resultado = res.id_resultado;
+                    var idPadre = await _context.examen_composicion
+                        .Where(c => c.id_examen_hijo == ex.IdExamen)
+                        .Select(c => c.id_examen_padre)
+                        .FirstOrDefaultAsync();
+
+                    if (idPadre != 0)
+                    {
+                        var detOrdenPadre = await _context.detalle_ordens
+                            .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == idPadre);
+                        if (detOrdenPadre != null)
+                            detOrdenPadre.id_resultado = res.id_resultado;
+                    }
+                    else
+                    {
+                        var detOrden = await _context.detalle_ordens
+                            .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == ex.IdExamen);
+                        if (detOrden != null)
+                            detOrden.id_resultado = res.id_resultado;
+                    }
 
                     var examReactivos = await _context.examen_reactivos
                         .Where(er => er.id_examen == ex.IdExamen)
                         .Include(er => er.id_reactivoNavigation)
                         .ToListAsync();
+
+                    if (idPadre != 0)
+                    {
+                        var reactivosPadre = await _context.examen_reactivos
+                            .Where(er => er.id_examen == idPadre)
+                            .Include(er => er.id_reactivoNavigation)
+                            .ToListAsync();
+                        examReactivos.AddRange(reactivosPadre);
+                    }
 
                     foreach (var er in examReactivos)
                     {
@@ -78,7 +104,8 @@ namespace Lab_APIRest.Services.Resultados
                             tipo_movimiento = "EGRESO",
                             cantidad = er.cantidad_usada,
                             fecha_movimiento = (DateTime)dto.FechaResultado,
-                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}"
+                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}",
+                            id_detalle_resultado = det.id_detalle_resultado
                         };
                         _context.movimiento_reactivos.Add(movimiento);
 
@@ -93,12 +120,10 @@ namespace Lab_APIRest.Services.Resultados
             catch (Exception ex)
             {
                 await trx.RollbackAsync();
-                Console.WriteLine($"[ERROR RESULTADO] {ex.GetType().Name}: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
+               
                 _logger.LogError(ex, $"Error guardando resultados de orden {dto.IdOrden} - paciente {dto.IdPaciente}");
                 return false;
             }
-
         }
 
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto f)
@@ -225,16 +250,46 @@ namespace Lab_APIRest.Services.Resultados
 
         public async Task<bool> AnularResultadoAsync(int id)
         {
-            var r = await _context.resultados.Include(x => x.detalle_resultados)
+            var r = await _context.resultados
+                .Include(x => x.detalle_resultados)
                 .FirstOrDefaultAsync(x => x.id_resultado == id);
 
             if (r == null || r.anulado == true) return false;
 
             r.anulado = true;
-            foreach (var dr in r.detalle_resultados) dr.anulado = true;
+            foreach (var dr in r.detalle_resultados)
+                dr.anulado = true;
 
-            var detOrden = await _context.detalle_ordens.Where(d => d.id_resultado == id).ToListAsync();
-            foreach (var d in detOrden) d.id_resultado = null;
+            var detOrden = await _context.detalle_ordens
+                .Where(d => d.id_resultado == id)
+                .ToListAsync();
+            foreach (var d in detOrden)
+                d.id_resultado = null;
+
+            var examenesPadres = await _context.examen_composicion
+                .Select(c => c.id_examen_padre)
+                .Distinct()
+                .ToListAsync();
+
+            var hijosDelResultado = r.detalle_resultados
+                .Select(dr => dr.id_examen)
+                .ToList();
+
+            var padresAsociados = await _context.examen_composicion
+                .Where(c => hijosDelResultado.Contains(c.id_examen_hijo))
+                .Select(c => c.id_examen_padre)
+                .Distinct()
+                .ToListAsync();
+
+            if (padresAsociados.Any())
+            {
+                var detOrdenPadres = await _context.detalle_ordens
+                    .Where(d => d.id_orden == r.id_orden && padresAsociados.Contains((int)d.id_examen))
+                    .ToListAsync();
+
+                foreach (var dp in detOrdenPadres)
+                    dp.id_resultado = null;
+            }
 
             await _context.SaveChangesAsync();
             return true;

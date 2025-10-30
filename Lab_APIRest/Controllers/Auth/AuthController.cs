@@ -62,7 +62,7 @@ namespace Lab_APIRest.Controllers.Auth
             }
         }
 
-        [Authorize]
+        [AllowAnonymous]
         [HttpPost("cambiar-contrasenia")]
         public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto dto, CancellationToken ct)
         {

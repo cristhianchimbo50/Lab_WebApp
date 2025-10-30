@@ -445,7 +445,7 @@
 
         ordenes = filtradas.OrderByDescending(o => o.IdOrden).ToList();
     }
-    private void IrANuevaOrden() => Navigation.NavigateTo("/ordenes/nuevo", true);
+    private void IrANuevaOrden() => Navigation.NavigateTo("/nueva-orden", true);
 
     private async Task VerDetalleOrden(int idOrden)
     {

@@ -170,8 +170,20 @@
                                         </NavLink>
                                     </li>
 
+
+
                                     @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
                                     {
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/nueva-orden"
+                                                     title="Nueva Orden"
+                                                     data-rail-tooltip="true">
+                                                Nueva Orden
+                                            </NavLink>
+                                        </li>
+
                                         <li>
                                             <NavLink class="link-light nav-link py-1 px-0"
                                                      activeClass="active"

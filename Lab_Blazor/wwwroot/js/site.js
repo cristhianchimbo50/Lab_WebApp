@@ -1,4 +1,6 @@
-﻿(function () {
+﻿window.mostrarToast = window.mostrarToast;
+
+(function () {
     const mqLg = window.matchMedia('(min-width: 992px)');
     const htmlEl = () => document.documentElement;
     const isDesktop = () => mqLg.matches;
@@ -124,3 +126,39 @@ window.marcarModalCerrado = function () {
     document.body.classList.remove("modal-activo");
 };
 
+//Toast
+
+
+window.mostrarToast = (mensaje, tipo = 'info') => {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        console.error("No se encontró el contenedor de toasts (#toastContainer)");
+        return;
+    }
+
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center text-white bg-${tipo} border-0`;
+    toastEl.role = 'alert';
+    toastEl.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${mensaje}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toastEl);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+};
+
+window.mostrarToastAsync = (mensaje, tipo = 'info') => {
+    setTimeout(() => {
+        if (typeof window.mostrarToast === "function") {
+            window.mostrarToast(mensaje, tipo);
+        } else {
+            console.error("mostrarToast no está definido todavía");
+        }
+    }, 200);
+};

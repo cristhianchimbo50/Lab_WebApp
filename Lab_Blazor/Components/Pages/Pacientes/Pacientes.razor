@@ -68,13 +68,6 @@
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(mensaje))
-            {
-                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
-                    @mensaje
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
 
             @if (ListaPacientes == null)
             {
@@ -90,31 +83,31 @@
             }
             else
             {
-                <div class="table-responsive shadow-sm rounded">
-                    <table class="table table-striped table-hover align-middle text-center">
-                        <thead class="table-light">
+                <div class="shadow-sm rounded border" style="max-height: 480px; overflow-y: auto;">
+                    <table class="table table-striped table-hover align-middle text-center mb-0" style="table-layout: fixed; width: 100%;">
+                        <thead class="table-light sticky-top">
                             <tr>
-                                <th>Cédula</th>
-                                <th>Nombre</th>
-                                <th>Edad</th>
-                                <th>Dirección</th>
-                                <th>Correo</th>
-                                <th>Teléfono</th>
-                                <th>Estado</th>
-                                <th>Contraseña</th>
-                                <th>Acciones</th>
+                                <th style="width: 10%;">Cédula</th>
+                                <th style="width: 15%;">Nombre</th>
+                                <th style="width: 7%;">Edad</th>
+                                <th style="width: 15%;">Dirección</th>
+                                <th style="width: 15%;">Correo</th>
+                                <th style="width: 10%;">Teléfono</th>
+                                <th style="width: 10%;">Estado</th>
+                                <th style="width: 8%;">Contraseña</th>
+                                <th style="width: 10%;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var paciente in PacientesPaginados)
                             {
                                 <tr>
-                                    <td>@paciente.CedulaPaciente</td>
-                                    <td>@paciente.NombrePaciente</td>
+                                    <td class="text-truncate">@paciente.CedulaPaciente</td>
+                                    <td class="text-truncate">@paciente.NombrePaciente</td>
                                     <td>@paciente.EdadPaciente</td>
-                                    <td>@paciente.DireccionPaciente</td>
-                                    <td>@paciente.CorreoElectronicoPaciente</td>
-                                    <td>@paciente.TelefonoPaciente</td>
+                                    <td class="text-truncate">@paciente.DireccionPaciente</td>
+                                    <td class="text-truncate">@paciente.CorreoElectronicoPaciente</td>
+                                    <td class="text-truncate">@paciente.TelefonoPaciente</td>
                                     <td>
                                         <span class="badge bg-@(paciente.Anulado ? "danger" : "success")">
                                             @(paciente.Anulado ? "Deshabilitado" : "Activo")
@@ -155,36 +148,52 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
-                    <div class="text-muted small">
-                        Mostrando @((paginaActual - 1) * tamPagina + 1) - @(Math.Min(paginaActual * tamPagina, ListaPacientes.Count)) de @ListaPacientes.Count registros
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="form-label mb-0 small">Registros por página:</label>
-                        <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                        </select>
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
-                                    <button class="page-link" @onclick="PrevPagina">&laquo;</button>
-                                </li>
-                                @for (int i = 1; i <= TotalPaginas; i++)
-                                {
-                                    <li class="page-item @(paginaActual == i ? "active" : "")">
-                                        <button class="page-link" @onclick="@(() => IrAPagina(i))">@i</button>
+                @if (ListaPacientes?.Count > 0)
+                {
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                        <div class="text-muted small">
+                            Mostrando @((paginaActual - 1) * tamPagina + 1)
+                            - @(Math.Min(paginaActual * tamPagina, ListaPacientes.Count))
+                            de @ListaPacientes.Count registros
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small">Registros por página:</label>
+                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
+
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PrevPagina">&laquo;</button>
                                     </li>
-                                }
-                                <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
-                                    <button class="page-link" @onclick="NextPagina">&raquo;</button>
-                                </li>
-                            </ul>
-                        </nav>
+
+                                    @foreach (var num in PaginasParaMostrar())
+                                    {
+                                        if (num == -1)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                        }
+                                        else
+                                        {
+                                            <li class="page-item @(paginaActual == num ? "active" : "")">
+                                                <button class="page-link" @onclick="@(() => IrAPagina(num))">@num</button>
+                                            </li>
+                                        }
+                                    }
+
+                                    <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPagina">&raquo;</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
                     </div>
-                </div>
+                }
             }
 
             <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
@@ -317,13 +326,13 @@
 
     private async Task ValidarYGuardar()
     {
-        PacienteActual.EdadPaciente = CalcularEdad(PacienteActual.FechaNacPaciente);
-
         if (PacienteActual.IdPaciente == 0)
         {
             var (exito, msg, _) = await PacientesApiService.CrearPacienteAsync(PacienteActual);
-            mensaje = msg;
             tipoMensaje = exito ? "success" : "danger";
+            mensaje = msg;
+
+            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
 
             if (exito)
             {
@@ -335,8 +344,10 @@
         else
         {
             var result = await PacientesApiService.EditarPacienteAsync(PacienteActual.IdPaciente, PacienteActual);
-            mensaje = result.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
             tipoMensaje = result.IsSuccessStatusCode ? "success" : "danger";
+            mensaje = result.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
+
+            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
 
             if (result.IsSuccessStatusCode)
             {
@@ -376,14 +387,6 @@
         }
     }
 
-    private int CalcularEdad(DateTime fechaNacimiento)
-    {
-        var hoy = DateTime.Today;
-        var edad = hoy.Year - fechaNacimiento.Year;
-        if (fechaNacimiento > hoy.AddYears(-edad)) edad--;
-        return edad;
-    }
-
     private async Task LimpiarBusqueda()
     {
         criterioBusqueda = "";
@@ -406,6 +409,30 @@
         tipoMensaje = exito ? "success" : "danger";
         if (exito) await BuscarPacientes();
     }
+
+    private List<int> PaginasParaMostrar()
+    {
+        var paginas = new List<int>();
+
+        if (TotalPaginas <= 10)
+        {
+            paginas.AddRange(Enumerable.Range(1, TotalPaginas));
+            return paginas;
+        }
+
+        paginas.AddRange(Enumerable.Range(1, 3));
+        if (paginaActual > 5) paginas.Add(-1);
+
+        int inicio = Math.Max(4, paginaActual - 1);
+        int fin = Math.Min(TotalPaginas - 3, paginaActual + 1);
+        for (int i = inicio; i <= fin; i++) paginas.Add(i);
+
+        if (paginaActual < TotalPaginas - 4) paginas.Add(-1);
+        paginas.AddRange(Enumerable.Range(TotalPaginas - 2, 3));
+
+        return paginas.Distinct().Where(p => p >= 1 && p <= TotalPaginas).ToList();
+    }
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

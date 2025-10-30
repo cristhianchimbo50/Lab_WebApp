@@ -46,14 +46,14 @@ namespace Lab_APIRest.Services.Auth
             await _db.SaveChangesAsync(ct);
 
             var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; //Debo cambiar para produccion
-            var asunto = "Recuperación de Contraseña - Laboratorio Clínico";
+            var asunto = "Recuperación de Contraseña - Laboratorio Clínico <strong>'La Inmaculada'</strong>";
             var cuerpoHtml = $@"
                 <p>Hola <b>{usuario.nombre}</b>,</p>
                 <p>Recibimos una solicitud para restablecer tu contraseña.</p>
                 <p>Puedes hacerlo desde el siguiente enlace (válido por 15 minutos):</p>
                 <p><a href='{link}' style='color:#0d6efd'>Restablecer contraseña</a></p>
                 <p>Si no solicitaste este cambio, ignora este mensaje.</p>
-                <br/><p>Saludos,<br/><b>Laboratorio Clínico</b></p>";
+                <br/><p>Saludos,<br/><b>Laboratorio Clínico <strong>'La Inmaculada'</strong></b></p>";
 
             await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpoHtml);
 
@@ -87,12 +87,12 @@ namespace Lab_APIRest.Services.Auth
 
             await _db.SaveChangesAsync(ct);
 
-            var asunto = "Contraseña actualizada - Laboratorio Clínico";
+            var asunto = "Contraseña actualizada - Laboratorio Clínico <strong>'La Inmaculada'</strong>";
             var cuerpoHtml = $@"
                 <p>Hola <b>{usuario.nombre}</b>,</p>
                 <p>Tu contraseña fue restablecida correctamente.</p>
                 <p>Si no realizaste este cambio, comunícate con soporte de inmediato.</p>
-                <br/><p>Saludos,<br/><b>Laboratorio Clínico</b></p>";
+                <br/><p>Saludos,<br/><b>Laboratorio Clínico <strong>'La Inmaculada'</strong></b></p>";
 
             await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpoHtml);
 

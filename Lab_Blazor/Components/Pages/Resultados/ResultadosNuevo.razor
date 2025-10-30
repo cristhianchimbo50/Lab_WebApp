@@ -30,9 +30,7 @@
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">
-                            No tienes permisos suficientes para ingresar resultados.
-                        </p>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para ingresar resultados.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -86,28 +84,48 @@
                             <i class="bi bi-microscope me-2 text-primary"></i> Parámetros del Examen
                         </h6>
 
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle text-center">
-                                <thead class="table-light">
+                        <div class="table-responsive" style="max-height: 480px; overflow-y: auto; border: 1px solid #dee2e6;">
+                            <table class="table table-bordered table-hover align-middle text-center mb-0">
+                                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
                                     <tr>
-                                        <th>Examen</th>
-                                        <th>Valor</th>
-                                        <th>Unidad</th>
-                                        <th>Referencia</th>
+                                        <th style="width: 40%;">Examen</th>
+                                        <th style="width: 25%;">Valor</th>
+                                        <th style="width: 15%;">Unidad</th>
+                                        <th style="width: 20%;">Referencia</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var ex in ExamenesSeleccionados)
+                                    @foreach (var grupo in ExamenesAgrupados)
                                     {
-                                        <tr>
-                                            <td class="text-start">@ex.NombreExamen</td>
-                                            <td>
-                                                <input type="text" class="form-control text-end"
-                                                       @bind="ValoresIngresados[ex.IdExamen]" />
-                                            </td>
-                                            <td>@ex.Unidad</td>
-                                            <td>@ex.ValorReferencia</td>
+                                        <tr class="table-primary">
+                                            <td class="text-start fw-semibold">@grupo.Padre.NombreExamen</td>
+                                            <td colspan="3"></td>
                                         </tr>
+                                        @if (grupo.Hijos.Any())
+                                        {
+                                            @foreach (var hijo in grupo.Hijos)
+                                            {
+                                                <tr>
+                                                    <td class="ps-4">@hijo.NombreExamen</td>
+                                                    <td>
+                                                        <input type="text" class="form-control text-end" @bind="ValoresIngresados[hijo.IdExamen]" />
+                                                    </td>
+                                                    <td>@hijo.Unidad</td>
+                                                    <td>@hijo.ValorReferencia</td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td class="ps-4">@grupo.Padre.NombreExamen</td>
+                                                <td>
+                                                    <input type="text" class="form-control text-end" @bind="ValoresIngresados[grupo.Padre.IdExamen]" />
+                                                </td>
+                                                <td>@grupo.Padre.Unidad</td>
+                                                <td>@grupo.Padre.ValorReferencia</td>
+                                            </tr>
+                                        }
                                     }
                                 </tbody>
                             </table>
@@ -115,9 +133,7 @@
 
                         <div class="mb-4 mt-3">
                             <label class="form-label fw-semibold">Observaciones Generales</label>
-                            <textarea class="form-control" rows="3"
-                                      placeholder="Ingrese observaciones adicionales..."
-                                      @bind="observacionesGenerales"></textarea>
+                            <textarea class="form-control" rows="3" placeholder="Ingrese observaciones adicionales..." @bind="observacionesGenerales"></textarea>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
@@ -155,7 +171,7 @@
     [Parameter] public List<int> idsExamenes { get; set; } = new();
 
     private OrdenDetalleDto? DatosOrden;
-    private List<ExamenDto> ExamenesSeleccionados = new();
+    private List<(ExamenDto Padre, List<ExamenDto> Hijos)> ExamenesAgrupados = new();
     private Dictionary<int, string> ValoresIngresados = new();
     private DateTime fechaResultado = DateTime.Today;
     private string observacionesGenerales = string.Empty;
@@ -169,7 +185,6 @@
             {
                 var authState = await AuthProvider.GetAuthenticationStateAsync();
                 var user = authState.User;
-
                 if (user.Identity?.IsAuthenticated ?? false)
                 {
                     var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
@@ -181,7 +196,6 @@
                             idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
                         if (query.TryGetValue("idsExamenes", out var ids))
                             idsExamenes = ids.Select(int.Parse).ToList();
-
                         await InicializarDatos();
                     }
                 }
@@ -203,26 +217,55 @@
         DatosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
         if (DatosOrden == null) return;
 
-        var todos = (await ExamenesApi.GetExamenesAsync()).ToList();
-        ExamenesSeleccionados = todos.Where(e => idsExamenes.Contains(e.IdExamen)).ToList();
-
-        foreach (var ex in ExamenesSeleccionados)
-            ValoresIngresados.TryAdd(ex.IdExamen, string.Empty);
+        var todos = await ExamenesApi.GetExamenesAsync();
+        foreach (var idPadre in idsExamenes)
+        {
+            var padre = todos.FirstOrDefault(e => e.IdExamen == idPadre);
+            if (padre == null) continue;
+            var hijos = await ExamenesApi.ObtenerHijosDeExamenAsync(idPadre);
+            ExamenesAgrupados.Add((padre, hijos));
+            ValoresIngresados.TryAdd(padre.IdExamen, string.Empty);
+            foreach (var hijo in hijos)
+                ValoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
+        }
     }
 
     private async Task GuardarResultados()
     {
         try
         {
-            var resultados = ExamenesSeleccionados.Select(ex => new ResultadoExamenDto
+            var resultados = new List<ResultadoExamenDto>();
+
+            foreach (var grupo in ExamenesAgrupados)
             {
-                IdExamen = ex.IdExamen,
-                NombreExamen = ex.NombreExamen ?? "",
-                Valor = ValoresIngresados.GetValueOrDefault(ex.IdExamen) ?? "",
-                Unidad = ex.Unidad ?? "",
-                ValorReferencia = ex.ValorReferencia ?? "",
-                Observacion = ""
-            }).ToList();
+                if (grupo.Hijos.Any())
+                {
+                    foreach (var hijo in grupo.Hijos)
+                    {
+                        resultados.Add(new ResultadoExamenDto
+                        {
+                            IdExamen = hijo.IdExamen,
+                            NombreExamen = hijo.NombreExamen ?? "",
+                            Valor = ValoresIngresados.GetValueOrDefault(hijo.IdExamen, ""),
+                            Unidad = hijo.Unidad ?? "",
+                            ValorReferencia = hijo.ValorReferencia ?? "",
+                            Observacion = ""
+                        });
+                    }
+                }
+                else
+                {
+                    resultados.Add(new ResultadoExamenDto
+                    {
+                        IdExamen = grupo.Padre.IdExamen,
+                        NombreExamen = grupo.Padre.NombreExamen ?? "",
+                        Valor = ValoresIngresados.GetValueOrDefault(grupo.Padre.IdExamen, ""),
+                        Unidad = grupo.Padre.Unidad ?? "",
+                        ValorReferencia = grupo.Padre.ValorReferencia ?? "",
+                        Observacion = ""
+                    });
+                }
+            }
 
             var dto = new ResultadoGuardarDto
             {
@@ -238,7 +281,7 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Resultado guardado correctamente.");
+                await JS.InvokeVoidAsync("alert", "Resultados guardados correctamente.");
                 Navigation.NavigateTo("/resultados");
             }
             else

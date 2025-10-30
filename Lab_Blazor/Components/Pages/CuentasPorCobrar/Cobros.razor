@@ -22,9 +22,7 @@
             ?? user.FindFirst("roles")?.Value
             ?? "";
 
-            bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "recepcionista";
-            bool puedeAnular = rol == "administrador";
         }
 
         @if (!puedeVer)
@@ -74,6 +72,12 @@
                                 </div>
 
                                 <h6 class="mt-4 text-secondary">Órdenes por Cobrar</h6>
+
+                                <div class="alert alert-success py-2 small d-flex align-items-center" role="alert">
+                                    <i class="bi bi-hand-index-thumb me-2 fs-5"></i>
+                                    <span>Seleccione una orden para cobrar usando el botón verde <strong>✔️</strong>.</span>
+                                </div>
+
                                 @if (ordenesPorCobrar.Count == 0)
                                 {
                                     <div class="alert alert-light border">
@@ -89,19 +93,24 @@
                                                     <th>Número</th>
                                                     <th>Fecha</th>
                                                     <th>Total</th>
-                                                    <th>Pagado</th>
                                                     <th>Saldo</th>
+                                                    <th>Acción</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach (var orden in ordenesPorCobrar)
                                                 {
-                                                    <tr @ondblclick="@(() => SeleccionarOrden(orden))" style="cursor:pointer">
+                                                    <tr>
                                                         <td>@orden.NumeroOrden</td>
                                                         <td>@orden.FechaOrden.ToString("dd/MM/yyyy")</td>
                                                         <td>@orden.Total.ToString("C")</td>
-                                                        <td>@orden.TotalPagado.ToString("C")</td>
                                                         <td class="text-danger fw-bold">@orden.SaldoPendiente.ToString("C")</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-success" title="Agregar a selección"
+                                                                    @onclick="(() => SeleccionarOrden(orden))">
+                                                                <i class="bi bi-check-lg"></i>
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -116,27 +125,55 @@
                         <div class="card shadow-sm border-0">
                             <div class="card-body">
                                 <h6 class="text-secondary mb-3">Órdenes Seleccionadas</h6>
+
+                                <div class="alert alert-danger py-2 small d-flex align-items-center" role="alert">
+                                    <i class="bi bi-hand-index-thumb me-2 fs-5"></i>
+                                    <span>Quite una orden seleccionada usando el botón rojo <strong>❌</strong>.</span>
+                                </div>
+
                                 <div class="table-responsive" style="max-height: 200px;">
                                     <table class="table table-sm table-bordered table-hover text-center align-middle">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Número</th>
                                                 <th>Saldo</th>
+                                                <th>Acción</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var orden in ordenesSeleccionadas)
+                                            @if (ordenesSeleccionadas.Count == 0)
                                             {
-                                                <tr @ondblclick="@(() => QuitarOrden(orden))" style="cursor:pointer">
-                                                    <td>@orden.NumeroOrden</td>
-                                                    <td>@orden.SaldoPendiente.ToString("C")</td>
+                                                <tr>
+                                                    <td colspan="3" class="text-muted">Ninguna orden seleccionada</td>
                                                 </tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var orden in ordenesSeleccionadas)
+                                                {
+                                                    <tr>
+                                                        <td>@orden.NumeroOrden</td>
+                                                        <td>@orden.SaldoPendiente.ToString("C")</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-danger" title="Quitar de selección"
+                                                                    @onclick="(() => QuitarOrden(orden))">
+                                                                <i class="bi bi-x-lg"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
                                             }
                                         </tbody>
                                     </table>
                                 </div>
 
                                 <h6 class="mt-4 text-secondary">Pagos Registrados</h6>
+
+                                <div class="alert alert-info py-2 small d-flex align-items-center" role="alert">
+                                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                    <span>Se muestran los pagos ya registrados para las órdenes seleccionadas.</span>
+                                </div>
+
                                 <div class="table-responsive" style="max-height: 200px;">
                                     <table class="table table-sm table-bordered align-middle text-center">
                                         <thead class="table-light">
@@ -147,13 +184,22 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var pago in pagosPrevios)
+                                            @if (pagosPrevios.Count == 0)
                                             {
                                                 <tr>
-                                                    <td>@pago.FechaPago?.ToString("dd/MM/yyyy")</td>
-                                                    <td>@pago.TipoPago</td>
-                                                    <td>@pago.Monto.ToString("C")</td>
+                                                    <td colspan="3" class="text-muted">Sin pagos registrados</td>
                                                 </tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var pago in pagosPrevios)
+                                                {
+                                                    <tr>
+                                                        <td>@pago.FechaPago?.ToString("dd/MM/yyyy")</td>
+                                                        <td>@pago.TipoPago</td>
+                                                        <td>@pago.Monto.ToString("C")</td>
+                                                    </tr>
+                                                }
                                             }
                                         </tbody>
                                     </table>
