@@ -196,7 +196,7 @@
                 }
             }
 
-            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" role="dialog" aria-modal="true" style="display:@(modalVisible ? "block" : "none")">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
                         <EditForm Model="@PacienteActual" OnValidSubmit="ValidarYGuardar">

@@ -119,12 +119,13 @@ console.log("site.js cargado correctamente (Sidebar funcional)");
 
 ///
 window.marcarModalAbierto = function () {
-    document.body.classList.add("modal-activo");
+    document.body.classList.add("modal-activo", "modal-open");
 };
 
 window.marcarModalCerrado = function () {
-    document.body.classList.remove("modal-activo");
+    document.body.classList.remove("modal-activo", "modal-open");
 };
+
 
 //Toast
 

@@ -1,4 +1,9 @@
-﻿:root {
+﻿.sidebar {
+    z-index: 1030 !important;
+}
+
+
+:root {
     --sidebar-width: 280px;
     --sidebar-collapsed-width: 72px;
     --rail-item: 56px;
@@ -26,7 +31,7 @@ html, body {
 .sidebar {
     width: var(--sidebar-width) !important;
     transition: width .2s ease, padding .2s ease, background-color .2s ease, color .2s ease !important;
-    z-index: 1050 !important;
+    z-index: 1020 !important;
     will-change: width !important;
     transform: none !important;
     filter: none !important;
@@ -41,7 +46,6 @@ html, body {
 .content-with-sidebar {
     flex: 1 1 auto !important;
     position: relative !important;
-    z-index: 1 !important;
     padding: 20px !important;
     transition: margin-left .2s ease, padding .2s ease !important;
 }
@@ -196,7 +200,6 @@ html, body {
             padding: .25rem 1rem .25rem 1rem !important;
         }
 
-/* Usuario footer */
 .sb-user {
     background: #212529 !important;
     border-top: 1px solid rgba(255,255,255,.08) !important;
@@ -350,7 +353,7 @@ html, body {
         top: 0 !important;
         height: auto !important;
         box-shadow: none !important;
-        z-index: 1 !important;
+        z-index: 1030 !important;
         transform: none !important;
     }
 
@@ -417,7 +420,7 @@ html, body {
         height: 100vh !important;
         width: var(--sidebar-width) !important;
         box-shadow: 0 24px 60px rgba(0,0,0,.45) !important;
-        z-index: 2000 !important;
+        z-index: 900 !important;
     }
 
     .sb-open .content-with-sidebar {
@@ -482,7 +485,7 @@ html, body {
         position: fixed !important;
         inset: 0 !important;
         background: rgba(0,0,0,.35) !important;
-        z-index: 1020 !important;
+        z-index: 1200 !important;
     }
 
     html.sb-open, body.sb-open {
@@ -543,6 +546,20 @@ html, body {
     .table-wrap > table {
         min-width: 520px !important;
     }
+
+
+    .sidebar {
+        z-index: 900 !important;
+    }
+
+
+    body.modal-open .sidebar,
+    .modal.show ~ .sidebar,
+    .modal.d-block ~ .sidebar {
+        pointer-events: none !important;
+        opacity: 0.8 !important;
+        filter: none !important;
+    }
 }
 
 @media (min-width: 1400px) {
@@ -593,14 +610,6 @@ h2 {
     }
 }
 
-
-#pdfModal {
-    z-index: 2000 !important;
-}
-
-#pdfModal .modal-backdrop {
-    display: none !important;
-}
 
 body.modal-open {
     overflow: hidden;
@@ -742,7 +751,6 @@ main.content-with-sidebar .content-inner {
                 text-align: left;
             }
 
-            /* Acciones */
             .table-responsive tbody td[data-label="Acciones"] {
                 justify-content: flex-start;
                 gap: 0.5rem;
@@ -793,42 +801,46 @@ main.content-with-sidebar .content-inner {
     }
 }
 
+
+.modal,
 .modal.show,
 .modal.d-block {
-    z-index: 1060 !important;
-}
-
-    .modal.show ~ .sidebar,
-    .modal.d-block ~ .sidebar,
-    body.modal-open .sidebar {
-        pointer-events: none !important;
-        filter: grayscale(100%) brightness(0.7) !important;
-        opacity: 0.8 !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .modal.show ~ .sidebar,
-    .modal.d-block ~ .sidebar,
-    body.modal-open .sidebar {
-        backdrop-filter: blur(2px) !important;
-    }
-
-.modal {
+    position: fixed !important;
     z-index: 1060 !important;
 }
 
 .modal-backdrop {
     z-index: 1055 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
-.sidebar {
-    z-index: 1030 !important;
+
+
+.content-with-sidebar {
+    position: relative !important;
+    z-index: auto !important;
 }
 
-body.modal-activo .sidebar {
-    pointer-events: none !important;
-    filter: grayscale(100%) brightness(0.7) !important;
-    opacity: 0.8 !important;
-    transition: all 0.3s ease !important;
-    backdrop-filter: blur(2px) !important;
+body.modal-open {
+    overflow: hidden !important;
 }
+
+
+    body.modal-activo::before,
+    body.modal-open::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 1400 !important;
+        backdrop-filter: blur(1px);
+        transition: opacity 0.25s ease;
+    }
+
+    body.modal-activo .modal,
+    body.modal-open .modal {
+        position: fixed !important;
+        z-index: 1500 !important;
+        filter: none !important;
+        opacity: 1 !important;
+    }
