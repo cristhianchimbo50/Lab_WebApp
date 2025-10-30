@@ -56,10 +56,9 @@ namespace Lab_APIRest.Services.Reactivos
                 else if (filtro.IncluirEgresos)
                     query = query.Where(m => m.tipo_movimiento == "EGRESO");
                 else
-                    query = query.Where(m => false); // ninguno
+                    query = query.Where(m => false);
             }
 
-            // ORDENADO por fecha descendente
             var movimientos = await query
                 .OrderByDescending(m => m.fecha_movimiento)
                 .Select(m => new MovimientoReactivoDto

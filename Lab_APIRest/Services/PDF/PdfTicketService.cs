@@ -23,7 +23,6 @@ namespace Lab_APIRest.Services.PDF
                     {
                         col.Spacing(4);
 
-                        // Encabezado
                         col.Item().AlignCenter().Text("LA INMACULADA").Bold().FontSize(12);
                         col.Item().AlignCenter().Text("LABORATORIO CLINICO DE BAJA COMPLEJIDAD").FontSize(8);
                         col.Item().AlignCenter().Text("Dir: Av. 20 de Diciembre y López de Galarza");
@@ -31,7 +30,6 @@ namespace Lab_APIRest.Services.PDF
                         col.Item().AlignCenter().Text("Tel.: 099 505 5992 / 098 323 9788");
                         col.Item().Text("--------------------------------------------------").FontSize(7);
 
-                        // Datos orden
                         col.Item().AlignCenter().Text("Orden").Bold();
                         col.Item().Text($"Orden.: {orden.NumeroOrden}");
                         col.Item().Text($"Fecha: {orden.FechaOrden:dd/MM/yyyy}");
@@ -42,7 +40,6 @@ namespace Lab_APIRest.Services.PDF
 
                         col.Item().Text("--------------------------------------------------").FontSize(7);
 
-                        // Lista exámenes
                         col.Item().Row(r =>
                         {
                             r.RelativeItem().Text("Examen").Bold();
@@ -60,7 +57,6 @@ namespace Lab_APIRest.Services.PDF
 
                         col.Item().Text("--------------------------------------------------").FontSize(7);
 
-                        // Totales
                         col.Item().Row(r =>
                         {
                             r.RelativeItem().Text("Total:").Bold();

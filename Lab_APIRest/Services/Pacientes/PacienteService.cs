@@ -265,7 +265,7 @@ namespace Lab_APIRest.Services.Pacientes
             CedulaPaciente = p.cedula_paciente,
             NombrePaciente = p.nombre_paciente,
             FechaNacPaciente = p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-            EdadPaciente = CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)), // 🔹 agregado
+            EdadPaciente = CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)), 
             DireccionPaciente = p.direccion_paciente,
             CorreoElectronicoPaciente = p.correo_electronico_paciente,
             TelefonoPaciente = p.telefono_paciente,

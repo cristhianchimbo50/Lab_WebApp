@@ -1,5 +1,4 @@
-﻿window.mostrarToast = window.mostrarToast;
-
+﻿
 (function () {
     const mqLg = window.matchMedia('(min-width: 992px)');
     const htmlEl = () => document.documentElement;
@@ -19,11 +18,20 @@
         if (isDesktop()) {
             htmlEl().classList.toggle('sb-collapsed');
         } else {
-            const willOpen = !htmlEl().classList.contains('sb-open');
-            htmlEl().classList.toggle('sb-open');
-            if (willOpen) closeAllGroups();
+            const html = htmlEl();
+            const isOpen = html.classList.contains('sb-open');
+
+            if (isOpen) {
+                html.classList.remove('sb-open');
+            } else {
+                html.classList.add('sb-open');
+                closeAllGroups();
+            }
         }
     };
+
+
+
 
     document.addEventListener('click', function (ev) {
         const btn = ev.target.closest('.sidebar .btn.btn-toggle');
@@ -77,10 +85,13 @@
     document.addEventListener('click', function (ev) {
         if (!isDesktop() && htmlEl().classList.contains('sb-open')) {
             const insideSidebar = !!ev.target.closest('.sidebar');
-            const onToggle = !!ev.target.closest('.sb-toggle');
-            if (!insideSidebar && !onToggle) htmlEl().classList.remove('sb-open');
+            const onToggle = !!ev.target.closest('.sb-toggle, .mobile-topbar .btn');
+            if (!insideSidebar && !onToggle) {
+                htmlEl().classList.remove('sb-open');
+            }
         }
     }, true);
+
 
     document.addEventListener('click', function (ev) {
         if (!isDesktop() && htmlEl().classList.contains('sb-open')) {
@@ -163,3 +174,8 @@ window.mostrarToastAsync = (mensaje, tipo = 'info') => {
         }
     }, 200);
 };
+
+document.addEventListener('blazor:afterRender', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.scrollTop = 0;
+});

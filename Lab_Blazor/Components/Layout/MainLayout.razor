@@ -4,11 +4,13 @@
 <div class="app-shell">
     <Sidebar />
 
-    <button class="btn sb-handle rounded-circle"
-            type="button"
-            onclick="window.toggleSidebar()"
-            aria-label="Expandir/Contraer">
-    </button>
+    <div class="mobile-topbar d-lg-none">
+        <img src="images/logo-inmaculada.png" alt="Logo" />
+        <button class="btn" onclick="window.toggleSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+
 
     <main class="content-with-sidebar">
         @Body
