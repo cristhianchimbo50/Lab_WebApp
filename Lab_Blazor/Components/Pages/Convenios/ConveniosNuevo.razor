@@ -73,7 +73,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Fecha Convenio</label>
-                            <InputDate class="form-control" @bind-Value="fechaConvenio" />
+                            <input type="text" class="form-control" value="@fechaConvenio.ToString("dd/MM/yyyy")" disabled />
                         </div>
                         <div class="col-md-3">
                             <button class="btn btn-primary w-100" @onclick="CargarOrdenes" disabled="@(!idMedicoSeleccionado.HasValue)">
@@ -83,40 +83,63 @@
                     </div>
                 </div>
 
+                @if (idMedicoSeleccionado == null)
+                {
+                    <div class="alert alert-info text-center shadow-sm">
+                        <i class="bi bi-info-circle me-2"></i>Seleccione un médico y presione <strong>Cargar Órdenes</strong> para continuar.
+                    </div>
+                }
+
+                @if (cargandoOrdenes)
+                {
+                    <div class="text-center py-5 text-primary">
+                        <div class="spinner-border me-2"></div>
+                        <strong>Cargando órdenes...</strong>
+                    </div>
+                }
+
+
                 @if (ordenesDisponibles.Any())
                 {
                     <div class="row g-4">
                         <div class="col-lg-6">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header bg-light fw-semibold">
-                                    <i class="bi bi-list-check me-2"></i>Órdenes Disponibles
+                                <div class="card-header bg-light fw-semibold d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-list-check me-2"></i>Órdenes Disponibles</span>
+                                    <small class="text-muted">Seleccione las órdenes para incluir en el convenio</small>
                                 </div>
                                 <div class="card-body p-2">
-                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                                        <table class="table table-sm table-bordered table-hover align-middle text-center">
-                                            <thead class="table-light">
+                                    <div class="table-responsive tabla-scroll" style="max-height: 380px;">
+                                        <table class="table table-sm table-bordered table-hover align-middle text-center mb-0">
+                                            <thead class="table-light sticky-top">
                                                 <tr>
-                                                    <th>N° Orden</th>
-                                                    <th>Paciente</th>
-                                                    <th>Total</th>
-                                                    <th>✔</th>
+                                                    <th style="width: 25%;">N° Orden</th>
+                                                    <th style="width: 45%;">Paciente</th>
+                                                    <th style="width: 20%;">Total</th>
+                                                    <th style="width: 10%;">✔</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach (var o in ordenesDisponibles)
                                                 {
                                                     <tr>
-                                                        <td>@o.NumeroOrden</td>
-                                                        <td>@o.Paciente</td>
-                                                        <td>@o.Total.ToString("C")</td>
-                                                        <td><input type="checkbox" @bind="@o.Seleccionado" /></td>
+                                                        <td data-label="N° Orden">@o.NumeroOrden</td>
+                                                        <td data-label="Paciente" class="text-truncate">@o.Paciente</td>
+                                                        <td data-label="Total">@o.Total.ToString("C")</td>
+                                                        <td data-label="Seleccionar">
+                                                            <input type="checkbox" class="form-check-input" @bind="@o.Seleccionado" />
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="text-end fw-bold mt-2">
-                                        Total: @ordenesDisponibles.Sum(o => o.Total).ToString("C")
+                                    <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+                                        <small class="text-muted">Total de órdenes disponibles: <strong>@ordenesDisponibles.Count</strong></small>
+                                        <div class="text-end fw-bold mt-2 border-top pt-2">
+                                            <span class="text-muted me-2">Total general:</span>
+                                            <span class="text-primary fs-6">@ordenesDisponibles.Sum(o => o.Total).ToString("C")</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -124,32 +147,48 @@
 
                         <div class="col-lg-6">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header bg-light fw-semibold">
-                                    <i class="bi bi-clipboard2-check me-2"></i>Órdenes Seleccionadas
+                                <div class="card-header bg-light fw-semibold d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-clipboard2-check me-2"></i>Órdenes Seleccionadas</span>
+                                    <small class="text-muted">Estas órdenes serán incluidas en el convenio</small>
                                 </div>
                                 <div class="card-body p-2">
-                                    <table class="table table-sm table-bordered align-middle text-center">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>N° Orden</th>
-                                                <th>Paciente</th>
-                                                <th>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var s in ordenesSeleccionadas)
-                                            {
-                                                <tr>
-                                                    <td>@s.NumeroOrden</td>
-                                                    <td>@s.Paciente</td>
-                                                    <td>@s.Total.ToString("C")</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                    <div class="text-end fw-bold mt-2">
-                                        Total Seleccionado: @ordenesSeleccionadas.Sum(o => o.Total).ToString("C")
-                                    </div>
+                                    @if (ordenesSeleccionadas.Count == 0)
+                                    {
+                                        <div class="alert alert-info text-center my-3 shadow-sm">
+                                            <i class="bi bi-info-circle me-2"></i>No ha seleccionado ninguna orden.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="table-responsive tabla-scroll" style="max-height: 380px;">
+                                            <table class="table table-sm table-bordered align-middle text-center mb-0">
+                                                <thead class="table-light sticky-top">
+                                                    <tr>
+                                                        <th style="width: 25%;">N° Orden</th>
+                                                        <th style="width: 55%;">Paciente</th>
+                                                        <th style="width: 20%;">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var s in ordenesSeleccionadas)
+                                                    {
+                                                        <tr>
+                                                            <td data-label="N° Orden">@s.NumeroOrden</td>
+                                                            <td data-label="Paciente" class="text-truncate">@s.Paciente</td>
+                                                            <td data-label="Total">@s.Total.ToString("C")</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+                                            <small class="text-muted">Órdenes seleccionadas: <strong>@ordenesSeleccionadas.Count</strong></small>
+                                            <div class="text-end fw-bold mt-2 border-top pt-2">
+                                                <span class="text-muted me-2">Total seleccionado:</span>
+                                                <span class="text-success fs-6">@ordenesSeleccionadas.Sum(o => o.Total).ToString("C")</span>
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -259,11 +298,17 @@
         }
     }
 
+    private bool cargandoOrdenes = false;
+
     private async Task CargarOrdenes()
     {
         if (idMedicoSeleccionado.HasValue)
         {
+            cargandoOrdenes = true;
+            StateHasChanged();
+
             var result = await ConveniosApi.ObtenerOrdenesDisponiblesAsync(idMedicoSeleccionado.Value);
+
             ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
             {
                 IdOrden = o.IdOrden,
@@ -272,6 +317,10 @@
                 FechaOrden = o.FechaOrden,
                 Total = o.Total
             }).ToList();
+
+            cargandoOrdenes = false;
+            await JS.InvokeVoidAsync("mostrarToastAsync", $"{ordenesDisponibles.Count} órdenes cargadas correctamente.", "success");
+            StateHasChanged();
         }
     }
 
@@ -279,13 +328,19 @@
     {
         mostrarModal = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
+        StateHasChanged();
     }
 
     private async Task CerrarModal()
     {
         mostrarModal = false;
+        porcentajeComision = 0;
         await JS.InvokeVoidAsync("marcarModalCerrado");
+        StateHasChanged();
     }
+
+
+
 
     private async Task RegistrarConvenio()
     {
@@ -303,14 +358,24 @@
         };
 
         var exito = await ConveniosApi.RegistrarConvenioAsync(dto);
+
+        mostrarModal = false;
+        await JS.InvokeVoidAsync("eval", @"
+        document.body.classList.remove('modal-activo','modal-open');
+        document.body.style.overflow='';
+        const backdrop=document.querySelector('.modal-backdrop');
+        if(backdrop) backdrop.remove();
+    ");
+        StateHasChanged();
+
         if (exito)
         {
-            await JS.InvokeVoidAsync("alert", "Convenio registrado correctamente.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio registrado correctamente.", "success");
             Navigation.NavigateTo("/convenios");
         }
         else
         {
-            await JS.InvokeVoidAsync("alert", "Error al registrar el convenio.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al registrar el convenio.", "danger");
         }
     }
 
@@ -318,6 +383,9 @@
     {
         public bool Seleccionado { get; set; }
     }
+
+
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

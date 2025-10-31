@@ -91,14 +91,17 @@
             }
             else
             {
+
+
                 @if (ListaExamenes?.Count > 0)
                 {
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="text-muted small">
                             Mostrando @((paginaActual - 1) * tamPagina + 1)
                             - @(Math.Min(paginaActual * tamPagina, ListaExamenes.Count))
-                            de @ListaExamenes.Count registros
+                            de @ListaExamenes.Count exámenes
                         </div>
+
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 small">Registros por página:</label>
                             <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
@@ -107,90 +110,84 @@
                                 <option value="15">15</option>
                                 <option value="20">20</option>
                             </select>
+
+                            <div class="d-flex align-items-center ms-2">
+                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                        disabled="@(paginaActual == 1)"
+                                        @onclick="PrevPagina">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        disabled="@(paginaActual >= TotalPaginas)"
+                                        @onclick="NextPagina">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 }
 
-                <div class="shadow-sm rounded border" style="max-height: 480px; overflow-y: auto;">
-                    <table class="table table-striped table-hover align-middle text-center mb-0" style="table-layout: fixed; width: 100%;">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th style="width: 20%;">Nombre</th>
-                                <th style="width: 15%;">Estudio</th>
-                                <th style="width: 15%;">Tipo de Muestra</th>
-                                <th style="width: 15%;">Tipo de Examen</th>
-                                <th style="width: 15%;">Técnica</th>
-                                <th style="width: 10%;">Precio</th>
-                                <th style="width: 10%;">Estado</th>
-                                <th style="width: 10%;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var examen in ExamenesPaginados)
-                            {
+                <div class="tabla-fija shadow-sm rounded border">
+                    <div class="tabla-body">
+                        <table class="table align-middle mb-0 tabla-examenes">
+                            <thead>
                                 <tr>
-                                    <td class="text-truncate">@examen.NombreExamen</td>
-                                    <td class="text-truncate">@examen.Estudio</td>
-                                    <td class="text-truncate">@examen.TipoMuestra</td>
-                                    <td class="text-truncate">@examen.TipoExamen</td>
-                                    <td class="text-truncate">@examen.Tecnica</td>
-                                    <td class="text-truncate">$@examen.Precio</td>
-                                    <td>
-                                        <span class="badge bg-@(examen.Anulado ? "danger" : "success")">
-                                            @(examen.Anulado ? "Deshabilitado" : "Activo")
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if (puedeModificar)
-                                        {
-                                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarExamen(examen)">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(examen.IdExamen)">
-                                                <i class="bi bi-x-circle-fill"></i>
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted small">Sin permisos</span>
-                                        }
-                                    </td>
+                                    <th style="width: 18%;">Nombre</th>
+                                    <th style="width: 15%;">Estudio</th>
+                                    <th style="width: 14%;">Tipo de Muestra</th>
+                                    <th style="width: 14%;">Tipo de Examen</th>
+                                    <th style="width: 14%;">Técnica</th>
+                                    <th style="width: 10%;">Precio</th>
+                                    <th style="width: 7%;">Estado</th>
+                                    <th style="width: 8%;">Acciones</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                @if (ListaExamenes?.Count > 0)
-                {
-                    <div class="d-flex justify-content-center align-items-center mt-3">
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
-                                    <button class="page-link" @onclick="PrevPagina">&laquo;</button>
-                                </li>
-
-                                @foreach (var num in PaginasParaMostrar())
+                            </thead>
+                            <tbody>
+                                @foreach (var examen in ExamenesPaginados)
                                 {
-                                    if (num == -1)
-                                    {
-                                        <li class="page-item disabled"><span class="page-link">…</span></li>
-                                    }
-                                    else
-                                    {
-                                        <li class="page-item @(paginaActual == num ? "active" : "")">
-                                            <button class="page-link" @onclick="@(() => IrAPagina(num))">@num</button>
-                                        </li>
-                                    }
+                                    <tr>
+                                        <td data-label="Nombre" class="text-truncate">@examen.NombreExamen</td>
+                                        <td data-label="Estudio" class="text-truncate">@examen.Estudio</td>
+                                        <td data-label="Tipo de Muestra" class="text-truncate">@examen.TipoMuestra</td>
+                                        <td data-label="Tipo de Examen" class="text-truncate">@examen.TipoExamen</td>
+                                        <td data-label="Técnica" class="text-truncate">@examen.Tecnica</td>
+                                        <td data-label="Precio" class="text-truncate">$@examen.Precio</td>
+                                        <td data-label="Estado">
+                                            <span class="badge bg-@(examen.Anulado ? "danger" : "success")">
+                                                @(examen.Anulado ? "Deshabilitado" : "Activo")
+                                            </span>
+                                        </td>
+                                        <td data-label="Acciones">
+                                            @if (puedeModificar)
+                                            {
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarExamen(examen)">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                @if (examen.Anulado)
+                                                {
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(examen)">
+                                                        <i class="bi bi-check-circle-fill"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(examen.IdExamen)">
+                                                        <i class="bi bi-x-circle-fill"></i>
+                                                    </button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Sin permisos</span>
+                                            }
+                                        </td>
+                                    </tr>
                                 }
-
-                                <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
-                                    <button class="page-link" @onclick="NextPagina">&raquo;</button>
-                                </li>
-                            </ul>
-                        </nav>
+                            </tbody>
+                        </table>
                     </div>
-                }
+                </div>
             }
 
             <div class="modal fade @(ModalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
@@ -463,7 +460,7 @@
         var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
         if (rol != "administrador")
         {
-            await JS.InvokeVoidAsync("alert", "No tienes permisos para editar exámenes.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar exámenes.", "danger");
             return;
         }
 
@@ -512,17 +509,20 @@
                     });
                 }
             }
-
             mensaje = "Examen y composiciones guardadas correctamente.";
             tipoMensaje = "success";
+            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
             ModalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
             await BuscarExamenes();
+
         }
         else
         {
             mensaje = "Error al guardar examen.";
             tipoMensaje = "danger";
+            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
+
         }
     }
 
@@ -552,17 +552,36 @@
         };
     }
 
+    private async Task ConfirmarReactivacion(ExamenDto examen)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el examen {examen.NombreExamen}?"))
+        {
+            examen.Anulado = false;
+            var result = await ExamenesApiService.EditarExamenAsync(examen.IdExamen, examen);
+            if (result.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
+                await BuscarExamenes();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al reactivar el examen.", "danger");
+            }
+        }
+    }
+
+
     private async void SeleccionarHijo(ExamenDto examen)
     {
         if (HijosSeleccionados.Any(x => x.IdExamen == examen.IdExamen))
         {
-            await JS.InvokeVoidAsync("alert", "Este examen ya está agregado como hijo.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Este examen ya está agregado como hijo.", "warning");
             return;
         }
 
         if (ExamenActual.IdExamen == examen.IdExamen)
         {
-            await JS.InvokeVoidAsync("alert", "No puede agregarse a sí mismo como hijo.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No puede agregarse a sí mismo como hijo.", "warning");
             return;
         }
 

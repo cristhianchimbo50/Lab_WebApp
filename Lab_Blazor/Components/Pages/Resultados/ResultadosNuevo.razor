@@ -282,6 +282,7 @@
             if (response.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("alert", "Resultados guardados correctamente.");
+                await OrdenesApi.VerificarNotificacionResultadosAsync(idOrden);
                 Navigation.NavigateTo("/resultados");
             }
             else

@@ -52,7 +52,6 @@
             {
                 <div class="d-flex justify-content-center align-items-center py-5 text-primary">
                     <div class="spinner-border me-2" role="status"></div>
-                    <strong>Cargando...</strong>
                 </div>
             }
             else
@@ -77,68 +76,74 @@
 
                 @if (examenSeleccionado != null)
                 {
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <span>
-                            Mostrando @((reactivosAsociados.Count == 0) ? 0 : ((CurrentPage - 1) * PageSize + 1))
-                            - @((CurrentPage - 1) * PageSize + PaginatedReactivos.Count()) de @reactivosAsociados.Count reactivos
-                        </span>
-                        <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-sm" style="width: auto;" @bind="PageSize">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                            <nav>
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => CambiarPagina(-1)">«</button>
-                                    </li>
-                                    <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => CambiarPagina(1)">»</button>
-                                    </li>
-                                </ul>
-                            </nav>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div>
+                            <button class="btn btn-success shadow-sm me-2" @onclick="MostrarModalReactivo">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar Reactivo
+                            </button>
+                            <button class="btn btn-primary shadow-sm" @onclick="GuardarAsociaciones">
+                                <i class="bi bi-save me-1"></i> Guardar Cambios
+                            </button>
                         </div>
+
+                        @if (reactivosAsociados?.Count > 0)
+                        {
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0 small">Registros por página:</label>
+                                <select class="form-select form-select-sm w-auto" @bind="PageSize" @bind:after="CambiarTamPagina">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                </select>
+
+                                <div class="d-flex align-items-center ms-2">
+                                    <button class="btn btn-sm btn-outline-secondary me-1"
+                                            disabled="@(CurrentPage == 1)"
+                                            @onclick="PrevPagina">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            disabled="@(CurrentPage >= TotalPages)"
+                                            @onclick="NextPagina">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     </div>
 
-                    <div class="table-responsive shadow-sm mb-3">
-                        <table class="table table-hover table-bordered align-middle text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Reactivo</th>
-                                    <th style="width: 180px;">Cantidad Usada</th>
-                                    <th style="width: 120px;">Unidad</th>
-                                    <th style="width: 80px;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in PaginatedReactivos)
-                                {
+                    <div class="tabla-scroll shadow-sm rounded border p-3">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0 tabla-reactivos">
+                                <thead class="table-light sticky-top">
                                     <tr>
-                                        <td class="text-start">@item.NombreReactivo</td>
-                                        <td>
-                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="item.CantidadUsada" />
-                                        </td>
-                                        <td>@item.Unidad</td>
-                                        <td>
-                                            <button class="btn btn-danger btn-sm shadow-sm" @onclick="@(() => QuitarReactivo(item))" title="Quitar reactivo">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
+                                        <th style="width: 40%;">Reactivo</th>
+                                        <th style="width: 25%;">Cantidad Usada</th>
+                                        <th style="width: 20%;">Unidad</th>
+                                        <th style="width: 15%;">Acciones</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-success" @onclick="MostrarModalReactivo">
-                            <i class="bi bi-plus-circle me-1"></i> Agregar Reactivo
-                        </button>
-                        <button class="btn btn-primary" @onclick="GuardarAsociaciones">
-                            <i class="bi bi-save me-1"></i> Guardar Cambios
-                        </button>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in PaginatedReactivos)
+                                    {
+                                        <tr>
+                                            <td data-label="Reactivo" class="text-truncate text-start">@item.NombreReactivo</td>
+                                            <td data-label="Cantidad" class="text-end">
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="item.CantidadUsada" />
+                                            </td>
+                                            <td data-label="Unidad" class="text-end">@item.Unidad</td>
+                                            <td data-label="Acciones" class="text-end">
+                                                <button class="btn btn-danger btn-sm" @onclick="@(() => QuitarReactivo(item))">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 }
             }
@@ -165,27 +170,53 @@
 {
     <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow">
+            <div class="modal-content shadow-lg border-0">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-search me-2"></i>Buscar Examen</h5>
-                    <button class="btn-close" @onclick="CerrarModalExamen"></button>
+                    <h5 class="modal-title">
+                        <i class="bi bi-search me-2"></i>Buscar Examen
+                    </h5>
+                    <button class="btn-close btn-close-white" @onclick="CerrarModalExamen"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="input-group mb-3">
-                        <InputText class="form-control" @bind-Value="valorBusquedaExamen" placeholder="Buscar por nombre..." />
-                        <button class="btn btn-primary" @onclick="BuscarExamenes"><i class="bi bi-search"></i></button>
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Buscar por</label>
+                            <select class="form-select" @bind="criterioBusquedaExamen">
+                                <option value="nombre">Nombre</option>
+                                <option value="estudio">Estudio</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Valor</label>
+                            <InputText class="form-control" @bind-Value="valorBusquedaExamen" placeholder="Ingrese valor a buscar" />
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <button class="btn btn-primary w-100" @onclick="BuscarExamenes">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle text-center">
-                            <thead class="table-light">
-                                <tr><th>Nombre</th><th>Estudio</th></tr>
+
+                    <div class="tabla-scroll-fija border rounded shadow-sm">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Estudio</th>
+                                    <th style="width: 120px;">Acción</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 @foreach (var ex in examenesEncontrados)
                                 {
-                                    <tr @ondblclick="@(() => SeleccionarExamen(ex))" style="cursor:pointer;">
+                                    <tr>
                                         <td>@ex.NombreExamen</td>
                                         <td>@ex.Estudio</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-success" @onclick="@(() => SeleccionarExamen(ex))">
+                                                <i class="bi bi-check-circle"></i> Seleccionar
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -193,7 +224,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CerrarModalExamen"><i class="bi bi-x-lg"></i> Cerrar</button>
+                    <button class="btn btn-secondary" @onclick="CerrarModalExamen">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
                 </div>
             </div>
         </div>
@@ -204,36 +237,68 @@
 {
     <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow">
+            <div class="modal-content shadow-lg border-0">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title"><i class="bi bi-vial me-2"></i>Buscar Reactivo</h5>
-                    <button class="btn-close" @onclick="CerrarModalReactivo"></button>
+                    <h5 class="modal-title">
+                        <i class="bi bi-vial me-2"></i>Buscar Reactivo
+                    </h5>
+                    <button class="btn-close btn-close-white" @onclick="CerrarModalReactivo"></button>
                 </div>
+
                 <div class="modal-body">
-                    <div class="input-group mb-3">
-                        <InputText class="form-control" @bind-Value="valorBusquedaReactivo" placeholder="Buscar por nombre..." />
-                        <button class="btn btn-primary" @onclick="BuscarReactivos"><i class="bi bi-search"></i></button>
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Buscar por</label>
+                            <select class="form-select" @bind="criterioBusquedaReactivo">
+                                <option value="nombre">Nombre</option>
+                                <option value="fabricante">Fabricante</option>
+                                <option value="unidad">Unidad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Valor</label>
+                            <InputText class="form-control" @bind-Value="valorBusquedaReactivo" placeholder="Ingrese valor a buscar" />
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <button class="btn btn-primary w-100" @onclick="BuscarReactivos">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle text-center">
-                            <thead class="table-light">
-                                <tr><th>Nombre</th><th>Fabricante</th><th>Unidad</th></tr>
+
+                    <div class="tabla-scroll-fija border rounded shadow-sm">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Fabricante</th>
+                                    <th>Unidad</th>
+                                    <th style="width: 120px;">Acción</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 @foreach (var r in reactivosEncontrados)
                                 {
-                                    <tr @ondblclick="@(() => SeleccionarReactivo(r))" style="cursor:pointer;">
+                                    <tr>
                                         <td>@r.NombreReactivo</td>
                                         <td>@r.Fabricante</td>
                                         <td>@r.Unidad</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-success" @onclick="async () => await SeleccionarReactivo(r)">
+                                                <i class="bi bi-check-circle"></i> Seleccionar
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
                 </div>
+
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CerrarModalReactivo"><i class="bi bi-x-lg"></i> Cerrar</button>
+                    <button class="btn btn-secondary" @onclick="CerrarModalReactivo">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
                 </div>
             </div>
         </div>
@@ -253,6 +318,9 @@
     private List<ReactivoDto> reactivosEncontrados = new();
     private List<ExamenDto> todosLosExamenes = new();
     private List<ReactivoDto> todosLosReactivos = new();
+    private string criterioBusquedaExamen = "nombre";
+    private string criterioBusquedaReactivo = "nombre";
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -311,10 +379,21 @@
     {
         if (!todosLosExamenes.Any())
             todosLosExamenes = await ExamenesApi.GetExamenesAsync();
+
         var val = valorBusquedaExamen.Trim().ToLower();
-        examenesEncontrados = string.IsNullOrWhiteSpace(val)
-            ? todosLosExamenes
-            : todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList();
+
+        if (string.IsNullOrWhiteSpace(val))
+        {
+            examenesEncontrados = todosLosExamenes;
+        }
+        else
+        {
+            examenesEncontrados = criterioBusquedaExamen switch
+            {
+                "estudio" => todosLosExamenes.Where(e => e.Estudio.ToLower().Contains(val)).ToList(),
+                _ => todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
+            };
+        }
     }
 
     private async Task SeleccionarExamen(ExamenDto examen)
@@ -344,19 +423,32 @@
     {
         if (!todosLosReactivos.Any())
             todosLosReactivos = await ReactivosApi.GetReactivosAsync();
+
         var val = valorBusquedaReactivo.Trim().ToLower();
-        reactivosEncontrados = string.IsNullOrWhiteSpace(val)
-            ? todosLosReactivos
-            : todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList();
+
+        if (string.IsNullOrWhiteSpace(val))
+        {
+            reactivosEncontrados = todosLosReactivos;
+        }
+        else
+        {
+            reactivosEncontrados = criterioBusquedaReactivo switch
+            {
+                "fabricante" => todosLosReactivos.Where(r => r.Fabricante?.ToLower().Contains(val) ?? false).ToList(),
+                "unidad" => todosLosReactivos.Where(r => r.Unidad?.ToLower().Contains(val) ?? false).ToList(),
+                _ => todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList()
+            };
+        }
     }
 
-    private void SeleccionarReactivo(ReactivoDto reactivo)
+    private async Task SeleccionarReactivo(ReactivoDto reactivo)
     {
         if (reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
         {
-            JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
+            await JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
             return;
         }
+
         reactivosAsociados.Add(new AsociacionReactivoDto
         {
             IdReactivo = reactivo.IdReactivo,
@@ -364,7 +456,10 @@
             Unidad = reactivo.Unidad,
             CantidadUsada = 0
         });
+
         mostrarModalReactivo = false;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
+        StateHasChanged();
     }
 
     private void QuitarReactivo(AsociacionReactivoDto item) => reactivosAsociados.Remove(item);
@@ -403,10 +498,23 @@
     private IEnumerable<AsociacionReactivoDto> PaginatedReactivos =>
         reactivosAsociados.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
 
-    private void CambiarPagina(int cambio)
+    private void PrevPagina()
     {
-        CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
+        if (CurrentPage > 1)
+            CurrentPage--;
     }
+
+    private void NextPagina()
+    {
+        if (CurrentPage < TotalPages)
+            CurrentPage++;
+    }
+
+    private void CambiarTamPagina()
+    {
+        CurrentPage = 1;
+    }
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

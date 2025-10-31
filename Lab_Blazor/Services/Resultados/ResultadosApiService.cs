@@ -18,6 +18,8 @@ namespace Lab_Blazor.Services.Resultados
 
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
                 queryParams.Add($"numeroResultado={Uri.EscapeDataString(filtro.NumeroResultado)}");
+            if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
+                queryParams.Add($"numeroOrden={Uri.EscapeDataString(filtro.NumeroOrden)}");
             if (!string.IsNullOrWhiteSpace(filtro.Cedula))
                 queryParams.Add($"cedula={Uri.EscapeDataString(filtro.Cedula)}");
             if (!string.IsNullOrWhiteSpace(filtro.Nombre))

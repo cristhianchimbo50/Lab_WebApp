@@ -14,27 +14,20 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
-            ?? user.FindFirst("role")?.Value
-            ?? user.FindFirst("roles")?.Value
-            ?? "";
-
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
             bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista" or "paciente";
             bool puedeAnular = rol is "administrador" or "laboratorista";
-
         }
-        @* Poner esto a todos! *@
+
         @if (!puedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
-                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+                <div class="card shadow-lg text-center border-0" style="max-width:450px;">
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">
-                            No tienes permisos suficientes para acceder a este módulo.
-                        </p>
+                        <p class="text-muted mb-3">No tienes permisos para acceder a la gestión de resultados.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -44,207 +37,250 @@
         }
         else
         {
-            <h4 class="mb-4">
-                <i class="fas fa-file-medical me-2 text-primary"></i>Gestión de Resultados
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-clipboard2-pulse text-primary fs-4 me-2"></i>@(esPaciente ? "Mis Resultados" : "Gestión de Resultados")</span>
             </h4>
 
-            @if (!esPaciente)
+            @if (!isRendered)
             {
-                <div class="card mb-3 shadow-sm">
+                <div class="d-flex align-items-center text-primary justify-content-center" style="height:200px;">
+                    <div class="spinner-border me-2" role="status"></div>
+                </div>
+            }
+            else
+            {
+                <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="criterioBusqueda" @onchange="CambioCriterioBusqueda">
+                            <label class="form-label fw-semibold">Buscar por</label>
+                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
                                 <option value="">-- Seleccione --</option>
-                                <option value="numero">Número de Resultado</option>
+                                <option value="numeroResultado">Número de Resultado</option>
+                                <option value="numeroOrden">Número de Orden</option>
                                 <option value="cedula">Cédula</option>
                                 <option value="nombre">Nombre</option>
                             </InputSelect>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label">Valor</label>
-                            <InputText class="form-control"
-                                       @bind-Value="valorBusqueda"
-                                       placeholder="@SampleTextBusqueda" />
+                            <label class="form-label fw-semibold">Valor</label>
+                            <InputText class="form-control" @bind-Value="valorBusqueda"
+                                       placeholder="Ingrese valor a buscar"
+                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultados(); })" />
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Fecha desde</label>
-                            <InputDate class="form-control" @bind-Value="fechaDesde" />
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Fecha hasta</label>
-                            <InputDate class="form-control" @bind-Value="fechaHasta" />
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" checked="@mostrarNoAnulados" @onchange="CambioCheckNoAnulados" />
-                                <label class="form-check-label">No anulados</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" checked="@mostrarAnulados" @onchange="CambioCheckAnulados" />
-                                <label class="form-check-label">Anulados</label>
-                            </div>
-                        </div>
-                        <div class="col-md-2 d-flex gap-2">
-                            <button class="btn btn-primary" @onclick="BuscarResultados" title="Buscar">
-                                <i class="fas fa-search"></i>
+                        <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                            <button type="button" class="btn btn-primary" @onclick="BuscarResultados">
+                                <i class="bi bi-search me-1"></i>Buscar
                             </button>
-                            <button class="btn btn-secondary" @onclick="LimpiarFiltros" title="Limpiar">
-                                <i class="fas fa-eraser"></i>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusqueda">
+                                <i class="bi bi-eraser me-1"></i>Limpiar
                             </button>
                         </div>
                     </div>
                 </div>
-            }
 
-            @if (cargando)
-            {
-                <div class="d-flex align-items-center text-primary justify-content-center" style="height:200px;">
-                    <div class="spinner-border me-2" role="status"></div>
-                    <strong>Cargando datos...</strong>
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Desde</label>
+                            <InputDate @bind-Value="fechaDesde" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Hasta</label>
+                            <InputDate @bind-Value="fechaHasta" class="form-control" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center mt-4">
+                            <InputCheckbox @bind-Value="filtroAnulado" class="form-check-input me-2" />
+                            <label class="form-check-label">Anulado</label>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center mt-4">
+                            <InputCheckbox @bind-Value="filtroNoAnulado" class="form-check-input me-2" />
+                            <label class="form-check-label">No Anulado</label>
+                        </div>
+                    </div>
                 </div>
-            }
-            else if (resultados.Count == 0)
-            {
-                <div class="alert alert-warning">No se encontraron resultados.</div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle text-center">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Número Resultado</th>
-                                <th>Cédula</th>
-                                <th>Nombre</th>
-                                <th>Fecha</th>
-                                <th style="width:110px;">Anulado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var res in resultados)
-                            {
-                                <tr>
-                                    <td>@res.NumeroResultado</td>
-                                    <td>@res.CedulaPaciente</td>
-                                    <td>@res.NombrePaciente</td>
-                                    <td>@res.FechaResultado.ToString("dd/MM/yyyy")</td>
-                                    <td>
-                                        @if (res.Anulado)
-                                        {
-                                            <span class="badge bg-danger">ANULADO</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" @onclick="() => VerDetalleResultado(res.IdResultado)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+
+                @if (resultados == null)
+                {
+                    <div class="alert alert-info text-center shadow-sm">
+                        <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los resultados.
+                    </div>
+                }
+                else if (!resultados.Any())
+                {
+                    <div class="alert alert-warning text-center shadow-sm">
+                        <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron resultados.
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div class="text-muted small">
+                            Mostrando @((CurrentPage - 1) * PageSize + 1)
+                            - @(Math.Min(CurrentPage * PageSize, resultados.Count))
+                            de @resultados.Count resultados
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small">Registros por página:</label>
+                            <select class="form-select form-select-sm w-auto" @bind="PageSize" @bind:after="(() => CurrentPage = 1)">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
+
+                            <div class="d-flex align-items-center ms-2">
+                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                        disabled="@(CurrentPage == 1)"
+                                        @onclick="(() => CambiarPagina(-1))">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        disabled="@(CurrentPage >= TotalPages)"
+                                        @onclick="(() => CambiarPagina(1))">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tabla-fija shadow-sm">
+                        <div class="tabla-body">
+                            <table class="table align-middle tabla-pacientes">
+                                <thead>
+                                    <tr>
+                                        <th style="width:12%;">N° Resultado</th>
+                                        <th style="width:12%;">N° Orden</th>
+                                        <th style="width:12%;">Cédula</th>
+                                        <th style="width:18%;">Paciente</th>
+                                        <th style="width:10%;">Fecha</th>
+                                        <th style="width:10%;">Estado</th>
+                                        <th style="width:10%;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var res in PaginatedResultados)
+                                    {
+                                        <tr>
+                                            <td data-label="N° Resultado">@res.NumeroResultado</td>
+                                            <td data-label="N° Orden">@res.NumeroOrden</td>
+                                            <td data-label="Cédula">@res.CedulaPaciente</td>
+                                            <td data-label="Paciente">@res.NombrePaciente</td>
+                                            <td data-label="Fecha">@res.FechaResultado.ToString("dd/MM/yyyy")</td>
+                                            <td data-label="Estado">
+                                                <span class="badge bg-@(res.Anulado ? "danger" : "success")">
+                                                    @(res.Anulado ? "Anulado" : "Vigente")
+                                                </span>
+                                            </td>
+                                            <td data-label="Acciones">
+                                                <button class="btn btn-primary btn-sm shadow-sm me-1"
+                                                        @onclick="() => VerDetalleResultado(res.IdResultado)">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
             }
 
             @if (mostrarDetalle && DetalleActual is not null)
             {
-                <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
-                    <div class="modal-dialog modal-xl">
-                        <div class="modal-content shadow">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-info-circle me-2"></i>Detalle Resultado
-                                    <span class="badge bg-light text-dark">@DetalleActual.NumeroResultado</span>
-                                </h5>
-                                <button class="btn-close" @onclick="CerrarDetalle"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-4">
-                                        <label><strong>Fecha Resultado</strong></label>
-                                        <input class="form-control" value="@DetalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label><strong>Cédula</strong></label>
-                                        <input class="form-control" value="@DetalleActual.CedulaPaciente" disabled />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label><strong>Nombre Paciente</strong></label>
-                                        <input class="form-control" value="@DetalleActual.NombrePaciente" disabled />
-                                    </div>
+                <div class="modal fade show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content shadow-lg border-0">
+                            @if (!string.IsNullOrEmpty(pdfUrl))
+                            {
+                                <div class="modal-header bg-dark text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-file-pdf me-2"></i>Visualización de Resultado
+                                    </h5>
+                                    <button class="btn-close btn-close-white" @onclick="CerrarPdf"></button>
                                 </div>
+                                <div class="modal-body p-0">
+                                    <iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-info-circle me-2"></i>Detalle de Resultado
+                                        <span class="badge bg-light text-dark">@DetalleActual.NumeroResultado</span>
+                                    </h5>
+                                    <button class="btn-close" @onclick="CerrarDetalle"></button>
+                                </div>
+                                <div class="modal-body">
+                                    @if (DetalleActual.Anulado)
+                                    {
+                                        <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div>
+                                    }
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Fecha de Resultado</strong></label>
+                                            <input class="form-control" value="@DetalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Cédula</strong></label>
+                                            <input class="form-control" value="@DetalleActual.CedulaPaciente" disabled />
+                                        </div>
+                                        <div class="col-md-6 col-12 mb-2">
+                                            <label><strong>Nombre del Paciente</strong></label>
+                                            <input class="form-control" value="@DetalleActual.NombrePaciente" disabled />
+                                        </div>
+                                    </div>
 
-                                <h6 class="mt-4 mb-3"><i class="fas fa-microscope me-1"></i>Detalle de Exámenes</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-bordered align-middle text-center">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Examen</th>
-                                                <th>Valor</th>
-                                                <th>Unidad</th>
-                                                <th>Referencia</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var d in DetalleActual.Detalles)
-                                            {
+                                    <h5 class="mt-4 mb-3"><i class="fas fa-vial me-2"></i>Exámenes</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered align-middle text-center">
+                                            <thead class="table-light">
                                                 <tr>
-                                                    <td>@d.NombreExamen</td>
-                                                    <td>@d.Valor</td>
-                                                    <td>@d.Unidad</td>
-                                                    <td>@d.ValorReferencia</td>
+                                                    <th>Nombre del Examen</th>
+                                                    <th>Valor</th>
+                                                    <th>Unidad</th>
+                                                    <th>Referencia</th>
                                                 </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div class="mb-3 mt-4">
-                                    <label><strong>Observaciones Generales</strong></label>
-                                    <textarea class="form-control" value="@DetalleActual.Observaciones" disabled style="min-height:70px;"></textarea>
-                                </div>
-
-                                <div class="d-flex gap-2 mt-3">
-                                    <div class="d-flex gap-2 mt-3">
-                                        @if (puedeAnular)
-                                        {
-                                            <button class="btn btn-danger"
-                                                    @onclick="AnularResultado"
-                                                    disabled="@DetalleActual.Anulado">
-                                                <i class="fas fa-ban me-1"></i> Anular Resultado
-                                            </button>
-                                        }
-                                        <button class="btn btn-secondary" @onclick="ImprimirResultado">
-                                            <i class="fas fa-print me-1"></i> Imprimir
-                                        </button>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var d in DetalleActual.Detalles)
+                                                {
+                                                    <tr>
+                                                        <td>@d.NombreExamen</td>
+                                                        <td>@d.Valor</td>
+                                                        <td>@d.Unidad</td>
+                                                        <td>@d.ValorReferencia</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
                                     </div>
 
+                                    <div class="mb-3">
+                                        <label><strong>Observaciones</strong></label>
+                                        <textarea class="form-control" value="@DetalleActual.Observaciones" disabled style="min-height:70px;"></textarea>
+                                    </div>
+
+                                    @if (!DetalleActual.Anulado)
+                                    {
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start mt-3">
+                                            <button class="btn btn-secondary" @onclick="ImprimirResultado">
+                                                <i class="fas fa-print me-1"></i> Imprimir
+                                            </button>
+                                            @if (puedeAnular)
+                                            {
+                                                <button class="btn btn-danger" @onclick="AnularResultado">
+                                                    <i class="fas fa-ban me-1"></i> Anular
+                                                </button>
+                                            }
+                                        </div>
+                                    }
                                 </div>
-                            </div>
+                            }
                         </div>
                     </div>
-
-                    @if (!string.IsNullOrEmpty(pdfUrl))
-                    {
-                        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-                            <div class="modal-dialog modal-xl modal-dialog-centered">
-                                <div class="modal-content shadow-lg border-0">
-                                    <div class="modal-header bg-dark text-white">
-                                        <h5 class="modal-title">
-                                            <i class="fas fa-file-pdf me-2"></i>Visualización de Resultado
-                                        </h5>
-                                        <button class="btn-close btn-close-white" @onclick="CerrarPdf"></button>
-                                    </div>
-                                    <div class="modal-body p-0">
-                                        <iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
                 </div>
             }
         }
@@ -252,12 +288,12 @@
 
     <NotAuthorized>
         <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
+            <div class="card shadow-lg text-center border-0" style="max-width:450px;">
                 <div class="card-body p-4">
                     <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
                     <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
                     <p class="text-muted mb-3">
-                        Para acceder a la gestión de resultados, por favor inicie sesión con una cuenta autorizada.
+                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
                     </p>
                     <NavLink href="/login" class="btn btn-primary">
                         <i class="bi bi-box-arrow-in-right"></i> Ir al Login
@@ -270,210 +306,179 @@
 
 @code {
     private List<ResultadoListadoDto> resultados = new();
+    private ResultadoDetalleDto? DetalleActual;
+    private bool mostrarDetalle = false;
+    private bool isRendered = false;
     private string criterioBusqueda = "";
     private string valorBusqueda = "";
-    private bool mostrarAnulados = false;
-    private bool mostrarNoAnulados = true;
-    private bool cargando = true;
-    private bool mostrarDetalle = false;
-    private ResultadoDetalleDto? DetalleActual;
     private DateTime? fechaDesde;
     private DateTime? fechaHasta;
-    private bool primerRender = true;
 
-    private async Task CerrarPdf()
+    private bool filtroAnulado = true;
+    private bool filtroNoAnulado = true;
+    private string? pdfUrl;
+
+    private int _pageSize = 10;
+    private int PageSize
     {
-        pdfUrl = null;
-
-        await JS.InvokeVoidAsync("marcarModalCerrado");
+        get => _pageSize;
+        set { if (_pageSize != value) { _pageSize = value; CurrentPage = 1; } }
     }
+    private int CurrentPage = 1;
+    private int TotalPages => resultados == null || resultados.Count == 0 ? 1 : (int)Math.Ceiling(resultados.Count / (double)PageSize);
+    private IEnumerable<ResultadoListadoDto> PaginatedResultados => resultados?.Skip((CurrentPage - 1) * PageSize).Take(PageSize) ?? Enumerable.Empty<ResultadoListadoDto>();
 
 
-
-    private string SampleTextBusqueda => criterioBusqueda switch
-    {
-        "numero" => "RES-00001",
-        "cedula" => "0101234567",
-        "nombre" => "Juan Pérez",
-        _ => "Ingrese un valor..."
-    };
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            primerRender = false;
-            await CargarInicialAsync();
+            resultados = null;
+            isRendered = true;
+            StateHasChanged();
         }
     }
-
-    private async Task CargarInicialAsync()
-    {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (!user.Identity?.IsAuthenticated ?? true)
-        {
-            cargando = false;
-            StateHasChanged();
-            return;
-        }
-
-        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-
-        if (rol == "paciente")
-        {
-            cargando = true;
-            resultados = await ResultadosApi.GetResultadosPacienteAsync();
-            cargando = false;
-            StateHasChanged();
-            return;
-        }
-
-        bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista";
-        if (puedeVer)
-            await BuscarResultados();
-        else
-            cargando = false;
-    }
-
 
     private async Task BuscarResultados()
     {
         try
         {
-            cargando = true;
-            var filtro = new ResultadoFiltroDto();
+            if (string.IsNullOrWhiteSpace(criterioBusqueda) &&
+                string.IsNullOrWhiteSpace(valorBusqueda) &&
+                !fechaDesde.HasValue && !fechaHasta.HasValue &&
+                !filtroAnulado && !filtroNoAnulado)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Presione Buscar para cargar los resultados.", "info");
+                resultados = null;
+                return;
+            }
+
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+            ResultadoFiltroDto filtro = new();
 
             if (!string.IsNullOrWhiteSpace(criterioBusqueda) && !string.IsNullOrWhiteSpace(valorBusqueda))
             {
                 switch (criterioBusqueda)
                 {
-                    case "numero": filtro.NumeroResultado = valorBusqueda; break;
-                    case "cedula": filtro.Cedula = valorBusqueda; break;
-                    case "nombre": filtro.Nombre = valorBusqueda; break;
+                    case "numeroResultado":
+                        filtro.NumeroResultado = valorBusqueda.Trim();
+                        break;
+                    case "numeroOrden":
+                        filtro.NumeroOrden = valorBusqueda.Trim();
+                        break;
+                    case "cedula":
+                        filtro.Cedula = valorBusqueda.Trim();
+                        break;
+                    case "nombre":
+                        filtro.Nombre = valorBusqueda.Trim();
+                        break;
                 }
             }
 
             if (fechaDesde.HasValue) filtro.FechaDesde = fechaDesde.Value;
             if (fechaHasta.HasValue) filtro.FechaHasta = fechaHasta.Value;
 
-            if (mostrarAnulados && !mostrarNoAnulados)
+            if (filtroAnulado && !filtroNoAnulado)
                 filtro.Anulado = true;
-            else if (!mostrarAnulados && mostrarNoAnulados)
+            else if (!filtroAnulado && filtroNoAnulado)
                 filtro.Anulado = false;
             else
                 filtro.Anulado = null;
 
-            resultados = await ResultadosApi.GetResultadosAsync(filtro);
+            if (rol == "paciente")
+            {
+                var lista = await ResultadosApi.GetResultadosPacienteAsync();
+                resultados = lista
+                    .Where(r =>
+                        (filtro.Anulado == null || r.Anulado == filtro.Anulado) &&
+                        (string.IsNullOrWhiteSpace(filtro.NumeroOrden) || (r.NumeroOrden?.Contains(filtro.NumeroOrden, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                        (string.IsNullOrWhiteSpace(filtro.NumeroResultado) || (r.NumeroResultado?.Contains(filtro.NumeroResultado, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                        (string.IsNullOrWhiteSpace(filtro.Cedula) || (r.CedulaPaciente?.Contains(filtro.Cedula, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                        (string.IsNullOrWhiteSpace(filtro.Nombre) || (r.NombrePaciente?.Contains(filtro.Nombre, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                        (!fechaDesde.HasValue || r.FechaResultado >= fechaDesde.Value) &&
+                        (!fechaHasta.HasValue || r.FechaResultado <= fechaHasta.Value)
+                    ).OrderByDescending(r => r.IdResultado)
+                    .ToList();
+            }
+            else
+            {
+                resultados = await ResultadosApi.GetResultadosAsync(filtro);
+                resultados = resultados.OrderByDescending(r => r.IdResultado).ToList();
+            }
+
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados cargados correctamente.", "success");
         }
-        catch (HttpRequestException)
+        catch
         {
-            resultados.Clear();
-            await JS.InvokeVoidAsync("alert", "No autorizado o sesión expirada.");
-        }
-        finally
-        {
-            cargando = false;
-            StateHasChanged();
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar los resultados.", "danger");
         }
     }
 
-    private void LimpiarFiltros()
+    private async Task LimpiarBusqueda()
     {
         criterioBusqueda = "";
         valorBusqueda = "";
-        mostrarAnulados = false;
-        mostrarNoAnulados = true;
         fechaDesde = null;
         fechaHasta = null;
-        _ = BuscarResultados();
+        filtroAnulado = true;
+        filtroNoAnulado = true;
+        resultados = null;
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
 
-    private async Task CambioCheckAnulados(ChangeEventArgs e)
+    private void CambiarPagina(int cambio)
     {
-        mostrarAnulados = (bool)e.Value;
-        if (mostrarAnulados)
-            mostrarNoAnulados = false;
-        await BuscarResultados();
+        CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
     }
-
-    private async Task CambioCheckNoAnulados(ChangeEventArgs e)
-    {
-        mostrarNoAnulados = (bool)e.Value;
-        if (mostrarNoAnulados)
-            mostrarAnulados = false;
-        await BuscarResultados();
-    }
-
-    private void CambioCriterioBusqueda(ChangeEventArgs e) => valorBusqueda = "";
 
     private async Task VerDetalleResultado(int idResultado)
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        try
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
-        if (rol == "paciente")
-            DetalleActual = await ResultadosApi.GetDetalleResultadoPacienteAsync(idResultado);
-        else
-            DetalleActual = await ResultadosApi.GetDetalleResultadoAsync(idResultado);
+            if (rol == "paciente")
+                DetalleActual = await ResultadosApi.GetDetalleResultadoPacienteAsync(idResultado);
+            else
+                DetalleActual = await ResultadosApi.GetDetalleResultadoAsync(idResultado);
 
-        mostrarDetalle = true;
-
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-
-        StateHasChanged();
+            mostrarDetalle = true;
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el detalle.", "danger");
+        }
     }
 
-
-
-    private async Task CerrarDetalle()
+    private void CerrarDetalle()
     {
         mostrarDetalle = false;
-
-        await JS.InvokeVoidAsync("marcarModalCerrado");
+        pdfUrl = null;
     }
-
-    private async Task AnularResultado()
-    {
-        if (DetalleActual is null || DetalleActual.Anulado)
-            return;
-
-        bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular este resultado?");
-        if (!confirmar) return;
-
-        var ok = await ResultadosApi.AnularResultadoAsync(DetalleActual.IdResultado);
-        if (ok)
-        {
-            await JS.InvokeVoidAsync("alert", "Resultado anulado correctamente.");
-            DetalleActual.Anulado = true;
-            await BuscarResultados();
-            mostrarDetalle = false;
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("alert", "No se pudo anular el resultado.");
-        }
-
-        StateHasChanged();
-    }
-
-    private string? pdfUrl;
 
     private async Task ImprimirResultado()
     {
-        if (DetalleActual == null) return;
+        if (DetalleActual == null)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning");
+            return;
+        }
 
         if (DetalleActual.Anulado)
         {
-            await JS.InvokeVoidAsync("alert", "El resultado está anulado. No se puede imprimir.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning");
             return;
         }
 
         var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(new List<int> { DetalleActual.IdResultado });
         if (pdfBytes == null || pdfBytes.Length == 0)
         {
-            await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al generar el PDF del resultado.", "danger");
             return;
         }
 
@@ -481,7 +486,42 @@
         pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }
 
+    private void CerrarPdf()
+    {
+        pdfUrl = null;
+    }
 
+    private async Task AnularResultado()
+    {
+        if (DetalleActual == null || DetalleActual.Anulado)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado ya está anulado o no es válido.", "info");
+            return;
+        }
+
+        bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular este resultado?");
+        if (!confirmar) return;
+
+        try
+        {
+            var ok = await ResultadosApi.AnularResultadoAsync(DetalleActual.IdResultado);
+            if (ok)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado anulado correctamente.", "success");
+                DetalleActual.Anulado = true;
+                mostrarDetalle = false;
+                await BuscarResultados();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el resultado.", "danger");
+            }
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular el resultado.", "danger");
+        }
+    }
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

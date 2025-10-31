@@ -26,7 +26,7 @@
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">No tienes permisos para acceder a la gestión de reactivos.</p>
+                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -68,14 +68,6 @@
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(mensaje))
-            {
-                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
-                    @mensaje
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-
             @if (ListaReactivos == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
@@ -90,89 +82,95 @@
             }
             else
             {
-                <div class="table-responsive shadow-sm rounded">
-                    <table class="table table-striped table-hover align-middle text-center">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Fabricante</th>
-                                <th>Unidad</th>
-                                <th>Cantidad</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var reactivo in ReactivosPaginados)
-                            {
+                @if (ListaReactivos?.Count > 0)
+                {
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div class="text-muted small">
+                            Mostrando @((paginaActual - 1) * tamPagina + 1)
+                            - @(Math.Min(paginaActual * tamPagina, ListaReactivos.Count))
+                            de @ListaReactivos.Count reactivos
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small">Registros por página:</label>
+                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
+
+                            <div class="d-flex align-items-center ms-2">
+                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                        disabled="@(paginaActual == 1)"
+                                        @onclick="PrevPagina">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        disabled="@(paginaActual >= TotalPaginas)"
+                                        @onclick="NextPagina">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="tabla-fija shadow-sm">
+                    <div class="tabla-body">
+                        <table class="table align-middle tabla-pacientes">
+                            <thead>
                                 <tr>
-                                    <td>@reactivo.NombreReactivo</td>
-                                    <td>@reactivo.Fabricante</td>
-                                    <td>@reactivo.Unidad</td>
-                                    <td>@reactivo.CantidadDisponible.ToString("N2")</td>
-                                    <td>
-                                        <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
-                                            @(reactivo.Anulado ? "Anulado" : "Activo")
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if (puedeGestionar)
-                                        {
-                                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarReactivo(reactivo)">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                            @if (reactivo.Anulado)
+                                    <th style="width:25%;">Nombre</th>
+                                    <th style="width:20%;">Fabricante</th>
+                                    <th style="width:15%;">Unidad</th>
+                                    <th style="width:10%;">Cantidad</th>
+                                    <th style="width:10%;">Estado</th>
+                                    <th style="width:20%;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var reactivo in ReactivosPaginados)
+                                {
+                                    <tr>
+                                        <td data-label="Nombre">@reactivo.NombreReactivo</td>
+                                        <td data-label="Fabricante">@reactivo.Fabricante</td>
+                                        <td data-label="Unidad">@reactivo.Unidad</td>
+                                        <td data-label="Cantidad">@reactivo.CantidadDisponible.ToString("N2")</td>
+                                        <td data-label="Estado">
+                                            <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
+                                                @(reactivo.Anulado ? "Deshabilitado" : "Activo")
+                                            </span>
+                                        </td>
+                                        <td data-label="Acciones">
+                                            @if (puedeGestionar)
                                             {
-                                                <button class="btn btn-success btn-sm" @onclick="() => ReactivarReactivo(reactivo)">
-                                                    <i class="bi bi-check-circle-fill"></i>
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarReactivo(reactivo)">
+                                                    <i class="bi bi-pencil-square"></i>
                                                 </button>
+                                                @if (reactivo.Anulado)
+                                                {
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ReactivarReactivo(reactivo)">
+                                                        <i class="bi bi-check-circle-fill"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
+                                                        <i class="bi bi-x-circle-fill"></i>
+                                                    </button>
+                                                }
                                             }
                                             else
                                             {
-                                                <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(reactivo.IdReactivo)">
-                                                    <i class="bi bi-x-circle-fill"></i>
-                                                </button>
+                                                <span class="text-muted small">Sin permisos</span>
                                             }
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted small">Sin permisos</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
-                    <div class="text-muted small">
-                        Mostrando @((paginaActual - 1) * tamPagina + 1) - @(Math.Min(paginaActual * tamPagina, ListaReactivos.Count)) de @ListaReactivos.Count registros
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="form-label mb-0 small">Registros por página:</label>
-                        <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                        </select>
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
-                                    <button class="page-link" @onclick="PrevPagina">&laquo;</button>
-                                </li>
-                                @for (int i = 1; i <= TotalPaginas; i++)
-                                {
-                                    <li class="page-item @(paginaActual == i ? "active" : "")">
-                                        <button class="page-link" @onclick="@(() => IrAPagina(i))">@i</button>
-                                    </li>
+                                        </td>
+                                    </tr>
                                 }
-                                <li class="page-item @(paginaActual == TotalPaginas ? "disabled" : "")">
-                                    <button class="page-link" @onclick="NextPagina">&raquo;</button>
-                                </li>
-                            </ul>
-                        </nav>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             }
@@ -243,16 +241,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-        {
-            try
-            {
-                await BuscarReactivos();
-            }
-            catch (HttpRequestException)
-            {
-                await JS.InvokeVoidAsync("alert", "No autorizado para ver reactivos.");
-            }
-        }
+            await BuscarReactivos();
     }
 
     private async Task BuscarReactivos()
@@ -289,7 +278,7 @@
 
     private async Task EditarReactivo(ReactivoDto reactivo)
     {
-        ReactivoActual = new ReactivoDto
+        ReactivoActual = new()
         {
             IdReactivo = reactivo.IdReactivo,
             NombreReactivo = reactivo.NombreReactivo,
@@ -304,30 +293,19 @@
 
     private async Task ValidarYGuardar()
     {
-        try
-        {
-            HttpResponseMessage result = ReactivoActual.IdReactivo == 0
-                ? await ReactivosApiService.CrearReactivoAsync(ReactivoActual)
-                : await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
+        HttpResponseMessage result = ReactivoActual.IdReactivo == 0
+            ? await ReactivosApiService.CrearReactivoAsync(ReactivoActual)
+            : await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
 
-            if (result.IsSuccessStatusCode)
-            {
-                mensaje = "Reactivo guardado correctamente.";
-                tipoMensaje = "success";
-                modalVisible = false;
-                await JS.InvokeVoidAsync("marcarModalCerrado");
-                await BuscarReactivos();
-            }
-            else
-            {
-                mensaje = "Error al guardar reactivo.";
-                tipoMensaje = "danger";
-            }
-        }
-        catch (HttpRequestException)
+        if (result.IsSuccessStatusCode)
         {
-            await JS.InvokeVoidAsync("alert", "No autorizado para crear o editar reactivos.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo guardado correctamente.", "success");
+            modalVisible = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+            await BuscarReactivos();
         }
+        else
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar el reactivo.", "danger");
     }
 
     private async Task ConfirmarAnulacion(int id)
@@ -337,8 +315,7 @@
             var result = await ReactivosApiService.AnularReactivoAsync(id);
             if (result.IsSuccessStatusCode)
             {
-                mensaje = "Reactivo anulado correctamente.";
-                tipoMensaje = "success";
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo anulado correctamente.", "success");
                 await BuscarReactivos();
             }
         }
@@ -352,8 +329,7 @@
             var result = await ReactivosApiService.EditarReactivoAsync(reactivo.IdReactivo, reactivo);
             if (result.IsSuccessStatusCode)
             {
-                mensaje = "Reactivo reactivado correctamente.";
-                tipoMensaje = "success";
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo reactivado correctamente.", "success");
                 await BuscarReactivos();
             }
         }

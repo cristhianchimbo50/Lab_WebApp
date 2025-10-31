@@ -44,173 +44,174 @@
         }
         else
         {
-            <h4 class="mb-4">
-                <i class="fas fa-file-medical me-2 text-primary"></i>
-                @(esPaciente ? "Mis Órdenes" : "Gestión de Órdenes")
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-file-medical text-primary fs-4 me-2"></i>@(esPaciente ? "Mis Órdenes" : "Gestión de Órdenes")</span>
+                @if (!esPaciente)
+                {
+                    <button class="btn btn-success shadow-sm" @onclick="IrANuevaOrden">
+                        <i class="bi bi-plus-circle-fill me-1"></i>Nueva Orden
+                    </button>
+                }
             </h4>
 
             @if (!isRendered)
             {
                 <div class="d-flex align-items-center text-primary justify-content-center" style="height: 200px;">
                     <div class="spinner-border me-2" role="status"></div>
-                    <strong>Cargando...</strong>
                 </div>
             }
             else
             {
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-body row g-3">
-                        @if (esPaciente)
-                        {
-                            <div class="col-md-3 col-12">
-                                <label class="form-label">Número de Orden</label>
-                                <InputText @bind-Value="valorBusqueda" class="form-control" placeholder="Ej. ORD-00001" />
-                            </div>
-
-                            <div class="col-md-3 col-12">
-                                <label class="form-label">Desde</label>
-                                <InputDate @bind-Value="fechaDesde" class="form-control" />
-                            </div>
-
-                            <div class="col-md-3 col-12">
-                                <label class="form-label">Hasta</label>
-                                <InputDate @bind-Value="fechaHasta" class="form-control" />
-                            </div>
-
-                            <div class="col-md-3 col-12">
-                                <label class="form-label">Estado de Pago</label>
-                                <div class="d-flex flex-column ps-2">
-                                    <div class="form-check">
-                                        <InputCheckbox @bind-Value="filtroPagado" class="form-check-input" id="chkPagado" />
-                                        <label class="form-check-label" for="chkPagado">Pagado</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <InputCheckbox @bind-Value="filtroPendiente" class="form-check-input" id="chkPendiente" />
-                                        <label class="form-check-label" for="chkPendiente">Pendiente</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3 col-12 d-flex align-items-end">
-                                <button class="btn btn-primary w-100" @onclick="BuscarOrdenes" title="Filtrar">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="col-md-3 col-12">
-                                <label class="form-label">Buscar por</label>
-                                <InputSelect class="form-select" @bind-Value="criterioBusqueda">
-                                    <option value="">-- Seleccione --</option>
-                                    <option value="numero">Número de Orden</option>
-                                    <option value="cedula">Cédula</option>
-                                    <option value="nombre">Nombre</option>
-                                    <option value="estadoPago">Estado de Pago</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-md-5 col-12">
-                                <label class="form-label">Valor</label>
-                                <InputText class="form-control" @bind-Value="valorBusqueda" />
-                            </div>
-                            <div class="col-md-4 col-12 d-flex align-items-end gap-2 flex-wrap justify-content-md-end">
-                                <button class="btn btn-primary" @onclick="BuscarOrdenes" title="Buscar">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                                <button class="btn btn-success" @onclick="IrANuevaOrden">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        }
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Buscar por</label>
+                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                                <option value="">-- Seleccione --</option>
+                                <option value="numero">Número de Orden</option>
+                                <option value="cedula">Cédula</option>
+                                <option value="nombre">Nombre</option>
+                                <option value="estadoPago">Estado de Pago</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Valor</label>
+                            <InputText class="form-control" @bind-Value="valorBusqueda"
+                                       placeholder="Ingrese valor a buscar"
+                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarOrdenes(); })" />
+                        </div>
+                        <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                            <button type="button" class="btn btn-primary" @onclick="BuscarOrdenes">
+                                <i class="bi bi-search me-1"></i>Buscar
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusqueda">
+                                <i class="bi bi-eraser me-1"></i>Limpiar
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                @if (ordenes == null || ordenes.Count == 0)
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Desde</label>
+                            <InputDate @bind-Value="fechaDesde" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Hasta</label>
+                            <InputDate @bind-Value="fechaHasta" class="form-control" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center mt-4">
+                            <InputCheckbox @bind-Value="filtroAnulado" class="form-check-input me-2" />
+                            <label class="form-check-label">Anulado</label>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center mt-4">
+                            <InputCheckbox @bind-Value="filtroNoAnulado" class="form-check-input me-2" />
+                            <label class="form-check-label">No Anulado</label>
+                        </div>
+                    </div>
+                </div>
+
+                @if (ordenes == null)
                 {
-                    <div class="alert alert-warning">No se encontraron órdenes.</div>
+                    <div class="alert alert-info text-center shadow-sm">
+                        <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar las órdenes.
+                    </div>
+                }
+                else if (!ordenes.Any())
+                {
+                    <div class="alert alert-warning text-center shadow-sm">
+                        <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron órdenes.
+                    </div>
                 }
                 else
                 {
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <span>
-                            Mostrando @((ordenes.Count == 0) ? 0 : ((CurrentPage - 1) * PageSize + 1))
-                            - @((CurrentPage - 1) * PageSize + PaginatedOrdenes.Count()) de @ordenes.Count órdenes
-                        </span>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div class="text-muted small">
+                            Mostrando @((CurrentPage - 1) * PageSize + 1)
+                            - @(Math.Min(CurrentPage * PageSize, ordenes.Count))
+                            de @ordenes.Count órdenes
+                        </div>
+
                         <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-sm" style="width: auto;" @bind="PageSize">
+                            <label class="form-label mb-0 small">Registros por página:</label>
+                            <select class="form-select form-select-sm w-auto" @bind="PageSize" @bind:after="(() => CurrentPage = 1)">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
+                                <option value="15">15</option>
                                 <option value="20">20</option>
-                                <option value="50">50</option>
                             </select>
-                            <nav>
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item">
-                                        <button class="page-link" @onclick="() => CambiarPagina(-1)">«</button>
-                                    </li>
-                                    <li class="page-item">
-                                        <button class="page-link" @onclick="() => CambiarPagina(1)">»</button>
-                                    </li>
-                                </ul>
-                            </nav>
+
+                            <div class="d-flex align-items-center ms-2">
+                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                        disabled="@(CurrentPage == 1)"
+                                        @onclick="(() => CambiarPagina(-1))">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        disabled="@(CurrentPage >= TotalPages)"
+                                        @onclick="(() => CambiarPagina(1))">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Número</th>
-                                    @if (!esPaciente)
-                                    {
-                                        <th>Cédula</th>
-                                        <th>Nombre</th>
-                                    }
-                                    <th>Fecha</th>
-                                    <th>Total</th>
-                                    <th>Pagado</th>
-                                    <th>Saldo</th>
-                                    <th>Estado Pago</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var orden in PaginatedOrdenes)
-                                {
+                    <div class="tabla-fija shadow-sm">
+                        <div class="tabla-body">
+                            <table class="table align-middle tabla-pacientes">
+                                <thead>
                                     <tr>
-                                        <td>@orden.NumeroOrden</td>
+                                        <th style="width:10%;">Número</th>
                                         @if (!esPaciente)
                                         {
-                                            <td>@orden.CedulaPaciente</td>
-                                            <td>@orden.NombrePaciente</td>
+                                            <th style="width:12%;">Cédula</th>
+                                            <th style="width:18%;">Paciente</th>
                                         }
-                                        <td>@orden.FechaOrden.ToShortDateString()</td>
-                                        <td>@orden.Total.ToString("C")</td>
-                                        <td>@orden.TotalPagado.ToString("C")</td>
-                                        <td>@orden.SaldoPendiente.ToString("C")</td>
-                                        <td>
-                                            <span class="badge bg-@(orden.EstadoPago == "PAGADO" ? "success" : "warning")">
-                                                @orden.EstadoPago
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-@(orden.Anulado ? "danger" : "success")">
-                                                @(orden.Anulado ? "ANULADO" : "VIGENTE")
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-sm text-white shadow-sm"
-                                                    style="background-color: #007bff; border-radius: 0.5rem;"
-                                                    title="Ver Detalles"
-                                                    @onclick="() => VerDetalleOrden(orden.IdOrden)">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                                        <th style="width:10%;">Fecha</th>
+                                        <th style="width:10%;">Total</th>
+                                        <th style="width:10%;">Pagado</th>
+                                        <th style="width:10%;">Saldo</th>
+                                        <th style="width:10%;">Estado Pago</th>
+                                        <th style="width:10%;">Estado</th>
+                                        <th style="width:10%;">Acciones</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach (var orden in PaginatedOrdenes)
+                                    {
+                                        <tr>
+                                            <td data-label="Número">@orden.NumeroOrden</td>
+                                            @if (!esPaciente)
+                                            {
+                                                <td data-label="Cédula">@orden.CedulaPaciente</td>
+                                                <td data-label="Paciente">@orden.NombrePaciente</td>
+                                            }
+                                            <td data-label="Fecha">@orden.FechaOrden.ToString("dd/MM/yyyy")</td>
+                                            <td data-label="Total">@orden.Total.ToString("C")</td>
+                                            <td data-label="Pagado">@orden.TotalPagado.ToString("C")</td>
+                                            <td data-label="Saldo">@orden.SaldoPendiente.ToString("C")</td>
+                                            <td data-label="Estado Pago">
+                                                <span class="badge bg-@(orden.EstadoPago == "PAGADO" ? "success" : "warning text-dark")">
+                                                    @orden.EstadoPago
+                                                </span>
+                                            </td>
+                                            <td data-label="Estado">
+                                                <span class="badge bg-@(orden.Anulado ? "danger" : "success")">
+                                                    @(orden.Anulado ? "Anulado" : "Vigente")
+                                                </span>
+                                            </td>
+                                            <td data-label="Acciones">
+                                                <button class="btn btn-primary btn-sm shadow-sm me-1"
+                                                        @onclick="() => VerDetalleOrden(orden.IdOrden)">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 }
             }
@@ -393,58 +394,43 @@
     {
         if (firstRender)
         {
-            try
-            {
-                isRendered = true;
-                await CargarOrdenes();
-                StateHasChanged();
-            }
-            catch (HttpRequestException)
-            {
-                await JS.InvokeVoidAsync("alert", "No autorizado para acceder a órdenes.");
-            }
+            isRendered = true;
+            ordenes = null;
+            StateHasChanged();
         }
     }
+
 
     private async Task CargarOrdenes()
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
-
-        if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
-            ordenes = await OrdenesApi.GetOrdenesPacienteAsync(idPaciente);
-        else
-            ordenes = await OrdenesApi.GetOrdenesAsync();
-
-        ordenes = ordenes.OrderByDescending(o => o.IdOrden).ToList();
-    }
-
-    private async Task BuscarOrdenes()
-    {
-        IEnumerable<OrdenDto> filtradas = ordenes;
-
-        if (fechaDesde.HasValue)
-            filtradas = filtradas.Where(o => o.FechaOrden >= fechaDesde.Value);
-        if (fechaHasta.HasValue)
-            filtradas = filtradas.Where(o => o.FechaOrden <= fechaHasta.Value);
-
-        if (!string.IsNullOrWhiteSpace(valorBusqueda))
+        try
         {
-            var val = valorBusqueda.Trim().ToLower();
-            filtradas = filtradas.Where(o => o.NumeroOrden?.ToLower().Contains(val) == true);
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+
+            if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
+            {
+                ordenes = await OrdenesApi.GetOrdenesPacienteAsync(idPaciente);
+                ordenes = ordenes.Where(o => !o.Anulado).ToList();
+            }
+            else
+            {
+                ordenes = await OrdenesApi.GetOrdenesAsync();
+            }
+
+            ordenes = ordenes.OrderByDescending(o => o.IdOrden).ToList();
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Órdenes cargadas correctamente.", "success");
         }
-
-        if (filtroPagado && !filtroPendiente)
-            filtradas = filtradas.Where(o => o.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase));
-        else if (!filtroPagado && filtroPendiente)
-            filtradas = filtradas.Where(o => !o.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase));
-        else if (!filtroPagado && !filtroPendiente)
-            filtradas = Enumerable.Empty<OrdenDto>();
-
-        ordenes = filtradas.OrderByDescending(o => o.IdOrden).ToList();
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar las órdenes.", "danger");
+        }
     }
+
+
+
     private void IrANuevaOrden() => Navigation.NavigateTo("/nueva-orden", true);
 
     private async Task VerDetalleOrden(int idOrden)
@@ -522,18 +508,35 @@
     private async Task ImprimirResultados()
     {
         if (DetalleActual == null) return;
-        var idsResultados = DetalleActual.Examenes.Where(e => e.IdResultado.HasValue).Select(e => e.IdResultado!.Value).Distinct().ToList();
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        if (rol == "paciente" && !DetalleActual.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync("alert", "No puede imprimir los resultados hasta completar el pago de la orden.");
+            return;
+        }
+
+        var idsResultados = DetalleActual.Examenes
+            .Where(e => e.IdResultado.HasValue)
+            .Select(e => e.IdResultado!.Value)
+            .Distinct()
+            .ToList();
+
         if (!idsResultados.Any())
         {
             await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
             return;
         }
+
         var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(idsResultados);
         if (pdfBytes == null || pdfBytes.Length == 0)
         {
             await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
             return;
         }
+
         var base64Pdf = Convert.ToBase64String(pdfBytes);
         pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }
@@ -551,17 +554,89 @@
         var response = await OrdenesApi.AnularOrdenCompletaAsync(DetalleActual.IdOrden);
         if (response.IsSuccessStatusCode)
         {
-            await JS.InvokeVoidAsync("alert", "Orden anulada correctamente.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Orden anulada correctamente.", "success");
+
             await CargarOrdenes();
             mostrarDetalleOrden = false;
         }
-        else await JS.InvokeVoidAsync("alert", "Error al anular la orden.");
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular la orden.", "danger");
     }
 
     private void CambiarPagina(int cambio)
     {
         CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
     }
+
+    private bool filtroAnulado = true;
+    private bool filtroNoAnulado = true;
+
+
+    private async Task BuscarOrdenes()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(criterioBusqueda) &&
+                string.IsNullOrWhiteSpace(valorBusqueda) &&
+                !fechaDesde.HasValue && !fechaHasta.HasValue &&
+                !filtroAnulado && !filtroNoAnulado)
+            {
+                if (ordenes == null)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Presione Buscar para cargar los datos.", "info");
+                    return;
+                }
+
+                await CargarOrdenes();
+                return;
+            }
+
+            await CargarOrdenes();
+
+            IEnumerable<OrdenDto> filtradas = ordenes;
+
+            if (fechaDesde.HasValue)
+                filtradas = filtradas.Where(o => o.FechaOrden >= fechaDesde.Value);
+            if (fechaHasta.HasValue)
+                filtradas = filtradas.Where(o => o.FechaOrden <= fechaHasta.Value);
+
+            if (!string.IsNullOrWhiteSpace(valorBusqueda))
+            {
+                var val = valorBusqueda.Trim().ToLower();
+                filtradas = filtradas.Where(o =>
+                    (criterioBusqueda == "numero" && o.NumeroOrden.ToLower().Contains(val)) ||
+                    (criterioBusqueda == "cedula" && o.CedulaPaciente.ToLower().Contains(val)) ||
+                    (criterioBusqueda == "nombre" && o.NombrePaciente.ToLower().Contains(val)) ||
+                    (criterioBusqueda == "estadoPago" && o.EstadoPago.ToLower().Contains(val))
+                );
+            }
+
+            if (filtroAnulado && !filtroNoAnulado)
+                filtradas = filtradas.Where(o => o.Anulado);
+            else if (!filtroAnulado && filtroNoAnulado)
+                filtradas = filtradas.Where(o => !o.Anulado);
+
+
+            ordenes = filtradas.OrderByDescending(o => o.IdOrden).ToList();
+
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar las órdenes.", "danger");
+        }
+    }
+
+    private async Task LimpiarBusqueda()
+    {
+        criterioBusqueda = "";
+        valorBusqueda = "";
+        fechaDesde = null;
+        fechaHasta = null;
+        filtroAnulado = true;
+        filtroNoAnulado = true;
+        ordenes = null;
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
+    }
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 

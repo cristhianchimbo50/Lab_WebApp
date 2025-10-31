@@ -128,10 +128,15 @@ namespace Lab_APIRest.Services.Resultados
 
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto f)
         {
-            var q = _context.resultados.Include(r => r.id_pacienteNavigation).AsQueryable();
-
+            var q = _context.resultados
+                .Include(r => r.id_pacienteNavigation)
+                .Include(r => r.id_ordenNavigation)
+                .AsQueryable();
             if (!string.IsNullOrWhiteSpace(f.NumeroResultado))
                 q = q.Where(r => r.numero_resultado.Contains(f.NumeroResultado));
+            if (!string.IsNullOrWhiteSpace(f.NumeroOrden))
+                q = q.Where(r => r.id_ordenNavigation != null &&
+                                 r.id_ordenNavigation.numero_orden.Contains(f.NumeroOrden));
             if (!string.IsNullOrWhiteSpace(f.Cedula))
                 q = q.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(f.Cedula));
             if (!string.IsNullOrWhiteSpace(f.Nombre))
@@ -148,6 +153,7 @@ namespace Lab_APIRest.Services.Resultados
                 {
                     IdResultado = r.id_resultado,
                     NumeroResultado = r.numero_resultado,
+                    NumeroOrden = r.id_ordenNavigation!.numero_orden,
                     CedulaPaciente = r.id_pacienteNavigation.cedula_paciente,
                     NombrePaciente = r.id_pacienteNavigation.nombre_paciente,
                     FechaResultado = r.fecha_resultado,
@@ -161,6 +167,7 @@ namespace Lab_APIRest.Services.Resultados
         {
             var r = await _context.resultados
                 .Include(x => x.id_pacienteNavigation)
+                .Include(x => x.id_ordenNavigation)
                 .Include(x => x.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
                 .FirstOrDefaultAsync(x => x.id_resultado == id);
 
@@ -175,6 +182,8 @@ namespace Lab_APIRest.Services.Resultados
                 FechaResultado = r.fecha_resultado,
                 IdPaciente = r.id_paciente ?? 0,
                 Observaciones = r.observaciones,
+                NumeroOrden = r.id_ordenNavigation?.numero_orden ?? "(Sin orden)",
+                EstadoPago = r.id_ordenNavigation?.estado_pago ?? "DESCONOCIDO",
                 Anulado = r.anulado ?? false,
                 Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
                 {

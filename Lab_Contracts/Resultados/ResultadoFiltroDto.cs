@@ -8,6 +8,7 @@ namespace Lab_Contracts.Resultados
 {
     public class ResultadoFiltroDto
     {
+        public string? NumeroOrden { get; set; }
         public string? NumeroResultado { get; set; }
         public string? Cedula { get; set; }
         public string? Nombre { get; set; }

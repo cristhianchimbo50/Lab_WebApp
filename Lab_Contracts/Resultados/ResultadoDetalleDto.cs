@@ -17,6 +17,8 @@ namespace Lab_Contracts.Resultados
         public bool Anulado { get; set; }
         public List<DetalleResultadoDto> Detalles { get; set; } = new();
         public int IdPaciente { get; set; }
+        public string NumeroOrden { get; set; } = "";
+        public string EstadoPago { get; set; } = ""; 
     }
 
     public class DetalleResultadoDto

@@ -10,6 +10,7 @@ namespace Lab_Contracts.Resultados
     {
         public int IdResultado { get; set; }
         public string NumeroResultado { get; set; } = "";
+        public string NumeroOrden { get; set; } = "";
         public string CedulaPaciente { get; set; } = "";
         public string NombrePaciente { get; set; } = "";
         public DateTime FechaResultado { get; set; }

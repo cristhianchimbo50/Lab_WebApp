@@ -137,15 +137,33 @@
                                     aria-expanded="false"
                                     type="button">
                                 <i class="bi bi-file-earmark-medical me-2"></i>
-                                <span class="nav-text">Órdenes Médicas</span>
+                                <span class="nav-text">
+                                    @(user.IsInRole("paciente") ? "Mis Órdenes" : "Órdenes Médicas")
+                                </span>
                             </button>
                             <div class="collapse" id="grpOrdenes">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/ordenes">Listado</NavLink></li>
-                                    @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
+                                    @if (user.IsInRole("paciente"))
                                     {
-                                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/nueva-orden">Nueva Orden</NavLink></li>
-                                        <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cuentasporcobrar">Cuentas por Cobrar</NavLink></li>
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/ordenes">Mis Órdenes</NavLink>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/ordenes">Listado</NavLink>
+                                        </li>
+
+                                        @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
+                                        {
+                                            <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/nueva-orden">Nueva Orden</NavLink></li>
+                                            <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cuentasporcobrar">Cuentas por Cobrar</NavLink></li>
+                                        }
                                     }
                                 </ul>
                             </div>
@@ -157,16 +175,32 @@
                                     aria-expanded="false"
                                     type="button">
                                 <i class="bi bi-clipboard-check me-2"></i>
-                                <span class="nav-text">Resultados</span>
+                                <span class="nav-text">
+                                    @(user.IsInRole("paciente") ? "Mis Resultados" : "Resultados")
+                                </span>
                             </button>
                             <div class="collapse" id="grpResultados">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/resultados">Listado</NavLink></li>
+                                    @if (user.IsInRole("paciente"))
+                                    {
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/resultados">Mis Resultados</NavLink>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li>
+                                            <NavLink class="link-light nav-link py-1 px-0"
+                                                     activeClass="active"
+                                                     href="/resultados">Listado</NavLink>
+                                        </li>
+                                    }
                                 </ul>
                             </div>
                         </li>
                     }
-
                     <hr class="border-secondary" />
 
                     <li class="mb-1">

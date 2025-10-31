@@ -149,6 +149,14 @@ namespace Lab_APIRest.Controllers
             });
         }
 
+        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [HttpPost("{idOrden}/verificar-notificacion")]
+        public async Task<IActionResult> VerificarNotificacion(int idOrden)
+        {
+            await _ordenService.VerificarYNotificarResultadosCompletosAsync(idOrden);
+            return Ok(new { mensaje = "Verificación de resultados completada." });
+        }
+
 
 
     }

@@ -14,6 +14,8 @@ namespace Lab_APIRest.Services.Ordenes
         Task<List<object>> GetOrdenesPorPacienteAsync(int idPaciente);
         Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden);
 
+        Task VerificarYNotificarResultadosCompletosAsync(int idOrden);
+
 
     }
 }

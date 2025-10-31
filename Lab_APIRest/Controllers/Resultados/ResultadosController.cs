@@ -23,6 +23,7 @@ namespace Lab_APIRest.Controllers.Resultados
         [HttpGet]
         public async Task<ActionResult<List<ResultadoListadoDto>>> Listar(
             [FromQuery] string? numeroResultado,
+            [FromQuery] string? numeroOrden,
             [FromQuery] string? cedula,
             [FromQuery] string? nombre,
             [FromQuery] DateTime? fechaDesde,
@@ -34,6 +35,7 @@ namespace Lab_APIRest.Controllers.Resultados
                 var filtro = new ResultadoFiltroDto
                 {
                     NumeroResultado = numeroResultado,
+                    NumeroOrden = numeroOrden,
                     Cedula = cedula,
                     Nombre = nombre,
                     FechaDesde = fechaDesde,

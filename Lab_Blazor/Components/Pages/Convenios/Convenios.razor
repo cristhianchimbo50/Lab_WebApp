@@ -16,10 +16,11 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            var rol = (user.FindFirst(ClaimTypes.Role)?.Value
             ?? user.FindFirst("role")?.Value
             ?? user.FindFirst("roles")?.Value
-            ?? "";
+            ?? "");
+
 
             bool esPaciente = rol == "paciente";
             bool puedeVer = rol is "administrador" or "recepcionista";
@@ -43,8 +44,11 @@
         }
         else
         {
-            <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
-                <i class="bi bi-handshake text-primary fs-4 me-2"></i>Gestión de Convenios
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-handshake text-primary fs-4 me-2"></i>Gestión de Convenios</span>
+                <button class="btn btn-success shadow-sm" @onclick="IrARegistrarConvenio">
+                    <i class="bi bi-plus-circle me-1"></i>Nuevo Convenio
+                </button>
             </h4>
 
             @if (!isRendered)
@@ -56,121 +60,130 @@
             }
             else
             {
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                            <label class="form-label fw-semibold">Buscar por</label>
+                            <InputSelect @bind-Value="criterioBusqueda" class="form-select">
                                 <option value="">-- Seleccione --</option>
                                 <option value="numero">Número Convenio</option>
                                 <option value="medico">Nombre Médico</option>
                             </InputSelect>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusqueda" />
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Valor</label>
+                            <InputText class="form-control" @bind-Value="valorBusqueda" placeholder="Ingrese valor a buscar"
+                                       @onkeypress="@(e => { if (e.Key == "Enter") FiltrarConvenios(); })" />
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Desde</label>
+                            <label class="form-label fw-semibold">Desde</label>
                             <InputDate class="form-control" @bind-Value="fechaDesde" />
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Hasta</label>
+                            <label class="form-label fw-semibold">Hasta</label>
                             <InputDate class="form-control" @bind-Value="fechaHasta" />
                         </div>
-                        <div class="col-md-1">
-                            <button class="btn btn-primary w-100" @onclick="FiltrarConvenios">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                        <div class="col-md-12 text-end mt-2">
-                            <button class="btn btn-success shadow-sm" @onclick="IrARegistrarConvenio">
-                                <i class="bi bi-plus-circle me-1"></i> Nuevo Convenio
-                            </button>
+                        <div class="col-md-12 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                            <button class="btn btn-primary" @onclick="FiltrarConvenios"><i class="bi bi-search me-1"></i>Buscar</button>
+                            <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                         </div>
                     </div>
                 </div>
 
                 @if (convenios == null || convenios.Count == 0)
                 {
-                    <div class="alert alert-warning text-center shadow-sm">
-                        <i class="bi bi-exclamation-circle me-2"></i> No se encontraron convenios.
+                    <div class="alert alert-info text-center shadow-sm">
+                        <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                     </div>
                 }
                 else
                 {
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <span>
-                            Mostrando @((convenios.Count == 0) ? 0 : ((CurrentPage - 1) * PageSize + 1))
-                            - @((CurrentPage - 1) * PageSize + PaginatedConvenios.Count()) de @convenios.Count convenios
-                        </span>
-                        <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-sm" style="width: auto;" @bind="PageSize">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                            <nav>
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => CambiarPagina(-1)">«</button>
-                                    </li>
-                                    <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => CambiarPagina(1)">»</button>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
+                    @if (convenios?.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                            <div class="text-muted small">
+                                Mostrando @((CurrentPage - 1) * PageSize + 1)
+                                - @(Math.Min(CurrentPage * PageSize, convenios.Count))
+                                de @convenios.Count convenios
+                            </div>
 
-                    <div class="table-responsive shadow-sm" style="max-height: 500px; min-height: 300px; overflow-y: auto;">
-                        <table class="table table-hover table-bordered text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Número</th>
-                                    <th>Médico</th>
-                                    <th>Fecha</th>
-                                    <th>Total Órdenes</th>
-                                    <th>% Comisión</th>
-                                    <th>Total Médico</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var c in PaginatedConvenios)
-                                {
-                                    var totalMedico = Math.Round(c.MontoTotal * c.PorcentajeComision / 100, 2);
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0 small">Registros por página:</label>
+                                <select class="form-select form-select-sm w-auto" @bind="PageSize" @bind:after="CambiarTamPagina">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                </select>
+
+                                <div class="d-flex align-items-center ms-2">
+                                    <button class="btn btn-sm btn-outline-secondary me-1"
+                                            disabled="@(CurrentPage == 1)"
+                                            @onclick="PrevPagina">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            disabled="@(CurrentPage >= TotalPages)"
+                                            @onclick="NextPagina">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="tabla-fija shadow-sm rounded border">
+                        <div class="tabla-body">
+                            <table class="table align-middle mb-0 tabla-convenios">
+                                <thead>
                                     <tr>
-                                        <td>@c.IdConvenio</td>
-                                        <td>@c.NombreMedico</td>
-                                        <td>@c.FechaConvenio.ToString("dd/MM/yyyy")</td>
-                                        <td>@c.MontoTotal.ToString("C")</td>
-                                        <td>@c.PorcentajeComision.ToString("0.##")%</td>
-                                        <td>@totalMedico.ToString("C")</td>
-                                        <td>
-                                            <span class="badge rounded-pill bg-@(c.Anulado == true ? "danger" : "success")">
-                                                @(c.Anulado == true ? "Anulado" : "Activo")
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex justify-content-center gap-2">
-                                                <button class="btn btn-sm btn-primary" @onclick="() => VerDetalle(c.IdConvenio)">
+                                        <th style="width: 10%;">Número</th>
+                                        <th style="width: 20%;">Médico</th>
+                                        <th style="width: 10%;">Fecha</th>
+                                        <th style="width: 15%;">Total Órdenes</th>
+                                        <th style="width: 10%;">% Comisión</th>
+                                        <th style="width: 15%;">Total Médico</th>
+                                        <th style="width: 10%;">Estado</th>
+                                        <th style="width: 10%;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var c in PaginatedConvenios)
+                                    {
+                                        var totalMedico = Math.Round(c.MontoTotal * c.PorcentajeComision / 100, 2);
+                                        <tr>
+                                            <td data-label="Número">@c.IdConvenio</td>
+                                            <td data-label="Médico" class="text-truncate">@c.NombreMedico</td>
+                                            <td data-label="Fecha">@c.FechaConvenio.ToString("dd/MM/yyyy")</td>
+                                            <td data-label="Total Órdenes">@c.MontoTotal.ToString("C")</td>
+                                            <td data-label="% Comisión">@c.PorcentajeComision.ToString("0.##")%</td>
+                                            <td data-label="Total Médico">@totalMedico.ToString("C")</td>
+                                            <td data-label="Estado">
+                                                <span class="badge bg-@(c.Anulado == true ? "danger" : "success")">
+                                                    @(c.Anulado == true ? "Anulado" : "Activo")
+                                                </span>
+                                            </td>
+                                            <td data-label="Acciones">
+                                                <button class="btn btn-primary btn-sm me-1" @onclick="() => VerDetalle(c.IdConvenio)">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                @if (c.Anulado != true && puedeAnular)
+                                                @if (puedeAnular && c.Anulado == false)
                                                 {
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => AnularConvenio(c.IdConvenio)">
-                                                        <i class="bi bi-x-circle"></i>
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => AnularConvenio(c.IdConvenio)">
+                                                        <i class="bi bi-x-circle-fill"></i>
                                                     </button>
                                                 }
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                                else if (!puedeAnular)
+                                                {
+                                                    <span class="text-muted small">Sin permisos</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 }
             }
@@ -276,46 +289,46 @@
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
-                ?? user.FindFirst("role")?.Value
-                ?? user.FindFirst("roles")?.Value
-                ?? "";
-
-            bool puedeVer = rol is "administrador" or "recepcionista";
-
-            if (puedeVer)
-            {
-                convenios = await ConveniosApi.ObtenerConveniosAsync();
-            }
-
             isRendered = true;
             StateHasChanged();
         }
     }
-
 
     private async Task FiltrarConvenios()
     {
         var todos = await ConveniosApi.ObtenerConveniosAsync();
         var filtrados = todos.AsEnumerable();
 
-        if (!string.IsNullOrWhiteSpace(criterioBusqueda) && !string.IsNullOrWhiteSpace(valorBusqueda))
+        bool tieneFiltros = !string.IsNullOrWhiteSpace(criterioBusqueda)
+                            || !string.IsNullOrWhiteSpace(valorBusqueda)
+                            || fechaDesde.HasValue
+                            || fechaHasta.HasValue;
+
+        if (tieneFiltros)
         {
-            var val = valorBusqueda.ToLower();
-            filtrados = criterioBusqueda switch
+            if (!string.IsNullOrWhiteSpace(criterioBusqueda) && !string.IsNullOrWhiteSpace(valorBusqueda))
             {
-                "numero" => filtrados.Where(c => c.IdConvenio.ToString().Contains(val)),
-                "medico" => filtrados.Where(c => c.NombreMedico != null && c.NombreMedico.ToLower().Contains(val)),
-                _ => filtrados
-            };
+                var val = valorBusqueda.ToLower();
+                filtrados = criterioBusqueda switch
+                {
+                    "numero" => filtrados.Where(c => c.IdConvenio.ToString().Contains(val)),
+                    "medico" => filtrados.Where(c => c.NombreMedico != null && c.NombreMedico.ToLower().Contains(val)),
+                    _ => filtrados
+                };
+            }
+
+            if (fechaDesde.HasValue)
+                filtrados = filtrados.Where(c => c.FechaConvenio >= DateOnly.FromDateTime(fechaDesde.Value));
+            if (fechaHasta.HasValue)
+                filtrados = filtrados.Where(c => c.FechaConvenio <= DateOnly.FromDateTime(fechaHasta.Value));
+
+            convenios = filtrados.ToList();
+        }
+        else
+        {
+            convenios = todos.ToList();
         }
 
-        if (fechaDesde.HasValue)
-            filtrados = filtrados.Where(c => c.FechaConvenio >= DateOnly.FromDateTime(fechaDesde.Value));
-        if (fechaHasta.HasValue)
-            filtrados = filtrados.Where(c => c.FechaConvenio <= DateOnly.FromDateTime(fechaHasta.Value));
-
-        convenios = filtrados.ToList();
         CurrentPage = 1;
     }
 
@@ -326,6 +339,11 @@
 
         await JS.InvokeVoidAsync("marcarModalAbierto");
         StateHasChanged();
+    }
+    private async Task LimpiarBusqueda()
+    {
+        criterioBusqueda = "";
+        valorBusqueda = "";
     }
 
     private async Task CerrarModal()
@@ -343,12 +361,12 @@
         var result = await ConveniosApi.AnularConvenioAsync(id);
         if (result)
         {
-            await JS.InvokeVoidAsync("alert", "Convenio anulado correctamente.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio anulado correctamente.", "success");
             convenios = await ConveniosApi.ObtenerConveniosAsync();
         }
         else
         {
-            await JS.InvokeVoidAsync("alert", "No se pudo anular el convenio.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el convenio.", "danger");
         }
 
         StateHasChanged();
@@ -359,10 +377,23 @@
         Navigation.NavigateTo("/convenios/nuevo");
     }
 
-    private void CambiarPagina(int cambio)
+    private void PrevPagina()
     {
-        CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
+        if (CurrentPage > 1)
+            CurrentPage--;
     }
+
+    private void NextPagina()
+    {
+        if (CurrentPage < TotalPages)
+            CurrentPage++;
+    }
+
+    private void CambiarTamPagina()
+    {
+        CurrentPage = 1;
+    }
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

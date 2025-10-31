@@ -24,6 +24,8 @@ namespace Lab_Blazor.Services.Ordenes
 
         Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPacienteAsync(int idPaciente, int idOrden);
 
+        Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int idOrden);
+
     }
 
 }

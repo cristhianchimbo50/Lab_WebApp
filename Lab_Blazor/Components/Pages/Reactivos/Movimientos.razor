@@ -26,9 +26,7 @@
                     <div class="card-body p-4">
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">
-                            No tienes permisos para visualizar los movimientos de reactivos.
-                        </p>
+                        <p class="text-muted mb-3">No tienes permisos para acceder a esta sección.</p>
                         <button class="btn btn-outline-primary" @onclick="VolverAtras">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
@@ -38,142 +36,151 @@
         }
         else
         {
-            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <span class="d-flex align-items-center">
-                    <i class="bi bi-arrow-left-right text-primary fs-5 me-2"></i> Movimientos de Reactivos
-                </span>
-                <div class="text-end">
-                    <button class="btn btn-success me-2 shadow-sm" @onclick='() => Navigation.NavigateTo("/reactivos/ingreso-stock")'>
-                        <i class="bi bi-box-arrow-in-down me-1"></i> Registrar Ingreso
+            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+                <span><i class="bi bi-arrow-left-right text-primary fs-4 me-2"></i>Gestión de Movimientos de Reactivos</span>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success shadow-sm" @onclick='() => Navigation.NavigateTo("/reactivos/ingreso-stock")'>
+                        <i class="bi bi-box-arrow-in-down me-1"></i>Registrar Ingreso
                     </button>
                     <button class="btn btn-danger shadow-sm" @onclick='() => Navigation.NavigateTo("/reactivos/egreso-stock")'>
-                        <i class="bi bi-box-arrow-up me-1"></i> Registrar Egreso
+                        <i class="bi bi-box-arrow-up me-1"></i>Registrar Egreso
                     </button>
                 </div>
             </h4>
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-body">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Filtrar por</label>
-                            <select class="form-select" @bind="filtroSeleccionado">
-                                <option value="numero">No. Movimiento</option>
-                                <option value="reactivo">Reactivo</option>
-                                <option value="observacion">Observación</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Valor</label>
-                            <input type="text" class="form-control" placeholder="Ingrese el valor a buscar..." @bind="valorFiltro" />
-                        </div>
-
-                        <div class="col-md-4 text-end">
-                            <button class="btn btn-primary me-2" @onclick="FiltrarMovimientosAsync">
-                                <i class="bi bi-search me-1"></i> Buscar
-                            </button>
-                            <button class="btn btn-outline-secondary" @onclick="LimpiarFiltros">
-                                <i class="bi bi-x-circle me-1"></i> Limpiar
-                            </button>
-                        </div>
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Buscar por</label>
+                        <InputSelect class="form-select" @bind-Value="filtroSeleccionado">
+                            <option value="">-- Seleccione --</option>
+                            <option value="numero">N° Movimiento</option>
+                            <option value="reactivo">Reactivo</option>
+                            <option value="observacion">Observación</option>
+                        </InputSelect>
                     </div>
-
-                    <hr />
-
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Desde</label>
-                            <InputDate @bind-Value="filtro.FechaDesde" class="form-control" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Hasta</label>
-                            <InputDate @bind-Value="filtro.FechaHasta" class="form-control" />
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="filtro.IncluirIngresos" class="form-check-input me-2" />
-                            <label class="form-check-label">Ingresos</label>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="filtro.IncluirEgresos" class="form-check-input me-2" />
-                            <label class="form-check-label">Egresos</label>
-                        </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Valor</label>
+                        <InputText class="form-control" @bind-Value="valorFiltro"
+                                   placeholder="Ingrese valor a buscar"
+                                   @onkeypress="@(e => { if (e.Key == "Enter") FiltrarMovimientosAsync(); })" />
+                    </div>
+                    <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                        <button class="btn btn-primary" @onclick="FiltrarMovimientosAsync"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarFiltros"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
 
-            @if (!cargado)
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Desde</label>
+                        <InputDate @bind-Value="filtro.FechaDesde" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Hasta</label>
+                        <InputDate @bind-Value="filtro.FechaHasta" class="form-control" />
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center mt-4">
+                        <InputCheckbox @bind-Value="filtro.IncluirIngresos" class="form-check-input me-2" />
+                        <label class="form-check-label">Ingresos</label>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center mt-4">
+                        <InputCheckbox @bind-Value="filtro.IncluirEgresos" class="form-check-input me-2" />
+                        <label class="form-check-label">Egresos</label>
+                    </div>
+                </div>
+            </div>
+
+            @if (movimientos == null)
             {
-                <div class="text-center text-primary my-5">
-                    <div class="spinner-border" role="status"></div>
-                    <div>Cargando movimientos...</div>
+                <div class="alert alert-info text-center shadow-sm">
+                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
+                </div>
+            }
+            else if (!movimientos.Any())
+            {
+                <div class="alert alert-warning text-center shadow-sm">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron movimientos.
                 </div>
             }
             else
             {
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-light fw-semibold">
-                        <i class="bi bi-table me-2"></i> Resultados de Movimientos
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div class="text-muted small">
+                        Mostrando @((paginaActual - 1) * tamPagina + 1)
+                        - @(Math.Min(paginaActual * tamPagina, movimientos.Count))
+                        de @movimientos.Count movimientos
                     </div>
-                    <div class="card-body p-2">
-                        <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-                            <table class="table table-sm table-hover table-bordered align-middle text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>No. Movimiento</th>
-                                        <th>Reactivo</th>
-                                        <th>Tipo</th>
-                                        <th class="text-end">Cantidad</th>
-                                        <th>Fecha</th>
-                                        <th>Observación</th>
-                                        <th>No. Resultado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (movimientos.Any())
-                                    {
-                                        @foreach (var m in movimientos)
-                                        {
-                                            <tr>
-                                                <td>@m.IdMovimientoReactivo</td>
-                                                <td>@m.NombreReactivo</td>
-                                                <td>
-                                                    @if (m.TipoMovimiento == "INGRESO")
-                                                    {
-                                                        <span class="badge bg-success">INGRESO</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-danger">EGRESO</span>
-                                                    }
-                                                </td>
-                                                <td class="text-end">@m.Cantidad.ToString("N2")</td>
-                                                <td>@m.FechaMovimiento.ToString("dd/MM/yyyy")</td>
-                                                <td>@m.Observacion</td>
-                                                <td>
-                                                    @if (!string.IsNullOrEmpty(m.NumeroResultado))
-                                                    {
-                                                        <span class="badge bg-info text-dark">@m.NumeroResultado</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted">-</span>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted py-3">
-                                                <i class="bi bi-info-circle me-2"></i> No se encontraron movimientos con los filtros seleccionados.
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small">Registros por página:</label>
+                        <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+
+                        <div class="d-flex align-items-center ms-2">
+                            <button class="btn btn-sm btn-outline-secondary me-1"
+                                    disabled="@(paginaActual == 1)"
+                                    @onclick="PrevPagina">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    disabled="@(paginaActual >= TotalPaginas)"
+                                    @onclick="NextPagina">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
                         </div>
+                    </div>
+                </div>
+
+                <div class="tabla-fija shadow-sm rounded border">
+                    <div class="tabla-body table-responsive" style="max-height: 420px; overflow-y: auto;">
+                        <table class="table align-middle mb-0 tabla-movimientos">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%;">N° Movimiento</th>
+                                    <th style="width: 20%;">Reactivo</th>
+                                    <th style="width: 10%;">Tipo</th>
+                                    <th style="width: 10%;" class="text-end">Cantidad</th>
+                                    <th style="width: 15%;">Fecha</th>
+                                    <th style="width: 25%;">Observación</th>
+                                    <th style="width: 10%;">N° Resultado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in movimientos.Skip((paginaActual - 1) * tamPagina).Take(tamPagina))
+                                {
+                                    <tr>
+                                        <td data-label="N° Movimiento">@m.IdMovimientoReactivo</td>
+                                        <td data-label="Reactivo" class="text-truncate">@m.NombreReactivo</td>
+                                        <td data-label="Tipo">
+                                            <span class="badge bg-@(m.TipoMovimiento == "INGRESO" ? "success" : "danger")">
+                                                @m.TipoMovimiento
+                                            </span>
+                                        </td>
+                                        <td data-label="Cantidad" class="text-end">@m.Cantidad.ToString("N2")</td>
+                                        <td data-label="Fecha">@m.FechaMovimiento.ToString("dd/MM/yyyy")</td>
+                                        <td data-label="Observación" class="text-truncate">@m.Observacion</td>
+                                        <td data-label="N° Resultado">
+                                            @if (!string.IsNullOrEmpty(m.NumeroResultado))
+                                            {
+                                                <span class="badge bg-info text-dark">@m.NumeroResultado</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             }
@@ -186,9 +193,7 @@
                 <div class="card-body p-4">
                     <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
                     <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
-                    <p class="text-muted mb-3">
-                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
-                    </p>
+                    <p class="text-muted mb-3">Inicie sesión con una cuenta autorizada para continuar.</p>
                     <NavLink href="/login" class="btn btn-primary">
                         <i class="bi bi-box-arrow-in-right"></i> Ir al Login
                     </NavLink>
@@ -201,32 +206,27 @@
 @code {
     private bool cargado;
     private MovimientoReactivoFiltroDto filtro = new();
-    private List<MovimientoReactivoDto> movimientos = new();
-    private string filtroSeleccionado = "reactivo";
+    private List<MovimientoReactivoDto>? movimientos = null;
+    private string? filtroSeleccionado = null;
     private string valorFiltro = string.Empty;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private int paginaActual = 1;
+    private int tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((movimientos?.Count ?? 1) / (double)tamPagina);
+
+    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
+    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
+    private void CambiarTamPagina() => paginaActual = 1;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !cargado)
+        if (firstRender)
         {
-            try
-            {
-                var authState = await AuthProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
-                if (user.Identity?.IsAuthenticated ?? false)
-                {
-                    var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-                    if (rol is "administrador" or "laboratorista")
-                        await FiltrarMovimientosAsync();
-                }
-            }
-            catch (HttpRequestException)
-            {
-                await JS.InvokeVoidAsync("alert", "No autorizado para ver movimientos.");
-            }
             cargado = true;
+            movimientos = null;
             StateHasChanged();
         }
+        return Task.CompletedTask;
     }
 
     private async Task FiltrarMovimientosAsync()
@@ -234,28 +234,46 @@
         try
         {
             cargado = false;
+            paginaActual = 1;
+
             filtro.IdMovimientoReactivo = null;
             filtro.NombreReactivo = null;
             filtro.Observacion = null;
 
-            switch (filtroSeleccionado)
+            if (string.IsNullOrWhiteSpace(filtroSeleccionado) && string.IsNullOrWhiteSpace(valorFiltro))
             {
-                case "numero":
-                    filtro.IdMovimientoReactivo = valorFiltro;
-                    break;
-                case "reactivo":
-                    filtro.NombreReactivo = valorFiltro;
-                    break;
-                case "observacion":
-                    filtro.Observacion = valorFiltro;
-                    break;
+                movimientos = await MovimientosApi.FiltrarMovimientosAsync(new MovimientoReactivoFiltroDto
+                {
+                    FechaDesde = filtro.FechaDesde,
+                    FechaHasta = filtro.FechaHasta,
+                    IncluirIngresos = filtro.IncluirIngresos,
+                    IncluirEgresos = filtro.IncluirEgresos
+                });
+            }
+            else
+            {
+                switch (filtroSeleccionado)
+                {
+                    case "numero":
+                        if (int.TryParse(valorFiltro, out var id))
+                            filtro.IdMovimientoReactivo = id.ToString();
+                        break;
+                    case "reactivo":
+                        filtro.NombreReactivo = valorFiltro;
+                        break;
+                    case "observacion":
+                        filtro.Observacion = valorFiltro;
+                        break;
+                }
+
+                movimientos = await MovimientosApi.FiltrarMovimientosAsync(filtro);
             }
 
-            movimientos = await MovimientosApi.FiltrarMovimientosAsync(filtro);
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Movimientos cargados correctamente.", "success");
         }
-        catch (HttpRequestException)
+        catch
         {
-            await JS.InvokeVoidAsync("alert", "No autorizado para ver movimientos.");
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar movimientos.", "danger");
         }
         finally
         {
@@ -268,9 +286,12 @@
     {
         filtro = new();
         valorFiltro = string.Empty;
-        filtroSeleccionado = "reactivo";
-        await FiltrarMovimientosAsync();
+        filtroSeleccionado = null;
+        movimientos = null;
+        StateHasChanged();
+
     }
+
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

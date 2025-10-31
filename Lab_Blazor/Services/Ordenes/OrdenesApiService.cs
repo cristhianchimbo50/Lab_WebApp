@@ -209,6 +209,15 @@ namespace Lab_Blazor.Services.Ordenes
             }
         }
 
+        public async Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int idOrden)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/ordenes/{idOrden}/verificar-notificacion");
+            AddTokenHeader(request);
+            return await _http.SendAsync(request);
+        }
 
 
     }

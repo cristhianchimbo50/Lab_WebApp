@@ -1,8 +1,10 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using Lab_APIRest.Infrastructure.Services;
 using Lab_APIRest.Services.PDF;
 using Lab_Contracts.Ordenes;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
 
 namespace Lab_APIRest.Services.Ordenes
 {
@@ -264,6 +266,43 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden)
         {
             return await ObtenerDetalleOrdenOriginalAsync(idOrden);
+        }
+
+        private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
+
+        public async Task VerificarYNotificarResultadosCompletosAsync(int idOrden)
+        {
+            var orden = await _context.ordens
+                .Include(o => o.id_pacienteNavigation)
+                .Include(o => o.detalle_ordens)
+                    .ThenInclude(d => d.id_resultadoNavigation)
+                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
+
+            if (orden == null) return;
+
+            bool todosConResultado = orden.detalle_ordens.All(d => d.id_resultado != null);
+            if (!todosConResultado || _ordenesNotificadas.ContainsKey(idOrden))
+                return;
+
+            var correo = orden.id_pacienteNavigation?.correo_electronico_paciente;
+            var nombre = orden.id_pacienteNavigation?.nombre_paciente;
+            if (string.IsNullOrWhiteSpace(correo)) return;
+
+            string asunto = "Resultados disponibles - Laboratorio La Inmaculada";
+            string cuerpo = $@"
+        <div style='font-family:Arial,sans-serif;color:#333;'>
+            <h3>Estimado/a {nombre},</h3>
+            <p>Le informamos que todos los resultados de su orden <strong>{orden.numero_orden}</strong> están disponibles.</p>
+            <p>Puede consultarlos ingresando a su cuenta en:
+            <a href='https://labinmaculada.com/login'>Portal de Resultados</a>.</p>
+            <p style='margin-top:20px;'>Gracias por confiar en nosotros.<br>
+            <strong>Laboratorio Clínico La Inmaculada</strong></p>
+        </div>";
+
+            var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
+            await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
+            _ordenesNotificadas.TryAdd(idOrden, true);
+
         }
 
 
