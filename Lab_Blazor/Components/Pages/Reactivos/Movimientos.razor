@@ -6,6 +6,8 @@
 @using Lab_Blazor.Services.Reactivos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IMovimientosApiService MovimientosApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -218,19 +220,27 @@
     private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
     private void CambiarTamPagina() => paginaActual = 1;
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    private bool _sesionVerificada = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             cargado = true;
             movimientos = null;
             StateHasChanged();
         }
-        return Task.CompletedTask;
     }
 
     private async Task FiltrarMovimientosAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             cargado = false;
@@ -284,13 +294,15 @@
 
     private async Task LimpiarFiltros()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         filtro = new();
         valorFiltro = string.Empty;
         filtroSeleccionado = null;
         movimientos = null;
         StateHasChanged();
-
     }
+
 
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");

@@ -6,6 +6,8 @@
 @using Lab_Blazor.Services.Reactivos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IReactivosApiService ReactivosApi
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
@@ -307,7 +309,6 @@
     private List<ReactivoExtendido> reactivosSeleccionados =>
         Reactivos?.Where(r => r.Seleccionado).ToList() ?? new();
 
-    // --- PAGINACIÓN SEGUNDA TABLA (Seleccionados) ---
     private int paginaActualSel = 1;
     private int tamPaginaSel = 5;
     private int TotalPaginasSel => (int)Math.Ceiling((reactivosSeleccionados.Count == 0 ? 1 : reactivosSeleccionados.Count) / (double)tamPaginaSel);
@@ -317,15 +318,28 @@
     private void NextPaginaSel() { if (paginaActualSel < TotalPaginasSel) paginaActualSel++; }
     private void CambiarTamPaginaSel() => paginaActualSel = 1;
 
-    protected override Task OnInitializedAsync()
+    private bool _sesionVerificada = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        cargado = true;
-        Reactivos = null;
-        return Task.CompletedTask;
+        if (firstRender && !_sesionVerificada)
+        {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
+            cargado = true;
+            Reactivos = null;
+            StateHasChanged();
+        }
     }
+
 
     private async Task BuscarReactivos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             cargado = false;
@@ -385,9 +399,11 @@
             StateHasChanged();
         }
     }
-
+    
     private async Task LimpiarBusqueda()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         criterioBusqueda = null;
         valorBusqueda = string.Empty;
         Reactivos = null;
@@ -401,6 +417,8 @@
 
     private async Task GuardarEgresosAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var seleccionados = reactivosSeleccionados
             .Where(r => r.Cantidad > 0)
             .Select(r => new MovimientoReactivoEgresoDto
@@ -427,7 +445,6 @@
             StateHasChanged();
 
             await Task.Delay(1500);
-
             Navigation.NavigateTo("/movimientos", forceLoad: true);
         }
         else

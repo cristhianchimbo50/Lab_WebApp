@@ -9,6 +9,8 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
 @inject IAuthApiService AuthApi
+@inject IJSRuntime JS
+
 
 <PageTitle>Iniciar Sesión</PageTitle>
 
@@ -133,6 +135,14 @@ else
                 if (requiereCambio)
                 {
                     Navigation.NavigateTo($"/cambiar-contrasenia?correo={usuario.CorreoUsuario}", true);
+                    return;
+                }
+
+                var redirectAfterLogin = await JS.InvokeAsync<string>("localStorage.getItem", "redirectAfterLogin");
+                if (!string.IsNullOrWhiteSpace(redirectAfterLogin))
+                {
+                    await JS.InvokeVoidAsync("localStorage.removeItem", "redirectAfterLogin");
+                    Navigation.NavigateTo("/" + redirectAfterLogin, true);
                     return;
                 }
 

@@ -6,9 +6,12 @@
 @using Lab_Blazor.Services.Resultados
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IResultadosApiService ResultadosApi
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
+
 
 <AuthorizeView>
     <Authorized Context="authState">
@@ -329,18 +332,28 @@
     private IEnumerable<ResultadoListadoDto> PaginatedResultados => resultados?.Skip((CurrentPage - 1) * PageSize).Take(PageSize) ?? Enumerable.Empty<ResultadoListadoDto>();
 
 
-    protected override void OnAfterRender(bool firstRender)
+    private bool _sesionVerificada = false;
+
+    protected override async void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             resultados = null;
             isRendered = true;
             StateHasChanged();
         }
     }
 
+
     private async Task BuscarResultados()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             if (string.IsNullOrWhiteSpace(criterioBusqueda) &&
@@ -419,6 +432,8 @@
 
     private async Task LimpiarBusqueda()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         criterioBusqueda = "";
         valorBusqueda = "";
         fechaDesde = null;
@@ -436,6 +451,8 @@
 
     private async Task VerDetalleResultado(int idResultado)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -463,6 +480,8 @@
 
     private async Task ImprimirResultado()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning");
@@ -493,6 +512,8 @@
 
     private async Task AnularResultado()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null || DetalleActual.Anulado)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado ya está anulado o no es válido.", "info");

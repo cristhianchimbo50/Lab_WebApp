@@ -8,6 +8,8 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using System.Linq
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 
 @inject IOrdenesApiService OrdenesApi
 @inject IResultadosApiService ResultadosApi
@@ -390,10 +392,17 @@
 
     private string? pdfUrl;
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             isRendered = true;
             ordenes = null;
             StateHasChanged();
@@ -403,6 +412,8 @@
 
     private async Task CargarOrdenes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -435,6 +446,8 @@
 
     private async Task VerDetalleOrden(int idOrden)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
@@ -468,6 +481,8 @@
 
     private async Task VisualizarTicketOrden()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null) return;
         var pdfBytes = await OrdenesApi.ObtenerTicketOrdenPdfAsync(DetalleActual.IdOrden);
         if (pdfBytes == null || pdfBytes.Length == 0)
@@ -481,6 +496,8 @@
 
     private async Task IrAIngresarResultados()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null) return;
         var seleccionados = DetalleActual.Examenes.Where(e => e.Seleccionado && !e.IdResultado.HasValue).ToList();
         if (!seleccionados.Any())
@@ -507,6 +524,8 @@
 
     private async Task ImprimirResultados()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null) return;
 
         var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -549,17 +568,22 @@
 
     private async Task AnularOrden()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (DetalleActual == null) return;
         if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular esta orden? Esto anulará también resultados y pagos relacionados.")) return;
+
         var response = await OrdenesApi.AnularOrdenCompletaAsync(DetalleActual.IdOrden);
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Orden anulada correctamente.", "success");
-
             await CargarOrdenes();
             mostrarDetalleOrden = false;
         }
-        await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular la orden.", "danger");
+        else
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular la orden.", "danger");
+        }
     }
 
     private void CambiarPagina(int cambio)
@@ -573,6 +597,8 @@
 
     private async Task BuscarOrdenes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             if (string.IsNullOrWhiteSpace(criterioBusqueda) &&
@@ -615,9 +641,7 @@
             else if (!filtroAnulado && filtroNoAnulado)
                 filtradas = filtradas.Where(o => !o.Anulado);
 
-
             ordenes = filtradas.OrderByDescending(o => o.IdOrden).ToList();
-
         }
         catch
         {

@@ -14,7 +14,8 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using System.Linq
-
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IOrdenesApiService OrdenApi
 @inject NavigationManager Navigation
 @inject IPacientesApiService PacientesApi
@@ -554,10 +555,17 @@
         set => MedicoActual = Medicos.FirstOrDefault(m => m.IdMedico == value);
     }
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !cargado)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             Medicos = await MedicosApi.ListarMedicosAsync();
             cargado = true;
             StateHasChanged();
@@ -566,6 +574,8 @@
 
     private async Task BuscarPorCedula()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (string.IsNullOrWhiteSpace(Cedula))
         {
             MostrarModalBuscarPaciente = true;
@@ -604,6 +614,8 @@
 
     private async Task BuscarPacientesModal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         PacientesEncontrados = string.IsNullOrWhiteSpace(ValorBusquedaPaciente)
             ? await PacientesApi.GetPacientesAsync()
             : await PacientesApi.BuscarPacientesAsync(FiltroBusquedaPaciente, ValorBusquedaPaciente);
@@ -611,6 +623,8 @@
 
     private async Task RegistrarNuevoPaciente()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var (exito, msg, paciente) = await PacientesApi.CrearPacienteAsync(NuevoPaciente);
         await JS.InvokeVoidAsync("alert", msg);
 
@@ -641,6 +655,8 @@
 
     private async Task GuardarNuevoMedico()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var res = await MedicosApi.CrearMedicoAsync(NuevoMedico);
         if (res.IsSuccessStatusCode)
         {
@@ -656,8 +672,12 @@
         }
     }
 
-    private async Task BuscarExamenes() =>
+    private async Task BuscarExamenes()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ExamenesDisponibles = await ExamenesApi.ListarExamenesAsync(TextoBuscarExamen);
+    }
 
     private void SeleccionarExamen(ExamenDto examen)
     {
@@ -695,6 +715,8 @@
 
     private async Task GuardarPago()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var pagado = Efectivo + Transferencia;
         var saldo = ObtenerSaldoPendiente();
 
@@ -737,10 +759,10 @@
                     MontoPagado = pagado,
                     Observacion = observacion,
                     DetallePagos = new List<DetallePagoDto>
-                    {
-                        new() { TipoPago = "EFECTIVO", Monto = Efectivo },
-                        new() { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
-                    }
+                {
+                    new() { TipoPago = "EFECTIVO", Monto = Efectivo },
+                    new() { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
+                }
                 };
 
                 await PagosApi.RegistrarPagoAsync(pago);

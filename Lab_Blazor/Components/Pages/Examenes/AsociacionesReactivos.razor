@@ -1,6 +1,9 @@
 ﻿@page "/asociaciones-reactivos"
+@inject SesionVerificacionService SesionService
+
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
@@ -230,6 +233,8 @@
 
     private async Task BuscarAsociaciones()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         cargando = true;
         StateHasChanged();
 
@@ -252,7 +257,6 @@
                     _ => asociaciones.ToList()
                 };
             }
-
         }
         catch
         {
@@ -265,6 +269,8 @@
 
     private async Task LimpiarBusqueda()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         criterioBusqueda = "";
         valorBusqueda = "";
         asociacionesFiltradas = null;
@@ -273,6 +279,8 @@
 
     private async Task EliminarAsociacion(int idAsociacion)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!await JS.InvokeAsync<bool>("confirm", "¿Desea eliminar esta asociación?")) return;
 
         var ok = await AsociacionesApi.EliminarAsync(idAsociacion);
@@ -288,13 +296,17 @@
         }
     }
 
-    private void IrAEditar(int idExamen)
+    private async void IrAEditar(int idExamen)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         Navigation.NavigateTo($"/examenes-reactivos?idExamen={idExamen}");
     }
 
-    private void IrAVinculoReactivos()
+    private async void IrAVinculoReactivos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         Navigation.NavigateTo("/examenes-reactivos");
     }
 

@@ -6,6 +6,8 @@
 @using Lab_Blazor.Services.Medicos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IMedicosApiService MedicosApiService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
@@ -237,10 +239,26 @@
     private int TotalPaginas => (int)Math.Ceiling((ListaMedicos?.Count ?? 1) / (double)tamPagina);
     private IEnumerable<MedicoDto> MedicosPaginados => ListaMedicos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<MedicoDto>();
 
-    protected override Task OnInitializedAsync() => Task.CompletedTask;
+    private bool _sesionVerificada = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_sesionVerificada)
+        {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
+            await BuscarMedicos();
+            StateHasChanged();
+        }
+    }
 
     private async Task BuscarMedicos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
             ListaMedicos = await MedicosApiService.GetMedicosAsync();
         else
@@ -251,6 +269,8 @@
 
     private async Task MostrarModalNuevo()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         MedicoActual = new MedicoDto();
         modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
@@ -258,6 +278,8 @@
 
     private async Task CerrarModal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         modalVisible = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
         mensaje = string.Empty;
@@ -265,6 +287,8 @@
 
     private async Task EditarMedico(MedicoDto medico)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
         if (rol != "administrador")
@@ -280,6 +304,8 @@
 
     private async Task ValidarYGuardar()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         HttpResponseMessage result = MedicoActual.IdMedico == 0
             ? await MedicosApiService.CrearMedicoAsync(MedicoActual)
             : await MedicosApiService.EditarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
@@ -303,6 +329,8 @@
 
     private async Task ConfirmarAnulacion(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este médico?"))
         {
             var result = await MedicosApiService.AnularMedicoAsync(id);
@@ -318,6 +346,8 @@
 
     private async Task ConfirmarReactivacion(MedicoDto medico)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?"))
         {
             medico.Anulado = false;

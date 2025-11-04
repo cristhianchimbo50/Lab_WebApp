@@ -9,11 +9,14 @@
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IOrdenesApiService OrdenesApi
 @inject IExamenesApiService ExamenesApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
+
 
 <AuthorizeView>
     <Authorized Context="authState">
@@ -177,10 +180,17 @@
     private string observacionesGenerales = string.Empty;
     private bool cargando = true;
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             try
             {
                 var authState = await AuthProvider.GetAuthenticationStateAsync();
@@ -214,6 +224,8 @@
 
     private async Task InicializarDatos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         DatosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
         if (DatosOrden == null) return;
 
@@ -232,6 +244,8 @@
 
     private async Task GuardarResultados()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             var resultados = new List<ResultadoExamenDto>();

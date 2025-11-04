@@ -1,7 +1,11 @@
 ﻿@page "/pacientes"
+@inject SesionVerificacionService SesionService
+@inject NavigationManager Nav
+
 @rendermode InteractiveServer
 <PageTitle>Gestión de Pacientes</PageTitle>
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Blazor.Services.Pacientes
 @using Lab_Contracts.Pacientes
 @using Microsoft.AspNetCore.Components.Authorization
@@ -156,7 +160,28 @@
                                             </span>
                                         </td>
                                         <td data-label="Acciones">
-                                            <button class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></button>
+                                            @if (puedeModificar)
+                                            {
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarPaciente(paciente)">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                @if (paciente.Anulado)
+                                                {
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(paciente)">
+                                                        <i class="bi bi-check-circle-fill"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(paciente.IdPaciente)">
+                                                        <i class="bi bi-x-circle-fill"></i>
+                                                    </button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Sin permisos</span>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -254,10 +279,22 @@
     private int TotalPaginas => (int)Math.Ceiling((ListaPacientes?.Count ?? 1) / (double)tamPagina);
     private IEnumerable<PacienteDto> PacientesPaginados => ListaPacientes?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<PacienteDto>();
 
-    protected override Task OnInitializedAsync() => Task.CompletedTask;
+    private bool _sesionVerificada = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_sesionVerificada)
+        {
+            _sesionVerificada = true;
+            await SesionService.VerificarOSalirAsync();
+        }
+    }
+
 
     private async Task BuscarPacientes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
             ListaPacientes = await PacientesApiService.GetPacientesAsync();
         else
@@ -298,6 +335,8 @@
 
     private async Task ValidarYGuardar()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (PacienteActual.IdPaciente == 0)
         {
             var (exito, msg, _) = await PacientesApiService.CrearPacienteAsync(PacienteActual);
@@ -332,6 +371,8 @@
 
     private async Task ConfirmarAnulacion(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este paciente?"))
         {
             var result = await PacientesApiService.AnularPacienteAsync(id);
@@ -346,6 +387,8 @@
 
     private async Task ConfirmarReactivacion(PacienteDto paciente)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.NombrePaciente}?"))
         {
             paciente.Anulado = false;
@@ -387,6 +430,8 @@
 
     private async Task ReenviarTemporal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (PacienteActual.IdPaciente == 0) return;
         var ok = await JS.InvokeAsync<bool>("confirm", $"¿Reenviar una nueva contraseña temporal a {PacienteActual.CorreoElectronicoPaciente}?");
         if (!ok) return;

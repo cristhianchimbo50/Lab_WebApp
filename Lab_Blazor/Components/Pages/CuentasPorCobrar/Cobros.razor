@@ -1,6 +1,9 @@
 ﻿@page "/cobros/{cedula}"
+@inject SesionVerificacionService SesionService
+
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Ordenes
 @using Lab_Contracts.Pagos
 @using Lab_Blazor.Services.Pagos
@@ -313,9 +316,12 @@
     private bool mostrarModalCobro;
     private bool datosCargados;
 
+    private bool _sesionVerificada = false;
+
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !datosCargados)
+        if (firstRender && !datosCargados && !_sesionVerificada)
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -340,6 +346,8 @@
 
     private async Task CargarOrdenesAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var filtro = new PagoFiltroDto { Cedula = cedula, IncluirAnulados = false };
         var ordenes = await PagosApi.ListarCuentasPorCobrarAsync(filtro);
         ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
@@ -349,6 +357,8 @@
 
     private async Task CargarPagosAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         pagosPrevios.Clear();
         foreach (var orden in ordenesSeleccionadas)
         {
@@ -369,6 +379,8 @@
 
     private async void SeleccionarOrden(OrdenDto orden)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!ordenesSeleccionadas.Any(o => o.IdOrden == orden.IdOrden))
         {
             ordenesSeleccionadas.Add(orden);
@@ -381,6 +393,8 @@
 
     private async void QuitarOrden(OrdenDto orden)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ordenesPorCobrar.Add(orden);
         ordenesSeleccionadas.Remove(orden);
         await CargarPagosAsync();
@@ -388,23 +402,30 @@
         StateHasChanged();
     }
 
+
     private void CalcularSaldoSeleccionado() => totalSaldoSeleccionado = ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
     private decimal totalCobro => dineroEfectivo + transferencia;
 
     private async Task MostrarModalCobro()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModalCobro = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task CerrarModalCobro()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModalCobro = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task RegistrarCobroAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         decimal saldoTotal = totalSaldoSeleccionado;
         decimal cobroTotal = totalCobro;
         decimal cambio = 0;
@@ -415,15 +436,25 @@
             cobroTotal = saldoTotal;
         }
 
-        var pagoDto = new PagoDto { DineroEfectivo = dineroEfectivo, Transferencia = transferencia, Observacion = observacion };
+        var pagoDto = new PagoDto
+        {
+            DineroEfectivo = dineroEfectivo,
+            Transferencia = transferencia,
+            Observacion = observacion
+        };
+
         bool errores = false;
 
         foreach (var orden in ordenesSeleccionadas)
         {
+            if (!await SesionService.VerificarOSalirAsync()) return;
+
             pagoDto.IdOrden = orden.IdOrden;
             var response = await PagosApi.RegistrarCobroCuentaPorCobrarAsync(pagoDto);
-            if (response == null) errores = true;
-            if (cobroTotal <= 0) break;
+            if (response == null)
+                errores = true;
+            if (cobroTotal <= 0)
+                break;
         }
 
         if (errores)

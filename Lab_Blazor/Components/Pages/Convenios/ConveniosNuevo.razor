@@ -1,6 +1,8 @@
 ﻿@page "/convenios/nuevo"
+@inject SesionVerificacionService SesionService
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Convenios
 @using Lab_Contracts.Medicos
 @using Lab_Blazor.Services.Convenios
@@ -267,10 +269,17 @@
     private bool mostrarModal;
     private decimal totalPagar => ordenesSeleccionadas.Sum(o => o.Total) * (porcentajeComision / 100m);
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
@@ -302,6 +311,8 @@
 
     private async Task CargarOrdenes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (idMedicoSeleccionado.HasValue)
         {
             cargandoOrdenes = true;
@@ -326,6 +337,8 @@
 
     private async Task MostrarModalPago()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModal = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
         StateHasChanged();
@@ -333,6 +346,8 @@
 
     private async Task CerrarModal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModal = false;
         porcentajeComision = 0;
         await JS.InvokeVoidAsync("marcarModalCerrado");
@@ -344,6 +359,8 @@
 
     private async Task RegistrarConvenio()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var dto = new ConvenioRegistroDto
         {
             IdMedico = idMedicoSeleccionado,

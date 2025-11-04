@@ -1,11 +1,15 @@
 ﻿@page "/examenes"
 @rendermode InteractiveServer
+
 <PageTitle>Gestión de Exámenes</PageTitle>
+
 
 @using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IExamenesApiService ExamenesApiService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
@@ -407,10 +411,17 @@
 
     private bool cargadoInicial = false;
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             await CargarListas();
             cargadoInicial = true;
             StateHasChanged();
@@ -419,6 +430,8 @@
 
     private async Task BuscarExamenes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var examenes = await ExamenesApiService.GetExamenesAsync();
 
         if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
@@ -441,6 +454,8 @@
 
     private async Task MostrarModalNuevo()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ExamenActual = new ExamenDto();
         HijosSeleccionados = new();
         ModalVisible = true;
@@ -449,6 +464,8 @@
 
     private async Task CerrarModal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ModalVisible = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
         mensaje = string.Empty;
@@ -456,6 +473,8 @@
 
     private async Task EditarExamen(ExamenDto examen)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
         if (rol != "administrador")
@@ -465,15 +484,15 @@
         }
 
         ExamenActual = examen;
-
         HijosSeleccionados = await ExamenesApiService.ObtenerHijosDeExamenAsync(examen.IdExamen) ?? new();
-
         ModalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task ValidarYGuardar()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         HttpResponseMessage result;
 
         if (ExamenActual.IdExamen == 0)
@@ -515,19 +534,19 @@
             ModalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
             await BuscarExamenes();
-
         }
         else
         {
             mensaje = "Error al guardar examen.";
             tipoMensaje = "danger";
             await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-
         }
     }
 
     private async Task ConfirmarAnulacion(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este examen?"))
         {
             var result = await ExamenesApiService.AnularExamenAsync(id);
@@ -554,6 +573,8 @@
 
     private async Task ConfirmarReactivacion(ExamenDto examen)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el examen {examen.NombreExamen}?"))
         {
             examen.Anulado = false;

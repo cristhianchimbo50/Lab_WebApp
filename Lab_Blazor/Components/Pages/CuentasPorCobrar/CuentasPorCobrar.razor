@@ -1,6 +1,9 @@
 ﻿@page "/cuentasporcobrar"
+@inject SesionVerificacionService SesionService
+
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Pagos
 @using Lab_Contracts.Ordenes
 @using Lab_Blazor.Services.Pagos
@@ -229,6 +232,8 @@
 
     private async Task BuscarAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             if (string.IsNullOrWhiteSpace(filtro.NumeroOrden) &&
@@ -250,7 +255,10 @@
             else
                 filtro.IncluirAnulados = null;
 
-            ordenes = (await PagosApi.ListarCuentasPorCobrarAsync(filtro)).OrderByDescending(o => o.IdOrden).ToList();
+            ordenes = (await PagosApi.ListarCuentasPorCobrarAsync(filtro))
+                .OrderByDescending(o => o.IdOrden)
+                .ToList();
+
             await JS.InvokeVoidAsync("mostrarToastAsync", "Datos cargados correctamente.", "success");
         }
         catch
@@ -261,6 +269,8 @@
 
     private async Task LimpiarFiltros()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         filtro = new();
         verAnulados = true;
         verNoAnulados = true;
@@ -273,8 +283,10 @@
         CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
     }
 
-    private void IrACobro(string? cedula)
+    private async void IrACobro(string? cedula)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!string.IsNullOrEmpty(cedula))
             Navigation.NavigateTo($"/cobros/{cedula}");
     }

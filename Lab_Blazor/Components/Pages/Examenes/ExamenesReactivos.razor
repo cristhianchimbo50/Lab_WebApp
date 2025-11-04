@@ -8,6 +8,8 @@
 @using Lab_Blazor.Services.Reactivos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IExamenesApiService ExamenesApi
 @inject IReactivosApiService ReactivosApi
 @inject IExamenReactivoAsociacionesApiService AsociacionesApi
@@ -322,10 +324,17 @@
     private string criterioBusquedaReactivo = "nombre";
 
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !isRendered)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
@@ -357,12 +366,16 @@
 
     private async Task SeleccionarExamenPorId(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         examenSeleccionado = await ExamenesApi.GetExamenPorIdAsync(id);
         reactivosAsociados = await AsociacionesApi.ObtenerPorExamenIdAsync(id) ?? new();
     }
 
     private async Task MostrarModalExamen()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         examenesEncontrados = new();
         valorBusquedaExamen = "";
         mostrarModalExamen = true;
@@ -371,12 +384,16 @@
 
     private async Task CerrarModalExamen()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task BuscarExamenes()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!todosLosExamenes.Any())
             todosLosExamenes = await ExamenesApi.GetExamenesAsync();
 
@@ -398,6 +415,8 @@
 
     private async Task SeleccionarExamen(ExamenDto examen)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         examenSeleccionado = examen;
         mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
@@ -407,6 +426,8 @@
 
     private async Task MostrarModalReactivo()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         reactivosEncontrados = new();
         valorBusquedaReactivo = "";
         mostrarModalReactivo = true;
@@ -415,12 +436,16 @@
 
     private async Task CerrarModalReactivo()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostrarModalReactivo = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task BuscarReactivos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!todosLosReactivos.Any())
             todosLosReactivos = await ReactivosApi.GetReactivosAsync();
 
@@ -443,6 +468,8 @@
 
     private async Task SeleccionarReactivo(ReactivoDto reactivo)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
         {
             await JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
@@ -466,11 +493,14 @@
 
     private async Task GuardarAsociaciones()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (examenSeleccionado == null)
         {
             await JS.InvokeVoidAsync("alert", "Debe seleccionar un examen.");
             return;
         }
+
         var exito = await AsociacionesApi.GuardarPorExamenAsync(examenSeleccionado.IdExamen, reactivosAsociados);
         if (exito)
             Navigation.NavigateTo("/asociaciones-reactivos", true);

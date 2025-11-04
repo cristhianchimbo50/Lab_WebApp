@@ -1,6 +1,9 @@
 ﻿@page "/examenes-composicion/{IdExamenPadre:int?}"
+@inject SesionVerificacionService SesionService
+
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
@@ -188,12 +191,16 @@
 
     private async Task CargarComposiciones()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (IdExamenPadre.HasValue)
             Composiciones = await ExamenComposicionApiService.GetComposicionesPorExamenPadreAsync(IdExamenPadre.Value);
     }
 
     private async Task CargarExamenesDisponibles()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var todos = await ExamenesApiService.GetExamenesAsync();
         ExamenesDisponibles = todos
             .Where(x => x.IdExamen != IdExamenPadre && !Composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
@@ -203,6 +210,8 @@
 
     private async Task AgregarComposicion()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (!IdExamenHijoSeleccionado.HasValue)
         {
             await JS.InvokeVoidAsync("alert", "Seleccione un examen hijo.");
@@ -231,6 +240,8 @@
 
     private async Task EliminarComposicion(ExamenComposicionDto composicion)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var conf = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
         if (!conf) return;
 

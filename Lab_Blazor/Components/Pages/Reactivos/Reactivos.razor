@@ -6,9 +6,12 @@
 @using Lab_Blazor.Services.Reactivos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IReactivosApiService ReactivosApiService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
+
 
 <AuthorizeView>
     <Authorized Context="authState">
@@ -238,14 +241,25 @@
     private int TotalPaginas => (int)Math.Ceiling((ListaReactivos?.Count ?? 1) / (double)tamPagina);
     private IEnumerable<ReactivoDto> ReactivosPaginados => ListaReactivos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<ReactivoDto>();
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
+        {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             await BuscarReactivos();
+        }
     }
 
     private async Task BuscarReactivos()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var data = await ReactivosApiService.GetReactivosAsync();
         if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
             ListaReactivos = data;
@@ -264,6 +278,8 @@
 
     private async Task MostrarModalNuevo()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ReactivoActual = new ReactivoDto();
         modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
@@ -271,6 +287,8 @@
 
     private async Task CerrarModal()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         modalVisible = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
         mensaje = string.Empty;
@@ -278,6 +296,8 @@
 
     private async Task EditarReactivo(ReactivoDto reactivo)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         ReactivoActual = new()
         {
             IdReactivo = reactivo.IdReactivo,
@@ -293,6 +313,8 @@
 
     private async Task ValidarYGuardar()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         HttpResponseMessage result = ReactivoActual.IdReactivo == 0
             ? await ReactivosApiService.CrearReactivoAsync(ReactivoActual)
             : await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
@@ -305,11 +327,15 @@
             await BuscarReactivos();
         }
         else
+        {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar el reactivo.", "danger");
+        }
     }
 
     private async Task ConfirmarAnulacion(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?"))
         {
             var result = await ReactivosApiService.AnularReactivoAsync(id);
@@ -323,6 +349,8 @@
 
     private async Task ReactivarReactivo(ReactivoDto reactivo)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el reactivo {reactivo.NombreReactivo}?"))
         {
             reactivo.Anulado = false;
@@ -337,6 +365,8 @@
 
     private async Task LimpiarBusqueda()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         criterioBusqueda = "";
         valorBusqueda = "";
         ListaReactivos = null;

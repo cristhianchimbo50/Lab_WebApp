@@ -1,7 +1,10 @@
 ﻿@page "/usuarios"
+@using Lab_Blazor.Services.Usuarios
 @using Lab_Contracts.Usuarios
 @using Microsoft.AspNetCore.Components.Authorization
-@inject Lab_Blazor.Services.Usuarios.IUsuariosApiService UsuariosApi
+@inject IUsuariosApiService UsuariosApi
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
 
@@ -277,10 +280,17 @@
     string campoFiltro = "", valorFiltro = "";
     string usuarioActualCorreo = "";
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             var auth = await AuthProvider.GetAuthenticationStateAsync();
             usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
             StateHasChanged();
@@ -291,6 +301,8 @@
 
     async Task Buscar()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         mostroBusqueda = true;
         filtro = new();
         if (!string.IsNullOrWhiteSpace(campoFiltro) && !string.IsNullOrWhiteSpace(valorFiltro))
@@ -345,12 +357,19 @@
 
     async Task GuardarUsuario()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         cargando = true;
         try
         {
             if (esNuevo)
             {
-                var crearDto = new UsuarioCrearDto { NombreUsuario = usuarioActual.NombreUsuario, CorreoUsuario = usuarioActual.CorreoUsuario, Rol = usuarioActual.Rol };
+                var crearDto = new UsuarioCrearDto
+                {
+                    NombreUsuario = usuarioActual.NombreUsuario,
+                    CorreoUsuario = usuarioActual.CorreoUsuario,
+                    Rol = usuarioActual.Rol
+                };
                 await UsuariosApi.CrearUsuarioAsync(crearDto);
                 mensaje = "Usuario creado correctamente y credenciales enviadas.";
             }
@@ -359,6 +378,7 @@
                 await UsuariosApi.EditarUsuarioAsync(usuarioActual);
                 mensaje = "Usuario actualizado correctamente.";
             }
+
             tipoMensaje = "success";
             modalVisible = false;
             await Buscar();
@@ -377,14 +397,18 @@
 
     async Task CambiarEstado(UsuarioListadoDto usuario)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         if (usuario.CorreoUsuario == usuarioActualCorreo)
         {
             mensaje = "No puedes deshabilitar tu propio usuario.";
             tipoMensaje = "warning";
             return;
         }
+
         bool confirmar = await JS.InvokeAsync<bool>("confirm", usuario.Activo ? "¿Deseas deshabilitar este usuario?" : "¿Deseas habilitar este usuario?");
         if (!confirmar) return;
+
         try
         {
             await UsuariosApi.CambiarEstadoAsync(usuario.IdUsuario, !usuario.Activo);
@@ -401,8 +425,11 @@
 
     async Task ReenviarCredenciales(int idUsuario)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Deseas reenviar una nueva contraseña temporal?");
         if (!confirmar) return;
+
         await UsuariosApi.ReenviarCredencialesTemporalesAsync(idUsuario);
         mensaje = "Se envió una nueva contraseña temporal al correo.";
         tipoMensaje = "info";
@@ -411,6 +438,8 @@
 
     async Task AbrirModalDetalle(int idUsuario)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         detalleUsuario = await UsuariosApi.GetUsuarioPorIdAsync(idUsuario);
         modalDetalleVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");

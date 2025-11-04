@@ -1,6 +1,8 @@
 ﻿@page "/convenios"
+@inject SesionVerificacionService SesionService
 @rendermode InteractiveServer
 
+@using Lab_Blazor.Services.Auth
 @using Lab_Contracts.Convenios
 @using Lab_Blazor.Services.Convenios
 @using Microsoft.AspNetCore.Components.Authorization
@@ -275,10 +277,17 @@
     private int TotalPages => (int)Math.Ceiling(convenios.Count / (double)PageSize);
     private IEnumerable<ConvenioDto> PaginatedConvenios => convenios.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
 
+    private bool _sesionVerificada = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_sesionVerificada)
         {
+            _sesionVerificada = true;
+
+            if (!await SesionService.VerificarOSalirAsync())
+                return;
+
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
@@ -296,6 +305,8 @@
 
     private async Task FiltrarConvenios()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         var todos = await ConveniosApi.ObtenerConveniosAsync();
         var filtrados = todos.AsEnumerable();
 
@@ -334,12 +345,15 @@
 
     private async Task VerDetalle(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         convenioDetalle = await ConveniosApi.ObtenerDetalleAsync(id);
         mostrarModal = convenioDetalle != null;
 
         await JS.InvokeVoidAsync("marcarModalAbierto");
         StateHasChanged();
     }
+
     private async Task LimpiarBusqueda()
     {
         criterioBusqueda = "";
@@ -355,6 +369,8 @@
 
     private async Task AnularConvenio(int id)
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este convenio?");
         if (!confirmar) return;
 

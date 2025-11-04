@@ -4,7 +4,8 @@
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthProvider
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
-
+@using Lab_Blazor.Services.Auth
+@inject SesionVerificacionService SesionService
 @using Lab_Contracts.Ajustes.Perfil
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
@@ -142,6 +143,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
         try
         {
             var response = await PerfilApi.ObtenerPerfilAsync();
