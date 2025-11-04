@@ -9,5 +9,8 @@ namespace Lab_Blazor.Services.Auth
         Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct = default);
         Task<bool> RegisterAsync(RegisterRequestDto dto, CancellationToken ct = default);
         Task<bool> ActivateAccountAsync(ActivateAccountDto dto, CancellationToken ct = default);
+        Task<bool> VerificarSesionAsync(CancellationToken ct = default);
+        Task<string?> ObtenerTokenAsync();
+        Task<LoginResponseDto?> ObtenerUsuarioAsync();
     }
 }

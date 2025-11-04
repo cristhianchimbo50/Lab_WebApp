@@ -2,13 +2,14 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.JSInterop;
 
 namespace Lab_Blazor.Services.Pacientes
 {
     public class PacientesApiService : BaseApiService, IPacientesApiService
     {
-        public PacientesApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
+        public PacientesApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<List<PacienteDto>> GetPacientesAsync()
         {

@@ -2,6 +2,7 @@
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Lab_APIRest.Controllers.Auth
 {
@@ -18,6 +19,7 @@ namespace Lab_APIRest.Controllers.Auth
             _logger = logger;
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto dto, CancellationToken ct)
         {
@@ -91,6 +93,26 @@ namespace Lab_APIRest.Controllers.Auth
             {
                 _logger.LogError(ex, "Error al cambiar la contraseña.");
                 return StatusCode(500, new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Error interno del servidor." });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("verificar-sesion")]
+        public IActionResult VerificarSesion()
+        {
+            try
+            {
+                return Ok(new
+                {
+                    Activa = true,
+                    Usuario = User.Identity?.Name,
+                    Rol = User.FindFirst(ClaimTypes.Role)?.Value,
+                    Mensaje = "Sesión válida."
+                });
+            }
+            catch
+            {
+                return Unauthorized(new { Activa = false, Mensaje = "Sesión inválida o expirada." });
             }
         }
     }

@@ -1,13 +1,14 @@
 ﻿using Lab_Contracts.Medicos;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Medicos
 {
     public class MedicosApiService : BaseApiService, IMedicosApiService
     {
-        public MedicosApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
+        public MedicosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<List<MedicoDto>> GetMedicosAsync()
         {

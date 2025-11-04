@@ -11,8 +11,6 @@ using Lab_Blazor.Services.Reactivos;
 using Lab_Blazor.Services.Resultados;
 using Lab_Blazor.Services.Usuarios;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +22,8 @@ builder.Services.AddHttpClient("Api", client =>
 builder.Services.AddAuthorizationCore();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<IAuthApiService, AuthApiService>();
+
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 
@@ -43,12 +41,6 @@ builder.Services.AddScoped<IMovimientosApiService, MovimientosApiService>();
 builder.Services.AddScoped<IPerfilApiService, PerfilApiService>();
 builder.Services.AddScoped<IUsuariosApiService, UsuariosApiService>();
 builder.Services.AddScoped<IRecuperacionApiService, RecuperacionApiService>();
-
-
-
-
-
-
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

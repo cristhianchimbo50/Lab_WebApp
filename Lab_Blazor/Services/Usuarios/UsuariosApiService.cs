@@ -1,14 +1,14 @@
 ﻿using Lab_Contracts.Usuarios;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Usuarios
 {
     public class UsuariosApiService : BaseApiService, IUsuariosApiService
     {
-        public UsuariosApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
-
+        public UsuariosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
         public async Task<List<UsuarioListadoDto>> GetUsuariosAsync(UsuarioFiltroDto filtro)
         {
             if (!await SetAuthHeaderAsync())

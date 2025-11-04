@@ -3,6 +3,7 @@
 @using System.Security.Claims
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JS
 
 <AuthorizeView>
     <Authorized Context="authState">
@@ -227,7 +228,7 @@
                         <small class="text-muted">@GetUserRol(user)</small>
                         <small class="text-muted">@GetUserEmail(user)</small>
                     </div>
-                    <button class="btn sb-logout" @onclick="Logout">
+                    <button class="btn sb-logout" @onclick="Logout" title="Cerrar sesión">
                         <i class="bi bi-box-arrow-right"></i>
                     </button>
                 </div>
@@ -281,9 +282,13 @@
 @code {
     private async Task Logout()
     {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "jwt");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "usuario");
+
         if (AuthProvider is CustomAuthenticationStateProvider customAuth)
             await customAuth.SignOutAsync();
-        Navigation.NavigateTo("/login", replace: true);
+
+        Navigation.NavigateTo("/login", forceLoad: true);
     }
 
     private string GetUserName(ClaimsPrincipal user) => user?.Identity?.Name ?? "Usuario";

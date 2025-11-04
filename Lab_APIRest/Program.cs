@@ -1,4 +1,4 @@
-using Lab_APIRest.Infrastructure.EF;
+﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_APIRest.Services.Auth;
 using Lab_APIRest.Services.Convenios;
@@ -21,9 +21,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-
 var builder = WebApplication.CreateBuilder(args);
-
 
 builder.Services.AddDbContext<LabDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("LabDb")));
@@ -56,18 +54,18 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-
         opt.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<ServerSessionKey>();
+builder.Services.AddSingleton<TokenService>();
 
-builder.Services.AddSingleton<Lab_APIRest.Infrastructure.Services.TokenService>();
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<IMedicoService, MedicoService>();
 builder.Services.AddScoped<IExamenService, ExamenService>();
@@ -81,15 +79,16 @@ builder.Services.AddScoped<PdfTicketService>();
 builder.Services.AddScoped<PdfResultadoService>();
 builder.Services.AddScoped<IConvenioService, ConvenioService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
-builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IRecuperacionService, RecuperacionService>();
 
-
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression();
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -112,13 +111,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = ClaimTypes.Role
         };
 
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var serverKey = context.HttpContext.RequestServices
+                    .GetRequiredService<ServerSessionKey>().CurrentKey;
+
+                var claimKey = context.Principal?.FindFirst("server_key")?.Value;
+
+                if (claimKey != serverKey)
+                {
+                    context.Fail("Sesión inválida: el servidor se reinició.");
+                }
+
+                return Task.CompletedTask;
+            }
+        };
 
         options.RequireHttpsMetadata = true;
         options.SaveToken = false;
     });
-
-builder.Services.AddMemoryCache();
-builder.Services.AddResponseCompression();
 
 var app = builder.Build();
 
@@ -129,7 +142,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseResponseCompression();
-
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

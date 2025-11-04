@@ -1,13 +1,14 @@
 ﻿using Lab_Contracts.Ajustes.Perfil;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Perfil
 {
     public class PerfilApiService : BaseApiService, IPerfilApiService
     {
-        public PerfilApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
+        public PerfilApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<PerfilResponseDto?> ObtenerPerfilAsync()
         {

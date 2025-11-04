@@ -1,5 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @using Lab_Blazor.Components.Layout
+@using Lab_Blazor.Services.Auth
+@inject NavigationManager Navigation
+@inject IAuthApiService AuthApi
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <div class="app-shell">
     <Sidebar />
@@ -11,14 +15,11 @@
         </button>
     </div>
 
-
     <main class="content-with-sidebar">
         @Body
     </main>
 
     <div class="toast-container position-fixed bottom-0 end-0 m-3" id="toastContainer"></div>
-
-
 </div>
 
 <HeadContent>
@@ -28,3 +29,34 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </HeadContent>
+
+@code {
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                var sigueActiva = await AuthApi.VerificarSesionAsync();
+                if (!sigueActiva)
+                {
+                    await AuthStateProvider.SignOutAsync();
+                    Navigation.NavigateTo("/login", forceLoad: true);
+                }
+            }
+            catch
+            {
+            }
+        },
+        null,
+        TimeSpan.FromMinutes(10),
+        TimeSpan.FromMinutes(10)); 
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

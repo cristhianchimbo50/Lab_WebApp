@@ -10,10 +10,12 @@ namespace Lab_APIRest.Infrastructure.Services
     public class TokenService
     {
         private readonly IConfiguration _config;
+        private readonly ServerSessionKey _serverSessionKey;
 
-        public TokenService(IConfiguration config)
+        public TokenService(IConfiguration config, ServerSessionKey serverSessionKey)
         {
             _config = config;
+            _serverSessionKey = serverSessionKey;
         }
 
         public (string token, DateTime expiresAtUtc) CreateToken(
@@ -31,7 +33,9 @@ namespace Lab_APIRest.Infrastructure.Services
                 new Claim(JwtRegisteredClaimNames.Email, correoUsuario),
                 new Claim(ClaimTypes.Name, nombre ?? ""),
                 new Claim(ClaimTypes.Role, rol ?? ""),
-                new Claim("temp_pwd", esContraseñaTemporal ? "1" : "0")
+                new Claim("temp_pwd", esContraseñaTemporal ? "1" : "0"),
+
+                new Claim("server_key", _serverSessionKey.CurrentKey)
             };
 
             if (rol == "paciente" && idPaciente.HasValue)
@@ -41,7 +45,7 @@ namespace Lab_APIRest.Infrastructure.Services
                 Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var expires = DateTime.UtcNow.AddHours(4);
+            var expires = DateTime.UtcNow.AddHours(1);
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],

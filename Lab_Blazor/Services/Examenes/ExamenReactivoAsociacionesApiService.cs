@@ -1,13 +1,14 @@
 ﻿using Lab_Contracts.Examenes;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Examenes
 {
     public class ExamenReactivoAsociacionesApiService : BaseApiService, IExamenReactivoAsociacionesApiService
     {
-        public ExamenReactivoAsociacionesApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
+        public ExamenReactivoAsociacionesApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<List<AsociacionReactivoDto>> ObtenerTodasAsync()
         {

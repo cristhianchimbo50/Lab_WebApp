@@ -1,17 +1,16 @@
 ﻿using Lab_Contracts.Auth;
 using Lab_Contracts.Shared;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Auth
 {
-    public class RecuperacionApiService : IRecuperacionApiService
+    public class RecuperacionApiService : BaseApiService, IRecuperacionApiService
     {
-        private readonly HttpClient _http;
 
-        public RecuperacionApiService(IHttpClientFactory factory)
-        {
-            _http = factory.CreateClient("Api");
-        }
+        public RecuperacionApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto dto)
         {

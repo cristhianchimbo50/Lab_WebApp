@@ -1,13 +1,14 @@
 using Lab_Contracts.Resultados;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace Lab_Blazor.Services.Resultados
 {
     public class ResultadosApiService : BaseApiService, IResultadosApiService
     {
-        public ResultadosApiService(IHttpClientFactory factory, ProtectedSessionStorage session)
-            : base(factory, session) { }
+        public ResultadosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<List<ResultadoListadoDto>> GetResultadosAsync(ResultadoFiltroDto filtro)
         {
