@@ -6,8 +6,8 @@ namespace Lab_Contracts.Pacientes
     {
         public int IdPaciente { get; set; }
 
-        [Required(ErrorMessage = "La cédula es obligatoria")]
-        [StringLength(20, ErrorMessage = "La cédula no puede superar 20 caracteres")]
+        [Required(ErrorMessage = "La cedula es obligatoria")]
+        [StringLength(20, ErrorMessage = "La cedula no puede superar 20 caracteres")]
         public string CedulaPaciente { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
@@ -17,16 +17,16 @@ namespace Lab_Contracts.Pacientes
         [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
         public DateTime FechaNacPaciente { get; set; }
 
-        [Range(0, 130, ErrorMessage = "La edad no es válida")]
+        [Range(0, 130, ErrorMessage = "La edad no es valida")]
         public int EdadPaciente { get; set; }
 
-        [StringLength(150, ErrorMessage = "La dirección es muy larga")]
+        [StringLength(150, ErrorMessage = "La direccoin es muy larga")]
         public string DireccionPaciente { get; set; } = string.Empty;
 
-        [EmailAddress(ErrorMessage = "Correo electrónico no válido")]
+        [EmailAddress(ErrorMessage = "Correo no valido")]
         public string CorreoElectronicoPaciente { get; set; } = string.Empty;
 
-        [StringLength(30, ErrorMessage = "El teléfono es muy largo")]
+        [StringLength(30, ErrorMessage = "El telefono es muy largo")]
         public string TelefonoPaciente { get; set; } = string.Empty;
 
         public DateTime? FechaRegistro { get; set; }
