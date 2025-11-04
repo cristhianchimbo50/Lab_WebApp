@@ -79,7 +79,7 @@ namespace Lab_APIRest.Services.Auth
 
             var usuario = registro.Usuario;
             usuario.clave_usuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
-            usuario.es_contraseña_temporal = false;
+            usuario.es_contrasenia_temporal = false;
             usuario.fecha_expira_temporal = null;
 
             registro.usado = true;

@@ -406,7 +406,7 @@ public partial class LabDbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
 
-            entity.Property(e => e.es_contraseña_temporal)
+            entity.Property(e => e.es_contrasenia_temporal)
                 .HasDefaultValue(true);
 
             entity.Property(e => e.activo)

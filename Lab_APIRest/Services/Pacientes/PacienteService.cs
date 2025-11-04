@@ -36,7 +36,7 @@ namespace Lab_APIRest.Services.Pacientes
                 FechaRegistro = p.fecha_registro,
                 Anulado = p.anulado ?? false,
                 IdUsuario = p.id_usuario,
-                EsContraseñaTemporal = p.id_usuarioNavigation?.es_contraseña_temporal
+                EsContraseniaTemporal = p.id_usuarioNavigation?.es_contrasenia_temporal
             }).ToList();
         }
 
@@ -59,7 +59,7 @@ namespace Lab_APIRest.Services.Pacientes
                 FechaRegistro = p.fecha_registro,
                 Anulado = p.anulado ?? false,
                 IdUsuario = p.id_usuario,
-                EsContraseñaTemporal = p.id_usuarioNavigation?.es_contraseña_temporal
+                EsContraseniaTemporal = p.id_usuarioNavigation?.es_contrasenia_temporal
             };
         }
 
@@ -105,9 +105,9 @@ namespace Lab_APIRest.Services.Pacientes
             if (existePaciente)
                 return (false, "Ya existe un paciente con la misma cédula o correo.", null);
 
-            string contraseñaTemporal = GenerarContraseñaTemporal();
+            string contraseniaTemporal = GenerarContraseniaTemporal();
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
-            string hashClave = hasher.HashPassword(null!, contraseñaTemporal);
+            string hashClave = hasher.HashPassword(null!, contraseniaTemporal);
 
             var usuario = new usuario
             {
@@ -115,7 +115,7 @@ namespace Lab_APIRest.Services.Pacientes
                 clave_usuario = hashClave,
                 nombre = dto.NombrePaciente,
                 rol = "paciente",
-                es_contraseña_temporal = true,
+                es_contrasenia_temporal = true,
                 fecha_expira_temporal = DateTime.UtcNow.AddHours(48),
                 activo = true,
             };
@@ -143,7 +143,7 @@ namespace Lab_APIRest.Services.Pacientes
         <h2>Bienvenido al Laboratorio Clínico <strong>'La Inmaculada'</strong></h2>
         <p>Estimado(a) <b>{dto.NombrePaciente}</b>, su cuenta ha sido creada exitosamente.</p>
         <p><b>Usuario:</b> {dto.CorreoElectronicoPaciente}</p>
-        <p><b>Contraseña temporal:</b> {contraseñaTemporal}</p>
+        <p><b>Contraseña temporal:</b> {contraseniaTemporal}</p>
         <p>Por motivos de seguridad, cambie su contraseña al iniciar sesión.</p>";
 
             await _emailService.EnviarCorreoAsync(
@@ -155,7 +155,7 @@ namespace Lab_APIRest.Services.Pacientes
             
             dto.IdPaciente = paciente.id_paciente;
             dto.EdadPaciente = CalcularEdad(dto.FechaNacPaciente);
-            dto.ContraseñaTemporal = contraseñaTemporal;
+            dto.ContraseniaTemporal = contraseniaTemporal;
 
             return (true, "Paciente registrado correctamente.", dto);
         }
@@ -197,11 +197,11 @@ namespace Lab_APIRest.Services.Pacientes
             if (usuario == null)
                 return (false, "Usuario asociado no encontrado.", null);
 
-            var nuevaTemp = GenerarContraseñaTemporal();
+            var nuevaTemp = GenerarContraseniaTemporal();
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
 
             usuario.clave_usuario = hasher.HashPassword(null!, nuevaTemp);
-            usuario.es_contraseña_temporal = true;
+            usuario.es_contrasenia_temporal = true;
             usuario.fecha_expira_temporal = DateTime.UtcNow.AddHours(48);
 
             await _context.SaveChangesAsync();
@@ -242,7 +242,7 @@ namespace Lab_APIRest.Services.Pacientes
             return ultimoDigito == digitoCalculado;
         }
 
-        private string GenerarContraseñaTemporal()
+        private string GenerarContraseniaTemporal()
         {
             const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789";
             var random = new Random();

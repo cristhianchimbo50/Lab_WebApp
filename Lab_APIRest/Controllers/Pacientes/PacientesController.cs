@@ -59,7 +59,7 @@ namespace Lab_APIRest.Controllers
                     resultado.Paciente!.IdPaciente,
                     resultado.Paciente!.NombrePaciente,
                     resultado.Paciente!.CorreoElectronicoPaciente,
-                    resultado.Paciente!.ContraseñaTemporal
+                    resultado.Paciente!.ContraseniaTemporal
                 }
             );
         }

@@ -155,8 +155,8 @@
                                             </span>
                                         </td>
                                         <td data-label="Contraseña">
-                                            <span class="badge bg-@((bool)paciente.EsContraseñaTemporal ? "warning text-dark" : "info")">
-                                                @((bool)paciente.EsContraseñaTemporal ? "Pendiente" : "Cambiada")
+                                            <span class="badge bg-@((bool)paciente.EsContraseniaTemporal ? "warning text-dark" : "info")">
+                                                @((bool)paciente.EsContraseniaTemporal ? "Pendiente" : "Cambiada")
                                             </span>
                                         </td>
                                         <td data-label="Acciones">
@@ -238,8 +238,8 @@
                                         <div class="col-md-6">
                                             <label class="form-label">Estado de Contraseña</label>
                                             <div class="input-group">
-                                                <input class="form-control" readonly value="@(PacienteActual.EsContraseñaTemporal == true ? "Pendiente de cambio" : "Cambiada")" />
-                                                @if (PacienteActual.EsContraseñaTemporal == true)
+                                                <input class="form-control" readonly value="@(PacienteActual.EsContraseniaTemporal == true ? "Pendiente de cambio" : "Cambiada")" />
+                                                @if (PacienteActual.EsContraseniaTemporal == true)
                                                 {
                                                     <button type="button" class="btn btn-outline-warning" @onclick="ReenviarTemporal">
                                                         <i class="bi bi-envelope-arrow-up me-1"></i>Reenviar temporal

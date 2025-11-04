@@ -78,8 +78,8 @@ namespace Lab_Blazor.Services.Pacientes
                         dto.NombrePaciente = nombre.GetString() ?? "";
                     if (contenido.TryGetProperty("correoElectronicoPaciente", out var correo))
                         dto.CorreoElectronicoPaciente = correo.GetString() ?? "";
-                    if (contenido.TryGetProperty("contraseñaTemporal", out var tempPass))
-                        dto.ContraseñaTemporal = tempPass.GetString();
+                    if (contenido.TryGetProperty("contraseniaTemporal", out var tempPass))
+                        dto.ContraseniaTemporal = tempPass.GetString();
 
                     string mensaje = contenido.TryGetProperty("mensaje", out var msg)
                         ? msg.GetString() ?? "Paciente registrado correctamente."

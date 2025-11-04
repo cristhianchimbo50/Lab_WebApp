@@ -66,7 +66,7 @@ namespace Lab_APIRest.Services.Auth
 
             _cache.Remove(cacheKey);
 
-            if (usuario.es_contraseña_temporal == true)
+            if (usuario.es_contrasenia_temporal == true)
             {
                 if (usuario.fecha_expira_temporal.HasValue && usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
                 {
@@ -76,7 +76,7 @@ namespace Lab_APIRest.Services.Auth
                         CorreoUsuario = usuario.correo_usuario,
                         Nombre = usuario.nombre,
                         Rol = usuario.rol,
-                        EsContraseñaTemporal = true,
+                        EsContraseniaTemporal = true,
                         AccessToken = null,
                         ExpiresAtUtc = usuario.fecha_expira_temporal.Value,
                         Mensaje = "La contraseña temporal ha expirado. Solicite una nueva."
@@ -89,7 +89,7 @@ namespace Lab_APIRest.Services.Auth
                     CorreoUsuario = usuario.correo_usuario,
                     Nombre = usuario.nombre,
                     Rol = usuario.rol,
-                    EsContraseñaTemporal = true,
+                    EsContraseniaTemporal = true,
                     AccessToken = null,
                     ExpiresAtUtc = (DateTime)usuario.fecha_expira_temporal,
                     Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
@@ -136,7 +136,7 @@ namespace Lab_APIRest.Services.Auth
                 CorreoUsuario = usuario.correo_usuario,
                 Nombre = usuario.nombre,
                 Rol = usuario.rol,
-                EsContraseñaTemporal = false,
+                EsContraseniaTemporal = false,
                 AccessToken = token,
                 ExpiresAtUtc = exp,
                 Mensaje = "Inicio de sesión exitoso. La sesión expirará en 1 hora."
@@ -159,7 +159,7 @@ namespace Lab_APIRest.Services.Auth
             if (usuario == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            if (usuario.es_contraseña_temporal == true &&
+            if (usuario.es_contrasenia_temporal == true &&
                 usuario.fecha_expira_temporal.HasValue &&
                 usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
             {
@@ -172,7 +172,7 @@ namespace Lab_APIRest.Services.Auth
 
             var nuevaHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
             usuario.clave_usuario = nuevaHash;
-            usuario.es_contraseña_temporal = false;
+            usuario.es_contrasenia_temporal = false;
             usuario.fecha_expira_temporal = null;
 
             await _db.SaveChangesAsync(ct);

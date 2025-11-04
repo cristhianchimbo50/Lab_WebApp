@@ -30,7 +30,7 @@ namespace Lab_APIRest.Controllers.Auth
                 if (result == null)
                     return Unauthorized(new { Mensaje = "Credenciales inválidas o la cuenta está bloqueada." });
 
-                if (result.EsContraseñaTemporal && string.IsNullOrEmpty(result.AccessToken))
+                if (result.EsContraseniaTemporal && string.IsNullOrEmpty(result.AccessToken))
                 {
                     if (result.ExpiresAtUtc != null && result.ExpiresAtUtc < DateTime.UtcNow)
                         return BadRequest(new
@@ -45,7 +45,7 @@ namespace Lab_APIRest.Controllers.Auth
                         result.CorreoUsuario,
                         result.Nombre,
                         result.Rol,
-                        result.EsContraseñaTemporal,
+                        result.EsContraseniaTemporal,
                         result.ExpiresAtUtc
                     });
                 }

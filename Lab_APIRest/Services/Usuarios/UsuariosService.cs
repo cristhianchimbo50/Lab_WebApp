@@ -42,7 +42,7 @@ namespace Lab_APIRest.Services.Usuarios
                     CorreoUsuario = x.correo_usuario,
                     Rol = x.rol,
                     Activo = x.activo,
-                    EsContraseniaTemporal = x.es_contraseña_temporal,
+                    EsContraseniaTemporal = x.es_contrasenia_temporal,
                     FechaCreacion = x.fecha_creacion,
                     UltimoAcceso = x.ultimo_acceso,
                     FechaExpiraTemporal = x.fecha_expira_temporal
@@ -61,7 +61,7 @@ namespace Lab_APIRest.Services.Usuarios
                 CorreoUsuario = x.correo_usuario,
                 Rol = x.rol,
                 Activo = x.activo,
-                EsContraseniaTemporal = x.es_contraseña_temporal,
+                EsContraseniaTemporal = x.es_contrasenia_temporal,
                 FechaCreacion = x.fecha_creacion,
                 UltimoAcceso = x.ultimo_acceso,
                 FechaExpiraTemporal = x.fecha_expira_temporal
@@ -70,14 +70,14 @@ namespace Lab_APIRest.Services.Usuarios
 
         public async Task<int> CrearUsuarioAsync(UsuarioCrearDto dto, CancellationToken ct = default)
         {
-            var nuevaTemporal = GenerarContraseñaTemporal();
+            var nuevaTemporal = GenerarContraseniaTemporal();
             var usuario = new usuario
             {
                 nombre = dto.NombreUsuario,
                 correo_usuario = dto.CorreoUsuario,
                 rol = dto.Rol,
                 activo = true,
-                es_contraseña_temporal = true,
+                es_contrasenia_temporal = true,
                 fecha_creacion = DateTime.UtcNow,
                 clave_usuario = _hasher.HashPassword(null!, nuevaTemporal),
                 fecha_expira_temporal = DateTime.UtcNow.AddDays(3)
@@ -108,7 +108,7 @@ namespace Lab_APIRest.Services.Usuarios
             usuario.correo_usuario = dto.CorreoUsuario;
             usuario.rol = dto.Rol;
             usuario.activo = dto.Activo;
-            usuario.es_contraseña_temporal = dto.EsContraseniaTemporal;
+            usuario.es_contrasenia_temporal = dto.EsContraseniaTemporal;
 
             await _db.SaveChangesAsync(ct);
             return true;
@@ -133,9 +133,9 @@ namespace Lab_APIRest.Services.Usuarios
         {
             var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol != "paciente", ct);
             if (usuario == null) return null;
-            var nuevaTemp = GenerarContraseñaTemporal();
+            var nuevaTemp = GenerarContraseniaTemporal();
             usuario.clave_usuario = _hasher.HashPassword(null!, nuevaTemp);
-            usuario.es_contraseña_temporal = true;
+            usuario.es_contrasenia_temporal = true;
             usuario.fecha_expira_temporal = DateTime.UtcNow.AddDays(3);
             await _db.SaveChangesAsync(ct);
 
@@ -156,7 +156,7 @@ namespace Lab_APIRest.Services.Usuarios
             };
         }
 
-        private string GenerarContraseñaTemporal()
+        private string GenerarContraseniaTemporal()
         {
             return Guid.NewGuid().ToString("N")[..10];
         }

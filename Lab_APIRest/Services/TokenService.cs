@@ -23,7 +23,7 @@ namespace Lab_APIRest.Infrastructure.Services
             string correoUsuario,
             string nombre,
             string rol,
-            bool esContraseñaTemporal,
+            bool esContraseniaTemporal,
             int? idPaciente = null)
         {
             var claimsList = new List<Claim>
@@ -33,7 +33,7 @@ namespace Lab_APIRest.Infrastructure.Services
                 new Claim(JwtRegisteredClaimNames.Email, correoUsuario),
                 new Claim(ClaimTypes.Name, nombre ?? ""),
                 new Claim(ClaimTypes.Role, rol ?? ""),
-                new Claim("temp_pwd", esContraseñaTemporal ? "1" : "0"),
+                new Claim("temp_pwd", esContraseniaTemporal ? "1" : "0"),
 
                 new Claim("server_key", _serverSessionKey.CurrentKey)
             };

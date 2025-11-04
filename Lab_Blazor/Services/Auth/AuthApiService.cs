@@ -25,7 +25,7 @@ namespace Lab_Blazor.Services.Auth
                 var loginResp = await resp.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
                 if (loginResp is not null)
                 {
-                    if (loginResp.EsContraseñaTemporal && string.IsNullOrEmpty(loginResp.AccessToken))
+                    if (loginResp.EsContraseniaTemporal && string.IsNullOrEmpty(loginResp.AccessToken))
                         return (true, "Debe cambiar su contraseña antes de continuar.", loginResp, true);
 
                     await _js.InvokeVoidAsync("localStorage.setItem", "jwt", loginResp.AccessToken);

@@ -35,8 +35,8 @@ namespace Lab_Contracts.Pacientes
 
         public int? IdUsuario { get; set; }
 
-        public string? ContraseñaTemporal { get; set; }
+        public string? ContraseniaTemporal { get; set; }
 
-        public bool? EsContraseñaTemporal { get; set; }
+        public bool? EsContraseniaTemporal { get; set; }
     }
 }
