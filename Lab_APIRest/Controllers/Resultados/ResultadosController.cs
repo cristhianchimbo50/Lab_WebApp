@@ -10,128 +10,128 @@ namespace Lab_APIRest.Controllers.Resultados
     [Route("api/[controller]")]
     public class ResultadosController : ControllerBase
     {
-        private readonly IResultadoService _resultadoService;
-        private readonly ILogger<ResultadosController> _logger;
+        private readonly IResultadoService ResultadoService;
+        private readonly ILogger<ResultadosController> Logger;
 
-        public ResultadosController(IResultadoService resultadoService, ILogger<ResultadosController> logger)
+        public ResultadosController(IResultadoService ResultadoService, ILogger<ResultadosController> Logger)
         {
-            _resultadoService = resultadoService;
-            _logger = logger;
+            this.ResultadoService = ResultadoService;
+            this.Logger = Logger;
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet]
         public async Task<ActionResult<List<ResultadoListadoDto>>> Listar(
-            [FromQuery] string? numeroResultado,
-            [FromQuery] string? numeroOrden,
-            [FromQuery] string? cedula,
-            [FromQuery] string? nombre,
-            [FromQuery] DateTime? fechaDesde,
-            [FromQuery] DateTime? fechaHasta,
-            [FromQuery] bool? anulado)
+            [FromQuery] string? NumeroResultado,
+            [FromQuery] string? NumeroOrden,
+            [FromQuery] string? Cedula,
+            [FromQuery] string? Nombre,
+            [FromQuery] DateTime? FechaDesde,
+            [FromQuery] DateTime? FechaHasta,
+            [FromQuery] bool? Anulado)
         {
             try
             {
-                var filtro = new ResultadoFiltroDto
+                var Filtro = new ResultadoFiltroDto
                 {
-                    NumeroResultado = numeroResultado,
-                    NumeroOrden = numeroOrden,
-                    Cedula = cedula,
-                    Nombre = nombre,
-                    FechaDesde = fechaDesde,
-                    FechaHasta = fechaHasta,
-                    Anulado = anulado
+                    NumeroResultado = NumeroResultado,
+                    NumeroOrden = NumeroOrden,
+                    Cedula = Cedula,
+                    Nombre = Nombre,
+                    FechaDesde = FechaDesde,
+                    FechaHasta = FechaHasta,
+                    Anulado = Anulado
                 };
 
-                var lista = await _resultadoService.ListarResultadosAsync(filtro);
-                return Ok(lista);
+                var Lista = await ResultadoService.ListarResultadosAsync(Filtro);
+                return Ok(Lista);
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error al listar resultados.");
+                Logger.LogError(Ex, "Error al listar resultados.");
                 return StatusCode(500, "Error interno al listar resultados.");
             }
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<ResultadoDetalleDto>> Obtener(int id)
+        public async Task<ActionResult<ResultadoDetalleDto>> Obtener(int Id)
         {
             try
             {
-                var detalle = await _resultadoService.ObtenerDetalleResultadoAsync(id);
-                return detalle == null
+                var Detalle = await ResultadoService.ObtenerDetalleResultadoAsync(Id);
+                return Detalle == null
                     ? NotFound("Resultado no encontrado.")
-                    : Ok(detalle);
+                    : Ok(Detalle);
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, $"Error al obtener resultado {id}.");
+                Logger.LogError(Ex, $"Error al obtener resultado {Id}.");
                 return StatusCode(500, "Error interno al obtener el resultado.");
             }
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
         [HttpGet("pdf-multiple")]
-        public async Task<IActionResult> PdfMultiple([FromQuery] List<int> ids)
+        public async Task<IActionResult> PdfMultiple([FromQuery] List<int> Ids)
         {
-            if (ids == null || !ids.Any())
+            if (Ids == null || !Ids.Any())
                 return BadRequest("Debe proporcionar al menos un ID de resultado.");
 
             try
             {
-                var rol = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-                var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
+                var Rol = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                var IdPacienteClaim = User.FindFirst("IdPaciente")?.Value;
 
-                if (rol == "paciente")
+                if (Rol == "paciente")
                 {
-                    if (string.IsNullOrEmpty(idPacienteClaim))
+                    if (string.IsNullOrEmpty(IdPacienteClaim))
                         return Forbid();
 
-                    var idPaciente = int.Parse(idPacienteClaim);
+                    var IdPaciente = int.Parse(IdPacienteClaim);
 
-                    var resultadosPaciente = await _resultadoService.ListarResultadosAsync(new ResultadoFiltroDto
+                    var ResultadosPaciente = await ResultadoService.ListarResultadosAsync(new ResultadoFiltroDto
                     {
                         Cedula = null,
                         Nombre = null
                     });
 
-                    var idsPropios = resultadosPaciente
-                        .Where(r => r.IdPaciente == idPaciente)
-                        .Select(r => r.IdResultado)
+                    var IdsPropios = ResultadosPaciente
+                        .Where(Resultado => Resultado.IdPaciente == IdPaciente)
+                        .Select(Resultado => Resultado.IdResultado)
                         .ToHashSet();
 
-                    if (ids.Any(id => !idsPropios.Contains(id)))
+                    if (Ids.Any(IdResultado => !IdsPropios.Contains(IdResultado)))
                         return Forbid("Intento de acceso a resultados de otro paciente.");
                 }
 
-                var pdfBytes = await _resultadoService.GenerarResultadosPdfAsync(ids);
-                if (pdfBytes == null)
+                var PdfBytes = await ResultadoService.GenerarResultadosPdfAsync(Ids);
+                if (PdfBytes == null)
                     return NotFound("No se encontraron resultados válidos.");
 
-                return File(pdfBytes, "application/pdf", $"Resultados_{DateTime.Now:yyyyMMddHHmmss}.pdf");
+                return File(PdfBytes, "application/pdf", $"Resultados_{DateTime.Now:yyyyMMddHHmmss}.pdf");
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error al generar PDF de resultados.");
+                Logger.LogError(Ex, "Error al generar PDF de resultados.");
                 return StatusCode(500, "Error interno al generar PDF.");
             }
         }
 
         [Authorize(Roles = "administrador,laboratorista")]
         [HttpPut("anular/{id:int}")]
-        public async Task<IActionResult> Anular(int id)
+        public async Task<IActionResult> Anular(int Id)
         {
             try
             {
-                var ok = await _resultadoService.AnularResultadoAsync(id);
-                return ok
+                var OkAnular = await ResultadoService.AnularResultadoAsync(Id);
+                return OkAnular
                     ? Ok(new { mensaje = "Resultado anulado correctamente." })
                     : NotFound("No se encontró el resultado o ya está anulado.");
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, $"Error al anular resultado {id}.");
+                Logger.LogError(Ex, $"Error al anular resultado {Id}.");
                 return StatusCode(500, "Error interno al anular el resultado.");
             }
         }
@@ -142,50 +142,47 @@ namespace Lab_APIRest.Controllers.Resultados
         {
             try
             {
-                var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
-                if (string.IsNullOrEmpty(idPacienteClaim))
+                var IdPacienteClaim = User.FindFirst("IdPaciente")?.Value;
+                if (string.IsNullOrEmpty(IdPacienteClaim))
                     return Forbid();
 
-                var idPaciente = int.Parse(idPacienteClaim);
+                var IdPaciente = int.Parse(IdPacienteClaim);
 
-                var lista = await _resultadoService.ListarResultadosAsync(new ResultadoFiltroDto());
-                var propios = lista.Where(r => r.IdPaciente == idPaciente).ToList();
+                var Lista = await ResultadoService.ListarResultadosAsync(new ResultadoFiltroDto());
+                var Propios = Lista.Where(Resultado => Resultado.IdPaciente == IdPaciente).ToList();
 
-                return Ok(propios);
+                return Ok(Propios);
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error al listar resultados del paciente.");
+                Logger.LogError(Ex, "Error al listar resultados del paciente.");
                 return StatusCode(500, "Error interno al listar resultados del paciente.");
             }
         }
 
         [Authorize(Roles = "paciente")]
         [HttpGet("mi-detalle/{id:int}")]
-        public async Task<ActionResult<ResultadoDetalleDto>> ObtenerDetallePaciente(int id)
+        public async Task<ActionResult<ResultadoDetalleDto>> ObtenerDetallePaciente(int Id)
         {
             try
             {
-                var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
-                if (string.IsNullOrEmpty(idPacienteClaim))
+                var IdPacienteClaim = User.FindFirst("IdPaciente")?.Value;
+                if (string.IsNullOrEmpty(IdPacienteClaim))
                     return Forbid();
 
-                var idPaciente = int.Parse(idPacienteClaim);
-                var detalle = await _resultadoService.ObtenerDetalleResultadoAsync(id);
+                var IdPaciente = int.Parse(IdPacienteClaim);
+                var Detalle = await ResultadoService.ObtenerDetalleResultadoAsync(Id);
 
-                if (detalle == null || detalle.IdPaciente != idPaciente)
+                if (Detalle == null || Detalle.IdPaciente != IdPaciente)
                     return Forbid("Intento de acceso a resultados de otro paciente.");
 
-                return Ok(detalle);
+                return Ok(Detalle);
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, $"Error al obtener detalle del resultado {id} para paciente.");
+                Logger.LogError(Ex, $"Error al obtener detalle del resultado {Id} para paciente.");
                 return StatusCode(500, "Error interno al obtener detalle del resultado.");
             }
         }
-
-
-
     }
 }

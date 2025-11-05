@@ -48,8 +48,11 @@
         }
         else
         {
-            <h3 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
-                <i class="bi bi-link-45deg fs-3 text-primary me-2"></i>Asociaciones Exámenes - Reactivos
+            <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
+                <span><i class="bi bi-link-45deg fs-3 text-primary me-2"></i>Asociaciones Exámenes - Reactivos</span>
+                <button class="btn btn-success shadow-sm" @onclick="IrAVinculoReactivos">
+                    <i class="bi bi-plus-circle me-1"></i>Vincular Reactivos
+                </button>
             </h3>
 
             <div class="card mb-3 shadow-sm border-0">
@@ -82,9 +85,7 @@
                     <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarBusqueda">
                         <i class="bi bi-eraser me-1"></i>Limpiar
                     </button>
-                    <button class="btn btn-success shadow-sm" @onclick="IrAVinculoReactivos">
-                        <i class="bi bi-plus-circle me-1"></i>Vincular Reactivos
-                    </button>
+
                 </div>
             </div>
         </div>

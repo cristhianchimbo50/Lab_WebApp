@@ -4,9 +4,9 @@ namespace Lab_APIRest.Services.Examenes
 {
     public interface IExamenComposicionService
     {
-        Task<List<ExamenComposicionDto>> GetComposicionesPorExamenPadreAsync(int idExamenPadre);
-        Task<List<ExamenComposicionDto>> GetComposicionesPorExamenHijoAsync(int idExamenHijo);
-        Task<bool> CrearComposicionAsync(ExamenComposicionDto dto);
-        Task<bool> EliminarComposicionAsync(int idExamenPadre, int idExamenHijo);
+        Task<List<ExamenComposicionDto>> ObtenerPorPadre(int IdExamenPadre);
+        Task<List<ExamenComposicionDto>> ObtenerPorHijo(int IdExamenHijo);
+        Task<bool> Crear(ExamenComposicionDto ComposicionDto);
+        Task<bool> Eliminar(int IdExamenPadre, int IdExamenHijo);
     }
 }

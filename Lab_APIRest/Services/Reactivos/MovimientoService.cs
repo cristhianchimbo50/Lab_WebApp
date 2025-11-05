@@ -6,78 +6,78 @@ namespace Lab_APIRest.Services.Reactivos
 {
     public class MovimientoService : IMovimientoService
     {
-        private readonly LabDbContext _context;
+        private readonly LabDbContext Contexto;
 
-        public MovimientoService(LabDbContext context)
+        public MovimientoService(LabDbContext Contexto)
         {
-            _context = context;
+            this.Contexto = Contexto;
         }
 
-        public async Task<List<MovimientoReactivoDto>> GetMovimientosAsync(MovimientoReactivoFiltroDto filtro)
+        public async Task<List<MovimientoReactivoDto>> ObtenerMovimientosAsync(MovimientoReactivoFiltroDto Filtro)
         {
-            var query = _context.movimiento_reactivos
-                .Include(m => m.id_reactivoNavigation)
-                .Include(m => m.id_detalle_resultadoNavigation)
-                    .ThenInclude(d => d.id_resultadoNavigation)
+            var Consulta = Contexto.movimiento_reactivos
+                .Include(Movimiento => Movimiento.id_reactivoNavigation)
+                .Include(Movimiento => Movimiento.id_detalle_resultadoNavigation)
+                    .ThenInclude(DetalleResultado => DetalleResultado.id_resultadoNavigation)
                 .AsQueryable();
 
             // FILTROS
-            if (!string.IsNullOrWhiteSpace(filtro.IdMovimientoReactivo))
+            if (!string.IsNullOrWhiteSpace(Filtro.IdMovimientoReactivo))
             {
-                if (int.TryParse(filtro.IdMovimientoReactivo, out int numMov))
-                    query = query.Where(m => m.id_movimiento_reactivo == numMov);
+                if (int.TryParse(Filtro.IdMovimientoReactivo, out int NumeroMovimiento))
+                    Consulta = Consulta.Where(Movimiento => Movimiento.id_movimiento_reactivo == NumeroMovimiento);
             }
 
-            if (!string.IsNullOrWhiteSpace(filtro.NombreReactivo))
+            if (!string.IsNullOrWhiteSpace(Filtro.NombreReactivo))
             {
-                query = query.Where(m => m.id_reactivoNavigation.nombre_reactivo
-                    .Contains(filtro.NombreReactivo));
+                Consulta = Consulta.Where(Movimiento => Movimiento.id_reactivoNavigation.nombre_reactivo
+                    .Contains(Filtro.NombreReactivo));
             }
 
-            if (!string.IsNullOrWhiteSpace(filtro.Observacion))
+            if (!string.IsNullOrWhiteSpace(Filtro.Observacion))
             {
-                query = query.Where(m => m.observacion.Contains(filtro.Observacion));
+                Consulta = Consulta.Where(Movimiento => Movimiento.observacion.Contains(Filtro.Observacion));
             }
 
-            if (filtro.FechaDesde.HasValue)
+            if (Filtro.FechaDesde.HasValue)
             {
-                query = query.Where(m => m.fecha_movimiento >= filtro.FechaDesde.Value);
+                Consulta = Consulta.Where(Movimiento => Movimiento.fecha_movimiento >= Filtro.FechaDesde.Value);
             }
 
-            if (filtro.FechaHasta.HasValue)
+            if (Filtro.FechaHasta.HasValue)
             {
-                query = query.Where(m => m.fecha_movimiento <= filtro.FechaHasta.Value);
+                Consulta = Consulta.Where(Movimiento => Movimiento.fecha_movimiento <= Filtro.FechaHasta.Value);
             }
 
-            if (!(filtro.IncluirIngresos && filtro.IncluirEgresos))
+            if (!(Filtro.IncluirIngresos && Filtro.IncluirEgresos))
             {
-                if (filtro.IncluirIngresos)
-                    query = query.Where(m => m.tipo_movimiento == "INGRESO");
-                else if (filtro.IncluirEgresos)
-                    query = query.Where(m => m.tipo_movimiento == "EGRESO");
+                if (Filtro.IncluirIngresos)
+                    Consulta = Consulta.Where(Movimiento => Movimiento.tipo_movimiento == "INGRESO");
+                else if (Filtro.IncluirEgresos)
+                    Consulta = Consulta.Where(Movimiento => Movimiento.tipo_movimiento == "EGRESO");
                 else
-                    query = query.Where(m => false);
+                    Consulta = Consulta.Where(_ => false);
             }
 
-            var movimientos = await query
-                .OrderByDescending(m => m.fecha_movimiento)
-                .Select(m => new MovimientoReactivoDto
+            var Movimientos = await Consulta
+                .OrderByDescending(Movimiento => Movimiento.fecha_movimiento)
+                .Select(Movimiento => new MovimientoReactivoDto
                 {
-                    IdMovimientoReactivo = m.id_movimiento_reactivo,
-                    IdReactivo = (int)m.id_reactivo,
-                    NombreReactivo = m.id_reactivoNavigation.nombre_reactivo,
-                    TipoMovimiento = m.tipo_movimiento,
-                    Cantidad = (decimal)m.cantidad,
-                    FechaMovimiento = m.fecha_movimiento,
-                    Observacion = m.observacion,
-                    IdDetalleResultado = m.id_detalle_resultado,
-                    NumeroResultado = m.id_detalle_resultadoNavigation != null
-                        ? m.id_detalle_resultadoNavigation.id_resultadoNavigation.numero_resultado
+                    IdMovimientoReactivo = Movimiento.id_movimiento_reactivo,
+                    IdReactivo = (int)Movimiento.id_reactivo,
+                    NombreReactivo = Movimiento.id_reactivoNavigation.nombre_reactivo,
+                    TipoMovimiento = Movimiento.tipo_movimiento,
+                    Cantidad = (decimal)Movimiento.cantidad,
+                    FechaMovimiento = Movimiento.fecha_movimiento,
+                    Observacion = Movimiento.observacion,
+                    IdDetalleResultado = Movimiento.id_detalle_resultado,
+                    NumeroResultado = Movimiento.id_detalle_resultadoNavigation != null
+                        ? Movimiento.id_detalle_resultadoNavigation.id_resultadoNavigation.numero_resultado
                         : null
                 })
                 .ToListAsync();
 
-            return movimientos;
+            return Movimientos;
         }
     }
 }

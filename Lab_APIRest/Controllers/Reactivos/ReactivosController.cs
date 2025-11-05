@@ -13,54 +13,54 @@ namespace Lab_APIRest.Controllers.Reactivos
     [Authorize(Roles = "administrador,laboratorista")]
     public class ReactivosController : ControllerBase
     {
-        private readonly IReactivoService _service;
-        private readonly ILogger<ReactivosController> _logger;
+        private readonly IReactivoService ReactivoService;
+        private readonly ILogger<ReactivosController> Logger;
 
-        public ReactivosController(IReactivoService service, ILogger<ReactivosController> logger)
+        public ReactivosController(IReactivoService ReactivoService, ILogger<ReactivosController> Logger)
         {
-            _service = service;
-            _logger = logger;
+            this.ReactivoService = ReactivoService;
+            this.Logger = Logger;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<ReactivoDto>>> ObtenerReactivos()
         {
-            var data = await _service.GetReactivosAsync();
-            return Ok(data);
+            var Reactivos = await ReactivoService.ObtenerReactivosAsync();
+            return Ok(Reactivos);
         }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<ReactivoDto>> ObtenerReactivoPorId(int id)
+        public async Task<ActionResult<ReactivoDto>> ObtenerReactivoPorId(int Id)
         {
-            var item = await _service.GetReactivoPorIdAsync(id);
-            if (item == null)
+            var ReactivoEncontrado = await ReactivoService.ObtenerReactivoPorIdAsync(Id);
+            if (ReactivoEncontrado == null)
                 return NotFound("Reactivo no encontrado.");
-            return Ok(item);
+            return Ok(ReactivoEncontrado);
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReactivoDto>> RegistrarReactivo([FromBody] ReactivoDto dto)
+        public async Task<ActionResult<ReactivoDto>> RegistrarReactivo([FromBody] ReactivoDto Reactivo)
         {
             try
             {
-                var creado = await _service.CrearReactivoAsync(dto);
-                return CreatedAtAction(nameof(ObtenerReactivoPorId), new { id = creado.IdReactivo }, creado);
+                var ReactivoCreado = await ReactivoService.CrearReactivoAsync(Reactivo);
+                return CreatedAtAction(nameof(ObtenerReactivoPorId), new { id = ReactivoCreado.IdReactivo }, ReactivoCreado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar reactivo.");
+                Logger.LogError(ex, "Error al registrar reactivo.");
                 return StatusCode(500, "Error interno al registrar el reactivo.");
             }
         }
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> EditarReactivo(int id, [FromBody] ReactivoDto dto)
+        public async Task<IActionResult> EditarReactivo(int Id, [FromBody] ReactivoDto Reactivo)
         {
-            if (id != dto.IdReactivo)
+            if (Id != Reactivo.IdReactivo)
                 return BadRequest("El identificador no coincide con el reactivo proporcionado.");
 
-            var ok = await _service.EditarReactivoAsync(id, dto);
-            if (!ok)
+            var Resultado = await ReactivoService.EditarReactivoAsync(Id, Reactivo);
+            if (!Resultado)
                 return NotFound("Reactivo no encontrado.");
 
             return NoContent();
@@ -68,61 +68,61 @@ namespace Lab_APIRest.Controllers.Reactivos
 
         [Authorize(Roles = "administrador")]
         [HttpPut("anular/{id:int}")]
-        public async Task<IActionResult> AnularReactivo(int id)
+        public async Task<IActionResult> AnularReactivo(int Id)
         {
             try
             {
-                var ok = await _service.AnularReactivoAsync(id);
-                if (!ok)
+                var Resultado = await ReactivoService.AnularReactivoAsync(Id);
+                if (!Resultado)
                     return NotFound("Reactivo no encontrado o ya estaba anulado.");
 
                 return Ok(new { mensaje = "Reactivo anulado correctamente." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al anular el reactivo con ID {id}.");
+                Logger.LogError(ex, $"Error al anular el reactivo con ID {Id}.");
                 return StatusCode(500, "Error interno al anular el reactivo.");
             }
         }
 
         [HttpPost("ingresos")]
-        public async Task<ActionResult> RegistrarIngresos([FromBody] IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        public async Task<ActionResult> RegistrarIngresos([FromBody] IEnumerable<MovimientoReactivoIngresoDto> Ingresos)
         {
-            if (ingresos == null || !ingresos.Any())
+            if (Ingresos == null || !Ingresos.Any())
                 return BadRequest("No se enviaron datos de ingreso.");
 
             try
             {
-                var ok = await _service.RegistrarIngresosAsync(ingresos);
-                if (ok)
+                var Resultado = await ReactivoService.RegistrarIngresosAsync(Ingresos);
+                if (Resultado)
                     return Ok(new { mensaje = "Ingresos registrados correctamente." });
 
                 return StatusCode(500, new { mensaje = "Error al registrar los ingresos." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar ingresos de reactivos.");
+                Logger.LogError(ex, "Error al registrar ingresos de reactivos.");
                 return StatusCode(500, "Error interno al registrar ingresos.");
             }
         }
 
         [HttpPost("egresos")]
-        public async Task<ActionResult> RegistrarEgresos([FromBody] IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        public async Task<ActionResult> RegistrarEgresos([FromBody] IEnumerable<MovimientoReactivoEgresoDto> Egresos)
         {
-            if (egresos == null || !egresos.Any())
+            if (Egresos == null || !Egresos.Any())
                 return BadRequest("No se enviaron datos de egreso.");
 
             try
             {
-                var ok = await _service.RegistrarEgresosAsync(egresos);
-                if (ok)
+                var Resultado = await ReactivoService.RegistrarEgresosAsync(Egresos);
+                if (Resultado)
                     return Ok(new { mensaje = "Egresos registrados correctamente." });
 
                 return StatusCode(500, new { mensaje = "Error al registrar los egresos." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar egresos de reactivos.");
+                Logger.LogError(ex, "Error al registrar egresos de reactivos.");
                 return StatusCode(500, "Error interno al registrar egresos.");
             }
         }

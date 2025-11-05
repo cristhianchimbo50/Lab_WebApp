@@ -4,15 +4,15 @@ namespace Lab_APIRest.Services.Medicos
 {
     public interface IMedicoService
     {
-        Task<List<MedicoDto>> GetMedicosAsync();
-        Task<MedicoDto?> GetMedicoByIdAsync(int id);
-        Task<MedicoDto?> GetMedicoPorCorreoAsync(string correo);
-        Task<List<MedicoDto>> GetMedicosPorNombreAsync(string nombre);
-        Task<List<MedicoDto>> GetMedicosPorEspecialidadAsync(string especialidad);
-        Task<List<MedicoDto>> GetMedicosPorCorreoAsync(string correo);
-        Task<MedicoDto> CrearMedicoAsync(MedicoDto dto);
-        Task<bool> EditarMedicoAsync(int id, MedicoDto dto);
-        Task<bool> AnularMedicoAsync(int id);
+        Task<List<MedicoDto>> ObtenerMedicosAsync();
+        Task<MedicoDto?> ObtenerMedicoPorIdAsync(int IdMedico);
+        Task<MedicoDto?> ObtenerMedicoPorCorreoAsync(string Correo);
+        Task<List<MedicoDto>> ObtenerMedicosPorNombreAsync(string Nombre);
+        Task<List<MedicoDto>> ObtenerMedicosPorEspecialidadAsync(string Especialidad);
+        Task<List<MedicoDto>> ObtenerMedicosPorCorreoAsync(string Correo);
+        Task<MedicoDto> RegistrarMedicoAsync(MedicoDto DatosMedico);
+        Task<bool> EditarMedicoAsync(int IdMedico, MedicoDto DatosMedico);
+        Task<bool> AnularMedicoAsync(int IdMedico);
         Task<List<MedicoDto>> ListarMedicosAsync();
     }
 }

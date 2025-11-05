@@ -10,95 +10,94 @@ namespace Lab_APIRest.Controllers.Examenes
     [Authorize(Roles = "administrador,laboratorista")]
     public class ExamenReactivoAsociacionesController : ControllerBase
     {
-        private readonly IExamenReactivoAsociacionService _service;
-        private readonly ILogger<ExamenReactivoAsociacionesController> _logger;
+        private readonly IExamenReactivoAsociacionService ReactivoAsociacionService;
+        private readonly ILogger<ExamenReactivoAsociacionesController> Logger;
 
         public ExamenReactivoAsociacionesController(
-            IExamenReactivoAsociacionService service,
+            IExamenReactivoAsociacionService reactivoAsociacionService,
             ILogger<ExamenReactivoAsociacionesController> logger)
         {
-            _service = service;
-            _logger = logger;
+            ReactivoAsociacionService = reactivoAsociacionService;
+            Logger = logger;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> ObtenerTodas()
         {
-            var data = await _service.ObtenerTodasAsync();
-            return Ok(data);
+            var ListaAsociaciones = await ReactivoAsociacionService.ObtenerTodas();
+            return Ok(ListaAsociaciones);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<AsociacionReactivoDto>> ObtenerPorId(int id)
+        [HttpGet("{IdExamenReactivo:int}")]
+        public async Task<ActionResult<AsociacionReactivoDto>> ObtenerPorId(int IdExamenReactivo)
         {
-            var item = await _service.ObtenerPorIdAsync(id);
-            if (item == null) return NotFound();
-            return Ok(item);
+            var Asociacion = await ReactivoAsociacionService.ObtenerPorId(IdExamenReactivo);
+            if (Asociacion == null) return NotFound();
+            return Ok(Asociacion);
         }
 
-        [HttpGet("buscar-examen/{nombre}")]
-        public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorExamen(string nombre)
+        [HttpGet("buscar-examen/{NombreExamen}")]
+        public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorExamen(string NombreExamen)
         {
-            var data = await _service.BuscarPorExamenAsync(nombre);
-            return Ok(data);
+            var ListaAsociaciones = await ReactivoAsociacionService.BuscarPorExamen(NombreExamen);
+            return Ok(ListaAsociaciones);
         }
 
-        [HttpGet("buscar-reactivo/{nombre}")]
-        public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorReactivo(string nombre)
+        [HttpGet("buscar-reactivo/{NombreReactivo}")]
+        public async Task<ActionResult<List<AsociacionReactivoDto>>> BuscarPorReactivo(string NombreReactivo)
         {
-            var data = await _service.BuscarPorReactivoAsync(nombre);
-            return Ok(data);
+            var ListaAsociaciones = await ReactivoAsociacionService.BuscarPorReactivo(NombreReactivo);
+            return Ok(ListaAsociaciones);
         }
 
         [Authorize(Roles = "administrador")]
         [HttpPost]
-        public async Task<ActionResult<AsociacionReactivoDto>> Crear([FromBody] AsociacionReactivoDto dto)
+        public async Task<ActionResult<AsociacionReactivoDto>> Crear([FromBody] AsociacionReactivoDto AsociacionDto)
         {
             try
             {
-                var creado = await _service.CrearAsync(dto);
-                return CreatedAtAction(nameof(ObtenerPorId), new { id = creado.IdExamenReactivo }, creado);
+                var Creado = await ReactivoAsociacionService.Crear(AsociacionDto);
+                return CreatedAtAction(nameof(ObtenerPorId), new { IdExamenReactivo = Creado.IdExamenReactivo }, Creado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear asociación examen-reactivo.");
+                Logger.LogError(ex, "Error al crear asociación examen-reactivo.");
                 return StatusCode(500, "Error interno al crear la asociación.");
             }
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Editar(int id, [FromBody] AsociacionReactivoDto dto)
+        [HttpPut("{IdExamenReactivo:int}")]
+        public async Task<IActionResult> Editar(int IdExamenReactivo, [FromBody] AsociacionReactivoDto AsociacionDto)
         {
-            var ok = await _service.EditarAsync(id, dto);
-            if (!ok) return NotFound();
+            var Editado = await ReactivoAsociacionService.Editar(IdExamenReactivo, AsociacionDto);
+            if (!Editado) return NotFound();
             return NoContent();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpDelete("{IdExamenReactivo:int}")]
+        public async Task<IActionResult> Eliminar(int IdExamenReactivo)
         {
-            var ok = await _service.EliminarAsync(id);
-            if (!ok) return NotFound();
+            var Eliminado = await ReactivoAsociacionService.Eliminar(IdExamenReactivo);
+            if (!Eliminado) return NotFound();
             return NoContent();
         }
 
         [Authorize(Roles = "administrador,laboratorista")]
-        [HttpGet("asociados/{idExamen:int}")]
-        public async Task<ActionResult<List<AsociacionReactivoDto>>> ObtenerAsociadosPorExamen(int idExamen)
+        [HttpGet("asociados/{IdExamen:int}")]
+        public async Task<ActionResult<List<AsociacionReactivoDto>>> ObtenerAsociadosPorExamen(int IdExamen)
         {
-            var data = await _service.ObtenerTodasAsync();
-            var asociados = data.Where(a => a.IdExamen == idExamen).ToList();
-            return Ok(asociados);
+            var ListaAsociaciones = await ReactivoAsociacionService.ObtenerPorExamenId(IdExamen);
+            return Ok(ListaAsociaciones);
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPost("asociados/{idExamen:int}")]
-        public async Task<IActionResult> GuardarAsociaciones(int idExamen, [FromBody] List<AsociacionReactivoDto> asociaciones)
+        [HttpPost("asociados/{IdExamen:int}")]
+        public async Task<IActionResult> GuardarAsociaciones(int IdExamen, [FromBody] List<AsociacionReactivoDto> Asociaciones)
         {
-            var ok = await _service.GuardarPorExamenAsync(idExamen, asociaciones);
-            if (ok) return Ok();
+            var Guardado = await ReactivoAsociacionService.GuardarPorExamen(IdExamen, Asociaciones);
+            if (Guardado) return Ok();
             return BadRequest("No se pudieron guardar las asociaciones.");
         }
     }

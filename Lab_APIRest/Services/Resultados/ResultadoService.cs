@@ -10,233 +10,233 @@ namespace Lab_APIRest.Services.Resultados
 {
     public class ResultadoService : IResultadoService
     {
-        private readonly LabDbContext _context;
-        private readonly PdfResultadoService _pdf;
-        private readonly ILogger<ResultadoService> _logger;
+        private readonly LabDbContext Contexto;
+        private readonly PdfResultadoService PdfResultadoService;
+        private readonly ILogger<ResultadoService> Logger;
 
-        public ResultadoService(LabDbContext context, PdfResultadoService pdf, ILogger<ResultadoService> logger)
+        public ResultadoService(LabDbContext Contexto, PdfResultadoService PdfResultadoService, ILogger<ResultadoService> Logger)
         {
-            _context = context;
-            _pdf = pdf;
-            _logger = logger;
+            this.Contexto = Contexto;
+            this.PdfResultadoService = PdfResultadoService;
+            this.Logger = Logger;
         }
 
-        public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto dto)
+        public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto Resultado)
         {
-            using var trx = await _context.Database.BeginTransactionAsync();
+            using var Transaccion = await Contexto.Database.BeginTransactionAsync();
             try
             {
-                var last = await _context.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
-                string numero = $"RES-{((last?.id_resultado ?? 0) + 1):D5}";
+                var UltimoResultado = await Contexto.resultados.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
+                string NumeroGenerado = $"RES-{((UltimoResultado?.id_resultado ?? 0) + 1):D5}";
 
-                var res = new resultado
+                var EntidadResultado = new resultado
                 {
-                    numero_resultado = numero,
-                    id_paciente = dto.IdPaciente,
-                    fecha_resultado = (DateTime)dto.FechaResultado,
-                    observaciones = dto.ObservacionesGenerales,
-                    id_orden = dto.IdOrden,
+                    numero_resultado = NumeroGenerado,
+                    id_paciente = Resultado.IdPaciente,
+                    fecha_resultado = (DateTime)Resultado.FechaResultado,
+                    observaciones = Resultado.ObservacionesGenerales,
+                    id_orden = Resultado.IdOrden,
                     anulado = false
                 };
-                _context.resultados.Add(res);
-                await _context.SaveChangesAsync();
+                Contexto.resultados.Add(EntidadResultado);
+                await Contexto.SaveChangesAsync();
 
-                foreach (var ex in dto.Examenes)
+                foreach (var Examen in Resultado.Examenes)
                 {
-                    var det = new detalle_resultado
+                    var DetalleResultado = new detalle_resultado
                     {
-                        id_resultado = res.id_resultado,
-                        id_examen = ex.IdExamen,
-                        valor = ex.Valor,
-                        unidad = ex.Unidad,
-                        observacion = ex.Observacion,
-                        valor_referencia = ex.ValorReferencia,
+                        id_resultado = EntidadResultado.id_resultado,
+                        id_examen = Examen.IdExamen,
+                        valor = Examen.Valor,
+                        unidad = Examen.Unidad,
+                        observacion = Examen.Observacion,
+                        valor_referencia = Examen.ValorReferencia,
                         anulado = false
                     };
-                    _context.detalle_resultados.Add(det);
-                    await _context.SaveChangesAsync();
+                    Contexto.detalle_resultados.Add(DetalleResultado);
+                    await Contexto.SaveChangesAsync();
 
-                    var idPadre = await _context.examen_composicion
-                        .Where(c => c.id_examen_hijo == ex.IdExamen)
+                    var IdExamenPadre = await Contexto.examen_composicion
+                        .Where(c => c.id_examen_hijo == Examen.IdExamen)
                         .Select(c => c.id_examen_padre)
                         .FirstOrDefaultAsync();
 
-                    if (idPadre != 0)
+                    if (IdExamenPadre != 0)
                     {
-                        var detOrdenPadre = await _context.detalle_ordens
-                            .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == idPadre);
-                        if (detOrdenPadre != null)
-                            detOrdenPadre.id_resultado = res.id_resultado;
+                        var DetalleOrdenPadre = await Contexto.detalle_ordens
+                            .FirstOrDefaultAsync(d => d.id_orden == Resultado.IdOrden && d.id_examen == IdExamenPadre);
+                        if (DetalleOrdenPadre != null)
+                            DetalleOrdenPadre.id_resultado = EntidadResultado.id_resultado;
                     }
                     else
                     {
-                        var detOrden = await _context.detalle_ordens
-                            .FirstOrDefaultAsync(d => d.id_orden == dto.IdOrden && d.id_examen == ex.IdExamen);
-                        if (detOrden != null)
-                            detOrden.id_resultado = res.id_resultado;
+                        var DetalleOrden = await Contexto.detalle_ordens
+                            .FirstOrDefaultAsync(d => d.id_orden == Resultado.IdOrden && d.id_examen == Examen.IdExamen);
+                        if (DetalleOrden != null)
+                            DetalleOrden.id_resultado = EntidadResultado.id_resultado;
                     }
 
-                    var examReactivos = await _context.examen_reactivos
-                        .Where(er => er.id_examen == ex.IdExamen)
+                    var ReactivosDelExamen = await Contexto.examen_reactivos
+                        .Where(er => er.id_examen == Examen.IdExamen)
                         .Include(er => er.id_reactivoNavigation)
                         .ToListAsync();
 
-                    if (idPadre != 0)
+                    if (IdExamenPadre != 0)
                     {
-                        var reactivosPadre = await _context.examen_reactivos
-                            .Where(er => er.id_examen == idPadre)
+                        var ReactivosDelPadre = await Contexto.examen_reactivos
+                            .Where(er => er.id_examen == IdExamenPadre)
                             .Include(er => er.id_reactivoNavigation)
                             .ToListAsync();
-                        examReactivos.AddRange(reactivosPadre);
+                        ReactivosDelExamen.AddRange(ReactivosDelPadre);
                     }
 
-                    foreach (var er in examReactivos)
+                    foreach (var Asociacion in ReactivosDelExamen)
                     {
-                        var reactivo = er.id_reactivoNavigation;
-                        if (reactivo == null) continue;
+                        var ReactivoAsociado = Asociacion.id_reactivoNavigation;
+                        if (ReactivoAsociado == null) continue;
 
-                        if (reactivo.cantidad_disponible < er.cantidad_usada)
-                            throw new InvalidOperationException($"Stock insuficiente para {reactivo.nombre_reactivo}");
+                        if (ReactivoAsociado.cantidad_disponible < Asociacion.cantidad_usada)
+                            throw new InvalidOperationException($"Stock insuficiente para {ReactivoAsociado.nombre_reactivo}");
 
-                        var movimiento = new movimiento_reactivo
+                        var MovimientoEntidad = new movimiento_reactivo
                         {
-                            id_reactivo = reactivo.id_reactivo,
+                            id_reactivo = ReactivoAsociado.id_reactivo,
                             tipo_movimiento = "EGRESO",
-                            cantidad = er.cantidad_usada,
-                            fecha_movimiento = (DateTime)dto.FechaResultado,
-                            observacion = $"Egreso por examen {ex.NombreExamen} en resultado {numero}",
-                            id_detalle_resultado = det.id_detalle_resultado
+                            cantidad = Asociacion.cantidad_usada,
+                            fecha_movimiento = (DateTime)Resultado.FechaResultado,
+                            observacion = $"Egreso por examen {Examen.NombreExamen} en resultado {NumeroGenerado}",
+                            id_detalle_resultado = DetalleResultado.id_detalle_resultado
                         };
-                        _context.movimiento_reactivos.Add(movimiento);
+                        Contexto.movimiento_reactivos.Add(MovimientoEntidad);
 
-                        reactivo.cantidad_disponible -= er.cantidad_usada;
+                        ReactivoAsociado.cantidad_disponible -= Asociacion.cantidad_usada;
                     }
                 }
 
-                await _context.SaveChangesAsync();
-                await trx.CommitAsync();
+                await Contexto.SaveChangesAsync();
+                await Transaccion.CommitAsync();
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                await trx.RollbackAsync();
-               
-                _logger.LogError(ex, $"Error guardando resultados de orden {dto.IdOrden} - paciente {dto.IdPaciente}");
+                await Transaccion.RollbackAsync();
+                
+                Logger.LogError(Ex, $"Error guardando resultados de orden {Resultado.IdOrden} - paciente {Resultado.IdPaciente}");
                 return false;
             }
         }
 
-        public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto f)
+        public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto Filtro)
         {
-            var q = _context.resultados
-                .Include(r => r.id_pacienteNavigation)
-                .Include(r => r.id_ordenNavigation)
+            var Consulta = Contexto.resultados
+                .Include(Resultado => Resultado.id_pacienteNavigation)
+                .Include(Resultado => Resultado.id_ordenNavigation)
                 .AsQueryable();
-            if (!string.IsNullOrWhiteSpace(f.NumeroResultado))
-                q = q.Where(r => r.numero_resultado.Contains(f.NumeroResultado));
-            if (!string.IsNullOrWhiteSpace(f.NumeroOrden))
-                q = q.Where(r => r.id_ordenNavigation != null &&
-                                 r.id_ordenNavigation.numero_orden.Contains(f.NumeroOrden));
-            if (!string.IsNullOrWhiteSpace(f.Cedula))
-                q = q.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(f.Cedula));
-            if (!string.IsNullOrWhiteSpace(f.Nombre))
-                q = q.Where(r => r.id_pacienteNavigation.nombre_paciente.Contains(f.Nombre));
-            if (f.FechaDesde != null)
-                q = q.Where(r => r.fecha_resultado >= f.FechaDesde);
-            if (f.FechaHasta != null)
-                q = q.Where(r => r.fecha_resultado <= f.FechaHasta);
-            if (f.Anulado != null)
-                q = q.Where(r => r.anulado == f.Anulado);
+            if (!string.IsNullOrWhiteSpace(Filtro.NumeroResultado))
+                Consulta = Consulta.Where(Resultado => Resultado.numero_resultado.Contains(Filtro.NumeroResultado));
+            if (!string.IsNullOrWhiteSpace(Filtro.NumeroOrden))
+                Consulta = Consulta.Where(Resultado => Resultado.id_ordenNavigation != null &&
+                                 Resultado.id_ordenNavigation.numero_orden.Contains(Filtro.NumeroOrden));
+            if (!string.IsNullOrWhiteSpace(Filtro.Cedula))
+                Consulta = Consulta.Where(Resultado => Resultado.id_pacienteNavigation.cedula_paciente.Contains(Filtro.Cedula));
+            if (!string.IsNullOrWhiteSpace(Filtro.Nombre))
+                Consulta = Consulta.Where(Resultado => Resultado.id_pacienteNavigation.nombre_paciente.Contains(Filtro.Nombre));
+            if (Filtro.FechaDesde != null)
+                Consulta = Consulta.Where(Resultado => Resultado.fecha_resultado >= Filtro.FechaDesde);
+            if (Filtro.FechaHasta != null)
+                Consulta = Consulta.Where(Resultado => Resultado.fecha_resultado <= Filtro.FechaHasta);
+            if (Filtro.Anulado != null)
+                Consulta = Consulta.Where(Resultado => Resultado.anulado == Filtro.Anulado);
 
-            return await q.OrderByDescending(r => r.id_resultado)
-                .Select(r => new ResultadoListadoDto
+            return await Consulta.OrderByDescending(Resultado => Resultado.id_resultado)
+                .Select(Resultado => new ResultadoListadoDto
                 {
-                    IdResultado = r.id_resultado,
-                    NumeroResultado = r.numero_resultado,
-                    NumeroOrden = r.id_ordenNavigation!.numero_orden,
-                    CedulaPaciente = r.id_pacienteNavigation.cedula_paciente,
-                    NombrePaciente = r.id_pacienteNavigation.nombre_paciente,
-                    FechaResultado = r.fecha_resultado,
-                    Anulado = r.anulado ?? false,
-                    IdPaciente = (int)r.id_paciente,
-                    Observaciones = r.observaciones
+                    IdResultado = Resultado.id_resultado,
+                    NumeroResultado = Resultado.numero_resultado,
+                    NumeroOrden = Resultado.id_ordenNavigation!.numero_orden,
+                    CedulaPaciente = Resultado.id_pacienteNavigation.cedula_paciente,
+                    NombrePaciente = Resultado.id_pacienteNavigation.nombre_paciente,
+                    FechaResultado = Resultado.fecha_resultado,
+                    Anulado = Resultado.anulado ?? false,
+                    IdPaciente = (int)Resultado.id_paciente,
+                    Observaciones = Resultado.observaciones
                 }).ToListAsync();
         }
 
-        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int id)
+        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int IdResultado)
         {
-            var r = await _context.resultados
-                .Include(x => x.id_pacienteNavigation)
-                .Include(x => x.id_ordenNavigation)
-                .Include(x => x.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
-                .FirstOrDefaultAsync(x => x.id_resultado == id);
+            var ResultadoEntidad = await Contexto.resultados
+                .Include(Resultado => Resultado.id_pacienteNavigation)
+                .Include(Resultado => Resultado.id_ordenNavigation)
+                .Include(Resultado => Resultado.detalle_resultados).ThenInclude(Detalle => Detalle.id_examenNavigation)
+                .FirstOrDefaultAsync(Resultado => Resultado.id_resultado == IdResultado);
 
-            if (r == null) return null;
+            if (ResultadoEntidad == null) return null;
 
             return new ResultadoDetalleDto
             {
-                IdResultado = r.id_resultado,
-                NumeroResultado = r.numero_resultado,
-                CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
-                NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
-                FechaResultado = r.fecha_resultado,
-                IdPaciente = r.id_paciente ?? 0,
-                Observaciones = r.observaciones,
-                NumeroOrden = r.id_ordenNavigation?.numero_orden ?? "(Sin orden)",
-                EstadoPago = r.id_ordenNavigation?.estado_pago ?? "DESCONOCIDO",
-                Anulado = r.anulado ?? false,
-                Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
+                IdResultado = ResultadoEntidad.id_resultado,
+                NumeroResultado = ResultadoEntidad.numero_resultado,
+                CedulaPaciente = ResultadoEntidad.id_pacienteNavigation?.cedula_paciente ?? "",
+                NombrePaciente = ResultadoEntidad.id_pacienteNavigation?.nombre_paciente ?? "",
+                FechaResultado = ResultadoEntidad.fecha_resultado,
+                IdPaciente = ResultadoEntidad.id_paciente ?? 0,
+                Observaciones = ResultadoEntidad.observaciones,
+                NumeroOrden = ResultadoEntidad.id_ordenNavigation?.numero_orden ?? "(Sin orden)",
+                EstadoPago = ResultadoEntidad.id_ordenNavigation?.estado_pago ?? "DESCONOCIDO",
+                Anulado = ResultadoEntidad.anulado ?? false,
+                Detalles = ResultadoEntidad.detalle_resultados.Select(Detalle => new DetalleResultadoDto
                 {
-                    IdDetalleResultado = d.id_detalle_resultado,
-                    NombreExamen = d.id_examenNavigation?.nombre_examen ?? "",
-                    Valor = d.valor,
-                    Unidad = d.unidad ?? "",
-                    Observacion = d.observacion ?? "",
-                    ValorReferencia = d.valor_referencia ?? "",
-                    Anulado = d.anulado ?? false
+                    IdDetalleResultado = Detalle.id_detalle_resultado,
+                    NombreExamen = Detalle.id_examenNavigation?.nombre_examen ?? "",
+                    Valor = Detalle.valor,
+                    Unidad = Detalle.unidad ?? "",
+                    Observacion = Detalle.observacion ?? "",
+                    ValorReferencia = Detalle.valor_referencia ?? "",
+                    Anulado = Detalle.anulado ?? false
                 }).ToList()
             };
         }
 
-        public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int id)
+        public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int IdResultado)
         {
-            var r = await _context.resultados
-                .Include(x => x.id_pacienteNavigation)
-                .Include(x => x.id_ordenNavigation).ThenInclude(o => o.id_medicoNavigation)
-                .Include(x => x.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
-                .FirstOrDefaultAsync(x => x.id_resultado == id);
+            var ResultadoEntidad = await Contexto.resultados
+                .Include(Resultado => Resultado.id_pacienteNavigation)
+                .Include(Resultado => Resultado.id_ordenNavigation).ThenInclude(Orden => Orden.id_medicoNavigation)
+                .Include(Resultado => Resultado.detalle_resultados).ThenInclude(Detalle => Detalle.id_examenNavigation)
+                .FirstOrDefaultAsync(Resultado => Resultado.id_resultado == IdResultado);
 
-            if (r == null) return null;
+            if (ResultadoEntidad == null) return null;
 
             return new ResultadoCompletoDto
             {
-                NumeroOrden = r.id_ordenNavigation?.numero_orden ?? "",
-                NumeroResultado = r.numero_resultado,
-                FechaResultado = r.fecha_resultado,
-                NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
-                CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
-                EdadPaciente = CalcularEdad(r.id_pacienteNavigation?.fecha_nac_paciente),
-                MedicoSolicitante = r.id_ordenNavigation?.id_medicoNavigation?.nombre_medico ?? "",
+                NumeroOrden = ResultadoEntidad.id_ordenNavigation?.numero_orden ?? "",
+                NumeroResultado = ResultadoEntidad.numero_resultado,
+                FechaResultado = ResultadoEntidad.fecha_resultado,
+                NombrePaciente = ResultadoEntidad.id_pacienteNavigation?.nombre_paciente ?? "",
+                CedulaPaciente = ResultadoEntidad.id_pacienteNavigation?.cedula_paciente ?? "",
+                EdadPaciente = CalcularEdad(ResultadoEntidad.id_pacienteNavigation?.fecha_nac_paciente),
+                MedicoSolicitante = ResultadoEntidad.id_ordenNavigation?.id_medicoNavigation?.nombre_medico ?? "",
                 Detalles = new List<ResultadoDetalleDto>
                 {
                     new ResultadoDetalleDto
                     {
-                        IdResultado = r.id_resultado,
-                        NumeroResultado = r.numero_resultado,
-                        CedulaPaciente = r.id_pacienteNavigation?.cedula_paciente ?? "",
-                        NombrePaciente = r.id_pacienteNavigation?.nombre_paciente ?? "",
-                        FechaResultado = r.fecha_resultado,
-                        Observaciones = r.observaciones,
-                        Anulado = r.anulado ?? false,
-                        Detalles = r.detalle_resultados.Select(d => new DetalleResultadoDto
+                        IdResultado = ResultadoEntidad.id_resultado,
+                        NumeroResultado = ResultadoEntidad.numero_resultado,
+                        CedulaPaciente = ResultadoEntidad.id_pacienteNavigation?.cedula_paciente ?? "",
+                        NombrePaciente = ResultadoEntidad.id_pacienteNavigation?.nombre_paciente ?? "",
+                        FechaResultado = ResultadoEntidad.fecha_resultado,
+                        Observaciones = ResultadoEntidad.observaciones,
+                        Anulado = ResultadoEntidad.anulado ?? false,
+                        Detalles = ResultadoEntidad.detalle_resultados.Select(Detalle => new DetalleResultadoDto
                         {
-                            IdDetalleResultado = d.id_detalle_resultado,
-                            NombreExamen = d.id_examenNavigation?.nombre_examen ?? "",
-                            Valor = d.valor,
-                            Unidad = d.unidad ?? "",
-                            Observacion = d.observacion ?? "",
-                            ValorReferencia = d.valor_referencia ?? "",
-                            Anulado = d.anulado ?? false
+                            IdDetalleResultado = Detalle.id_detalle_resultado,
+                            NombreExamen = Detalle.id_examenNavigation?.nombre_examen ?? "",
+                            Valor = Detalle.valor,
+                            Unidad = Detalle.unidad ?? "",
+                            Observacion = Detalle.observacion ?? "",
+                            ValorReferencia = Detalle.valor_referencia ?? "",
+                            Anulado = Detalle.anulado ?? false
                         }).ToList()
                     }
                 }
@@ -244,74 +244,74 @@ namespace Lab_APIRest.Services.Resultados
             };
         }
 
-        public async Task<byte[]?> GenerarResultadosPdfAsync(List<int> ids)
+        public async Task<byte[]?> GenerarResultadosPdfAsync(List<int> Ids)
         {
-            var resultados = new List<ResultadoCompletoDto>();
-            foreach (var id in ids)
+            var Resultados = new List<ResultadoCompletoDto>();
+            foreach (var IdResultado in Ids)
             {
-                var r = await ObtenerResultadoCompletoAsync(id);
-                if (r != null) resultados.Add(r);
+                var ResultadoCompleto = await ObtenerResultadoCompletoAsync(IdResultado);
+                if (ResultadoCompleto != null) Resultados.Add(ResultadoCompleto);
             }
 
-            if (!resultados.Any()) return null;
-            return _pdf.GenerarResultadosPdf(resultados);
+            if (!Resultados.Any()) return null;
+            return PdfResultadoService.GenerarResultadosPdf(Resultados);
         }
 
-        public async Task<bool> AnularResultadoAsync(int id)
+        public async Task<bool> AnularResultadoAsync(int IdResultado)
         {
-            var r = await _context.resultados
-                .Include(x => x.detalle_resultados)
-                .FirstOrDefaultAsync(x => x.id_resultado == id);
+            var ResultadoEntidad = await Contexto.resultados
+                .Include(Resultado => Resultado.detalle_resultados)
+                .FirstOrDefaultAsync(Resultado => Resultado.id_resultado == IdResultado);
 
-            if (r == null || r.anulado == true) return false;
+            if (ResultadoEntidad == null || ResultadoEntidad.anulado == true) return false;
 
-            r.anulado = true;
-            foreach (var dr in r.detalle_resultados)
-                dr.anulado = true;
+            ResultadoEntidad.anulado = true;
+            foreach (var Detalle in ResultadoEntidad.detalle_resultados)
+                Detalle.anulado = true;
 
-            var detOrden = await _context.detalle_ordens
-                .Where(d => d.id_resultado == id)
+            var DetallesOrden = await Contexto.detalle_ordens
+                .Where(Detalle => Detalle.id_resultado == IdResultado)
                 .ToListAsync();
-            foreach (var d in detOrden)
-                d.id_resultado = null;
+            foreach (var DetalleOrden in DetallesOrden)
+                DetalleOrden.id_resultado = null;
 
-            var examenesPadres = await _context.examen_composicion
-                .Select(c => c.id_examen_padre)
+            var ExamenesPadres = await Contexto.examen_composicion
+                .Select(Composicion => Composicion.id_examen_padre)
                 .Distinct()
                 .ToListAsync();
 
-            var hijosDelResultado = r.detalle_resultados
-                .Select(dr => dr.id_examen)
+            var HijosDelResultado = ResultadoEntidad.detalle_resultados
+                .Select(Detalle => Detalle.id_examen)
                 .ToList();
 
-            var padresAsociados = await _context.examen_composicion
-                .Where(c => hijosDelResultado.Contains(c.id_examen_hijo))
-                .Select(c => c.id_examen_padre)
+            var PadresAsociados = await Contexto.examen_composicion
+                .Where(Composicion => HijosDelResultado.Contains(Composicion.id_examen_hijo))
+                .Select(Composicion => Composicion.id_examen_padre)
                 .Distinct()
                 .ToListAsync();
 
-            if (padresAsociados.Any())
+            if (PadresAsociados.Any())
             {
-                var detOrdenPadres = await _context.detalle_ordens
-                    .Where(d => d.id_orden == r.id_orden && padresAsociados.Contains((int)d.id_examen))
+                var DetallesOrdenPadres = await Contexto.detalle_ordens
+                    .Where(DetalleOrden => DetalleOrden.id_orden == ResultadoEntidad.id_orden && PadresAsociados.Contains((int)DetalleOrden.id_examen))
                     .ToListAsync();
 
-                foreach (var dp in detOrdenPadres)
-                    dp.id_resultado = null;
+                foreach (var DetalleOrdenPadre in DetallesOrdenPadres)
+                    DetalleOrdenPadre.id_resultado = null;
             }
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        private int CalcularEdad(DateOnly? fn)
+        private int CalcularEdad(DateOnly? FechaNacimiento)
         {
-            if (fn == null) return 0;
-            var f = fn.Value.ToDateTime(TimeOnly.MinValue);
-            var h = DateTime.Today;
-            var edad = h.Year - f.Year;
-            if (f > h.AddYears(-edad)) edad--;
-            return edad;
+            if (FechaNacimiento == null) return 0;
+            var FechaNac = FechaNacimiento.Value.ToDateTime(TimeOnly.MinValue);
+            var Hoy = DateTime.Today;
+            var Edad = Hoy.Year - FechaNac.Year;
+            if (FechaNac > Hoy.AddYears(-Edad)) Edad--;
+            return Edad;
         }
     }
 }

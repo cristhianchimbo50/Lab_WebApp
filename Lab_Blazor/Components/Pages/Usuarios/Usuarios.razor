@@ -33,12 +33,12 @@
         }
         else
         {
-            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+            <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
                 <span><i class="bi bi-people-fill me-2 text-primary fs-4"></i>Gestión de Usuarios</span>
                 <button class="btn btn-success shadow-sm" @onclick="AbrirModalNuevo">
                     <i class="bi bi-person-plus-fill me-1"></i>Nuevo Usuario
                 </button>
-            </h4>
+            </h3>
 
             <div class="card mb-3 shadow-sm border-0">
                 <div class="card-body row g-3 align-items-end">
@@ -73,12 +73,12 @@
                         }
                         else
                         {
-                            <input class="form-control" @bind="valorFiltro" placeholder="Ingrese valor..." />
+                            <input class="form-control" @bind="valorFiltro" placeholder="Ingrese valor a buscar..." />
                         }
                     </div>
                     <div class="col-md-2 text-end">
                         <button class="btn btn-primary w-100 shadow-sm" @onclick="Buscar">
-                            <i class="bi bi-search"></i>
+                            <i class="bi bi-search">Buscar</i>
                         </button>
                     </div>
                     <div class="col-md-2 text-end">

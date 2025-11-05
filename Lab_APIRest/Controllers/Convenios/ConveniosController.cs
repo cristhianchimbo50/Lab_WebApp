@@ -10,70 +10,70 @@ namespace Lab_APIRest.Controllers.Convenios
     [Authorize(Roles = "administrador,recepcionista")]
     public class ConveniosController : ControllerBase
     {
-        private readonly IConvenioService _service;
-        private readonly ILogger<ConveniosController> _logger;
+        private readonly IConvenioService ConvenioService;
+        private readonly ILogger<ConveniosController> Logger;
 
-        public ConveniosController(IConvenioService service, ILogger<ConveniosController> logger)
+        public ConveniosController(IConvenioService ConvenioService, ILogger<ConveniosController> Logger)
         {
-            _service = service;
-            _logger = logger;
+            this.ConvenioService = ConvenioService;
+            this.Logger = Logger;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ConvenioDto>>> ObtenerConvenios()
         {
-            var convenios = await _service.ObtenerConveniosAsync();
-            return Ok(convenios);
+            var Convenios = await ConvenioService.ObtenerConveniosAsync();
+            return Ok(Convenios);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<ConvenioDetalleDto>> ObtenerDetalle(int id)
+        [HttpGet("{IdConvenio:int}")]
+        public async Task<ActionResult<ConvenioDetalleDto>> ObtenerDetalle(int IdConvenio)
         {
-            var detalle = await _service.ObtenerDetalleConvenioAsync(id);
-            if (detalle == null)
+            var Detalle = await ConvenioService.ObtenerDetalleConvenioAsync(IdConvenio);
+            if (Detalle == null)
                 return NotFound("No se encontró el convenio solicitado.");
-            return Ok(detalle);
+            return Ok(Detalle);
         }
 
-        [HttpGet("ordenes-disponibles/{idMedico:int}")]
-        public async Task<ActionResult<IEnumerable<OrdenDisponibleDto>>> ObtenerOrdenesDisponibles(int idMedico)
+        [HttpGet("ordenes-disponibles/{IdMedico:int}")]
+        public async Task<ActionResult<IEnumerable<OrdenDisponibleDto>>> ObtenerOrdenesDisponibles(int IdMedico)
         {
-            var ordenes = await _service.ObtenerOrdenesDisponiblesAsync(idMedico);
-            return Ok(ordenes);
+            var Ordenes = await ConvenioService.ObtenerOrdenesDisponiblesAsync(IdMedico);
+            return Ok(Ordenes);
         }
 
         [Authorize(Roles = "administrador")]
         [HttpPost]
-        public async Task<ActionResult> RegistrarConvenio([FromBody] ConvenioRegistroDto dto)
+        public async Task<ActionResult> RegistrarConvenio([FromBody] ConvenioRegistroDto ConvenioRegistro)
         {
             try
             {
-                var exito = await _service.RegistrarConvenioAsync(dto);
-                if (!exito)
+                var Exito = await ConvenioService.RegistrarConvenioAsync(ConvenioRegistro);
+                if (!Exito)
                     return BadRequest("No se pudo registrar el convenio.");
                 return Ok();
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error al registrar un nuevo convenio.");
+                Logger.LogError(Ex, "Error al registrar un nuevo convenio.");
                 return StatusCode(500, "Ocurrió un error interno al registrar el convenio.");
             }
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("{id:int}/anular")]
-        public async Task<ActionResult> AnularConvenio(int id)
+        [HttpPut("{IdConvenio:int}/anular")]
+        public async Task<ActionResult> AnularConvenio(int IdConvenio)
         {
             try
             {
-                var exito = await _service.AnularConvenioAsync(id);
-                if (!exito)
+                var Exito = await ConvenioService.AnularConvenioAsync(IdConvenio);
+                if (!Exito)
                     return NotFound("No se encontró el convenio a anular.");
                 return Ok();
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, $"Error al anular el convenio con ID {id}.");
+                Logger.LogError(Ex, $"Error al anular el convenio con ID {IdConvenio}.");
                 return StatusCode(500, "Ocurrió un error interno al anular el convenio.");
             }
         }

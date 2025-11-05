@@ -10,86 +10,86 @@ namespace Lab_APIRest.Controllers
     [Authorize(Roles = "administrador,recepcionista")]
     public class PacientesController : ControllerBase
     {
-        private readonly IPacienteService _service;
+        private readonly IPacienteService ServicioPaciente;
 
-        public PacientesController(IPacienteService service)
+        public PacientesController(IPacienteService ServicioPaciente)
         {
-            _service = service;
+            this.ServicioPaciente = ServicioPaciente;
         }
 
         [HttpGet]
         public async Task<IActionResult> ObtenerPacientes()
         {
-            var pacientes = await _service.GetPacientesAsync();
-            return Ok(pacientes);
+            var ListaPacientes = await ServicioPaciente.ObtenerPacientesAsync();
+            return Ok(ListaPacientes);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> ObtenerPaciente(int id)
+        [HttpGet("{IdPaciente:int}")]
+        public async Task<IActionResult> ObtenerPaciente(int IdPaciente)
         {
-            var paciente = await _service.GetPacienteByIdAsync(id);
-            if (paciente == null)
-                return NotFound(new { mensaje = "No se encontró el paciente solicitado." });
+            var PacienteEncontrado = await ServicioPaciente.ObtenerPacientePorIdAsync(IdPaciente);
+            if (PacienteEncontrado == null)
+                return NotFound(new { Mensaje = "No se encontró el paciente solicitado." });
 
-            return Ok(paciente);
+            return Ok(PacienteEncontrado);
         }
 
         [HttpGet("buscar")]
-        public async Task<IActionResult> BuscarPacientes([FromQuery] string campo, [FromQuery] string valor)
+        public async Task<IActionResult> BuscarPacientes([FromQuery] string CampoBusqueda, [FromQuery] string ValorBusqueda)
         {
-            var pacientes = await _service.BuscarPacientesAsync(campo, valor);
-            if (pacientes == null)
+            var ResultadoBusqueda = await ServicioPaciente.BuscarPacientesAsync(CampoBusqueda, ValorBusqueda);
+            if (ResultadoBusqueda == null)
                 return BadRequest("Campo de búsqueda no soportado. Use: cedula, nombre o correo.");
-            return Ok(pacientes);
+            return Ok(ResultadoBusqueda);
         }
 
         [HttpPost]
-        public async Task<IActionResult> RegistrarPaciente([FromBody] PacienteDto dto)
+        public async Task<IActionResult> RegistrarPaciente([FromBody] PacienteDto DatosPaciente)
         {
-            var resultado = await _service.RegistrarPacienteAsync(dto);
-            if (!resultado.Exito)
-                return BadRequest(new { mensaje = resultado.Mensaje });
+            var ResultadoRegistro = await ServicioPaciente.RegistrarPacienteAsync(DatosPaciente);
+            if (!ResultadoRegistro.Exito)
+                return BadRequest(new { Mensaje = ResultadoRegistro.Mensaje });
 
             return CreatedAtAction(
                 nameof(ObtenerPaciente),
-                new { id = resultado.Paciente!.IdPaciente },
+                new { IdPaciente = ResultadoRegistro.Paciente!.IdPaciente },
                 new
                 {
-                    mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
-                    resultado.Paciente!.IdPaciente,
-                    resultado.Paciente!.NombrePaciente,
-                    resultado.Paciente!.CorreoElectronicoPaciente,
-                    resultado.Paciente!.ContraseniaTemporal
+                    Mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
+                    ResultadoRegistro.Paciente!.IdPaciente,
+                    ResultadoRegistro.Paciente!.NombrePaciente,
+                    ResultadoRegistro.Paciente!.CorreoElectronicoPaciente,
+                    ResultadoRegistro.Paciente!.ContraseniaTemporal
                 }
             );
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> EditarPaciente(int id, [FromBody] PacienteDto dto)
+        [HttpPut("{IdPaciente:int}")]
+        public async Task<IActionResult> EditarPaciente(int IdPaciente, [FromBody] PacienteDto DatosPaciente)
         {
-            var ok = await _service.EditarPacienteAsync(id, dto);
-            if (!ok)
+            var OkEdicion = await ServicioPaciente.EditarPacienteAsync(IdPaciente, DatosPaciente);
+            if (!OkEdicion)
                 return NotFound("No se encontró el paciente a editar.");
             return NoContent();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular/{id:int}")]
-        public async Task<IActionResult> AnularPaciente(int id)
+        [HttpPut("anular/{IdPaciente:int}")]
+        public async Task<IActionResult> AnularPaciente(int IdPaciente)
         {
-            var ok = await _service.AnularPacienteAsync(id);
-            if (!ok)
+            var OkAnulado = await ServicioPaciente.AnularPacienteAsync(IdPaciente);
+            if (!OkAnulado)
                 return NotFound("Paciente no encontrado o ya estaba anulado.");
 
-            return Ok(new { mensaje = "Paciente anulado correctamente." });
+            return Ok(new { Mensaje = "Paciente anulado correctamente." });
         }
 
-        [HttpPost("{id:int}/reenviar-temporal")]
-        public async Task<IActionResult> ReenviarTemporal(int id)
+        [HttpPost("{IdPaciente:int}/reenviar-temporal")]
+        public async Task<IActionResult> ReenviarTemporal(int IdPaciente)
         {
-            var (exito, mensaje, temp) = await _service.ReenviarCredencialesTemporalesAsync(id);
-            if (!exito) return BadRequest(new { mensaje });
-            return Ok(new { mensaje, nuevaTemporal = temp });
+            var (Exito, Mensaje, NuevaTemporal) = await ServicioPaciente.ReenviarCredencialesTemporalesAsync(IdPaciente);
+            if (!Exito) return BadRequest(new { Mensaje });
+            return Ok(new { Mensaje, NuevaTemporal = NuevaTemporal });
         }
     }
 }

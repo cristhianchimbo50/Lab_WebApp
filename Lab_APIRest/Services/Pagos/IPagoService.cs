@@ -5,10 +5,9 @@ namespace Lab_APIRest.Services.Pagos
 {
     public interface IPagoService
     {
-        Task<PagoDto?> RegistrarPagoAsync(PagoDto dto);
-        Task<List<PagoDto>> ListarPagosPorOrdenAsync(int idOrden);
-
-        Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto dto);
-        Task<List<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro);
+        Task<PagoDto?> RegistrarPago(PagoDto PagoDto);
+        Task<List<PagoDto>> ListarPagosPorOrden(int IdOrden);
+        Task<PagoDto?> RegistrarCobroCuentaPorCobrar(PagoDto PagoDto);
+        Task<List<OrdenDto>> ListarCuentasPorCobrar(PagoFiltroDto Filtro);
     }
 }

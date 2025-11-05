@@ -11,150 +11,150 @@ namespace Lab_APIRest.Controllers
     [Route("api/[controller]")]
     public class OrdenesController : ControllerBase
     {
-        private readonly IOrdenService _ordenService;
-        private readonly IResultadoService _resultadoService;
+        private readonly IOrdenService ServicioOrden;
+        private readonly IResultadoService ServicioResultado;
 
-        public OrdenesController(IOrdenService ordenService, IResultadoService resultadoService)
+        public OrdenesController(IOrdenService ServicioOrden, IResultadoService ServicioResultado)
         {
-            _ordenService = ordenService;
-            _resultadoService = resultadoService;
+            this.ServicioOrden = ServicioOrden;
+            this.ServicioResultado = ServicioResultado;
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet]
-        public async Task<IActionResult> GetOrdenes()
+        public async Task<IActionResult> ObtenerOrdenes()
         {
-            var data = await _ordenService.GetOrdenesAsync();
-            return Ok(data);
+            var ListaOrdenes = await ServicioOrden.ObtenerOrdenesAsync();
+            return Ok(ListaOrdenes);
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
-        [HttpGet("detalle/{id}")]
-        public async Task<IActionResult> ObtenerDetalleOrden(int id)
+        [HttpGet("detalle/{IdOrden}")]
+        public async Task<IActionResult> ObtenerDetalleOrden(int IdOrden)
         {
-            var dto = await _ordenService.ObtenerDetalleOrdenOriginalAsync(id);
-            if (dto == null) return NotFound();
-            return Ok(dto);
+            var DetalleOrden = await ServicioOrden.ObtenerDetalleOrdenOriginalAsync(IdOrden);
+            if (DetalleOrden == null) return NotFound();
+            return Ok(DetalleOrden);
         }
 
 
         [Authorize(Roles = "administrador,recepcionista")]
         [HttpPost]
-        public async Task<IActionResult> CrearOrden([FromBody] OrdenCompletaDto dto)
+        public async Task<IActionResult> CrearOrden([FromBody] OrdenCompletaDto DatosOrden)
         {
-            var result = await _ordenService.CrearOrdenAsync(dto);
-            if (result == null) return BadRequest();
-            return Ok(result);
+            var RespuestaCreacion = await ServicioOrden.CrearOrdenAsync(DatosOrden);
+            if (RespuestaCreacion == null) return BadRequest();
+            return Ok(RespuestaCreacion);
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular/{id}")]
-        public async Task<IActionResult> AnularOrden(int id)
+        [HttpPut("anular/{IdOrden}")]
+        public async Task<IActionResult> AnularOrden(int IdOrden)
         {
-            var ok = await _ordenService.AnularOrdenAsync(id);
-            if (!ok) return NotFound();
+            var OkAnulado = await ServicioOrden.AnularOrdenAsync(IdOrden);
+            if (!OkAnulado) return NotFound();
             return NoContent();
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
-        [HttpGet("{id}/ticket-pdf")]
-        public async Task<IActionResult> ObtenerTicketPdf(int id)
+        [HttpGet("{IdOrden}/ticket-pdf")]
+        public async Task<IActionResult> ObtenerTicketPdf(int IdOrden)
         {
-            var pdfBytes = await _ordenService.ObtenerTicketPdfAsync(id);
-            if (pdfBytes == null)
+            var PdfBytes = await ServicioOrden.ObtenerTicketPdfAsync(IdOrden);
+            if (PdfBytes == null)
                 return NotFound("Orden no encontrada.");
 
-            return File(pdfBytes, "application/pdf", $"orden_{id}_ticket.pdf");
+            return File(PdfBytes, "application/pdf", $"orden_{IdOrden}_ticket.pdf");
         }
 
         [Authorize(Roles = "administrador,laboratorista")]
         [HttpPost("ingresar-resultado")]
-        public async Task<IActionResult> IngresarResultado([FromBody] ResultadoGuardarDto dto)
+        public async Task<IActionResult> IngresarResultado([FromBody] ResultadoGuardarDto DatosResultado)
         {
             if (!ModelState.IsValid)
             {
-                var errores = ModelState.Values
+                var Errores = ModelState.Values
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
 
                 return BadRequest(new
                 {
-                    mensaje = "Modelo inválido o datos mal formateados.",
-                    errores
+                    Mensaje = "Modelo inválido o datos mal formateados.",
+                    Errores
                 });
             }
 
             try
             {
-                var ok = await _resultadoService.GuardarResultadosAsync(dto);
-                if (ok)
-                    return Ok(new { mensaje = "Resultados guardados correctamente." });
+                var OkGuardado = await ServicioResultado.GuardarResultadosAsync(DatosResultado);
+                if (OkGuardado)
+                    return Ok(new { Mensaje = "Resultados guardados correctamente." });
                 else
-                    return BadRequest(new { mensaje = "No se pudo guardar los resultados en la base de datos." });
+                    return BadRequest(new { Mensaje = "No se pudo guardar los resultados en la base de datos." });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    mensaje = "Error interno en el servidor.",
-                    detalle = ex.Message,
-                    stack = ex.StackTrace
+                    Mensaje = "Error interno en el servidor.",
+                    Detalle = ex.Message,
+                    Stack = ex.StackTrace
                 });
             }
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular-completo/{idOrden}")]
-        public async Task<IActionResult> AnularOrdenCompleta(int idOrden)
+        [HttpPut("anular-completo/{IdOrden}")]
+        public async Task<IActionResult> AnularOrdenCompleta(int IdOrden)
         {
-            var exito = await _ordenService.AnularOrdenCompletaAsync(idOrden);
-            if (!exito)
+            var ExitoAnulado = await ServicioOrden.AnularOrdenCompletaAsync(IdOrden);
+            if (!ExitoAnulado)
                 return NotFound("No se pudo anular la orden o ya estaba anulada.");
 
-            return Ok(new { mensaje = "Orden anulada correctamente junto con sus detalles, pagos y resultados." });
+            return Ok(new { Mensaje = "Orden anulada correctamente junto con sus detalles, pagos y resultados." });
         }
 
         //Para pacientes
 
         [Authorize(Roles = "paciente")]
-        [HttpGet("paciente/{idPaciente}")]
-        public async Task<IActionResult> GetOrdenesPorPaciente(int idPaciente)
+        [HttpGet("paciente/{IdPaciente}")]
+        public async Task<IActionResult> ObtenerOrdenesPorPaciente(int IdPaciente)
         {
-            var userId = User.FindFirst("IdPaciente")?.Value;
-            if (userId == null || userId != idPaciente.ToString())
+            var UserId = User.FindFirst("IdPaciente")?.Value;
+            if (UserId == null || UserId != IdPaciente.ToString())
                 return Forbid();
 
-            var data = await _ordenService.GetOrdenesPorPacienteAsync(idPaciente);
-            return Ok(data);
+            var ListaOrdenes = await ServicioOrden.ObtenerOrdenesPorPacienteAsync(IdPaciente);
+            return Ok(ListaOrdenes);
         }
 
         [Authorize(Roles = "paciente")]
-        [HttpGet("paciente/{idPaciente}/detalle/{idOrden}")]
-        public async Task<IActionResult> ObtenerDetalleOrdenPaciente(int idPaciente, int idOrden)
+        [HttpGet("paciente/{IdPaciente}/detalle/{IdOrden}")]
+        public async Task<IActionResult> ObtenerDetalleOrdenPaciente(int IdPaciente, int IdOrden)
         {
-            var userId = User.FindFirst("IdPaciente")?.Value;
-            if (userId == null || userId != idPaciente.ToString())
+            var UserId = User.FindFirst("IdPaciente")?.Value;
+            if (UserId == null || UserId != IdPaciente.ToString())
                 return Forbid();
 
-            var dto = await _ordenService.ObtenerDetalleOrdenOriginalAsync(idOrden);
-            if (dto == null)
+            var DetalleOrden = await ServicioOrden.ObtenerDetalleOrdenOriginalAsync(IdOrden);
+            if (DetalleOrden == null)
                 return NotFound();
 
-            var tieneSaldoPendiente = dto.SaldoPendiente > 0;
+            var TieneSaldoPendiente = DetalleOrden.SaldoPendiente > 0;
             return Ok(new
             {
-                dto,
-                TieneSaldoPendiente = tieneSaldoPendiente
+                DetalleOrden,
+                TieneSaldoPendiente = TieneSaldoPendiente
             });
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
-        [HttpPost("{idOrden}/verificar-notificacion")]
-        public async Task<IActionResult> VerificarNotificacion(int idOrden)
+        [HttpPost("{IdOrden}/verificar-notificacion")]
+        public async Task<IActionResult> VerificarNotificacion(int IdOrden)
         {
-            await _ordenService.VerificarYNotificarResultadosCompletosAsync(idOrden);
-            return Ok(new { mensaje = "Verificación de resultados completada." });
+            await ServicioOrden.VerificarYNotificarResultadosCompletosAsync(IdOrden);
+            return Ok(new { Mensaje = "Verificación de resultados completada." });
         }
 
 

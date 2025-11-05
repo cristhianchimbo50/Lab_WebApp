@@ -4,12 +4,12 @@ namespace Lab_APIRest.Services.Pacientes
 {
     public interface IPacienteService
     {
-        Task<List<PacienteDto>> GetPacientesAsync();
-        Task<PacienteDto?> GetPacienteByIdAsync(int id);
-        Task<List<PacienteDto>?> BuscarPacientesAsync(string campo, string valor);
+        Task<List<PacienteDto>> ObtenerPacientesAsync();
+        Task<PacienteDto?> ObtenerPacientePorIdAsync(int IdPaciente);
+        Task<List<PacienteDto>?> BuscarPacientesAsync(string Campo, string Valor);
         Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> RegistrarPacienteAsync(PacienteDto dto);
-        Task<bool> EditarPacienteAsync(int id, PacienteDto dto);
-        Task<bool> AnularPacienteAsync(int id);
-        Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesAsync(int idPaciente);
+        Task<bool> EditarPacienteAsync(int IdPaciente, PacienteDto dto);
+        Task<bool> AnularPacienteAsync(int IdPaciente);
+        Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesAsync(int IdPaciente);
     }
 }

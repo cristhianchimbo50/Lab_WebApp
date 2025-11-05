@@ -14,69 +14,69 @@ namespace Lab_APIRest.Controllers
     [Authorize(Roles = "administrador,recepcionista")]
     public class PagosController : ControllerBase
     {
-        private readonly IPagoService _service;
-        private readonly ILogger<PagosController> _logger;
+        private readonly IPagoService PagoService;
+        private readonly ILogger<PagosController> Logger;
 
-        public PagosController(IPagoService service, ILogger<PagosController> logger)
+        public PagosController(IPagoService pagoService, ILogger<PagosController> logger)
         {
-            _service = service;
-            _logger = logger;
+            PagoService = pagoService;
+            Logger = logger;
         }
 
         [HttpPost]
-        public async Task<ActionResult<PagoDto>> RegistrarPago([FromBody] PagoDto dto)
+        public async Task<ActionResult<PagoDto>> RegistrarPago([FromBody] PagoDto PagoDto)
         {
             try
             {
-                var pago = await _service.RegistrarPagoAsync(dto);
-                if (pago == null)
+                var PagoRegistrado = await PagoService.RegistrarPago(PagoDto);
+                if (PagoRegistrado == null)
                     return BadRequest("No se pudo registrar el pago. Verifique los datos ingresados.");
 
-                return Ok(pago);
+                return Ok(PagoRegistrado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar el pago.");
+                Logger.LogError(ex, "Error al registrar el pago.");
                 return StatusCode(500, "Ocurrió un error interno al registrar el pago.");
             }
         }
 
-        [HttpGet("orden/{idOrden:int}")]
-        public async Task<ActionResult<List<PagoDto>>> ListarPagosPorOrden(int idOrden)
+        [HttpGet("orden/{IdOrden:int}")]
+        public async Task<ActionResult<List<PagoDto>>> ListarPagosPorOrden(int IdOrden)
         {
-            var pagos = await _service.ListarPagosPorOrdenAsync(idOrden);
-            return Ok(pagos);
+            var Pagos = await PagoService.ListarPagosPorOrden(IdOrden);
+            return Ok(Pagos);
         }
 
         [HttpPost("cuentasporcobrar/listar")]
-        public async Task<ActionResult<List<OrdenDto>>> ListarCuentasPorCobrar([FromBody] PagoFiltroDto filtro)
+        public async Task<ActionResult<List<OrdenDto>>> ListarCuentasPorCobrar([FromBody] PagoFiltroDto Filtro)
         {
             try
             {
-                var ordenes = await _service.ListarCuentasPorCobrarAsync(filtro);
-                return Ok(ordenes);
+                var Ordenes = await PagoService.ListarCuentasPorCobrar(Filtro);
+                return Ok(Ordenes);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al listar cuentas por cobrar.");
+                Logger.LogError(ex, "Error al listar cuentas por cobrar.");
                 return StatusCode(500, "Ocurrió un error interno al listar las cuentas por cobrar.");
             }
         }
 
         [HttpPost("cuentasporcobrar/registrar")]
-        public async Task<ActionResult<PagoDto>> RegistrarCobroCuentaPorCobrar([FromBody] PagoDto dto)
+        public async Task<ActionResult<PagoDto>> RegistrarCobroCuentaPorCobrar([FromBody] PagoDto PagoDto)
         {
             try
             {
-                var pago = await _service.RegistrarCobroCuentaPorCobrarAsync(dto);
-                if (pago == null)
+                var PagoRegistrado = await PagoService.RegistrarCobroCuentaPorCobrar(PagoDto);
+                if (PagoRegistrado == null)
                     return BadRequest("No se pudo registrar el cobro. Verifique la orden o los valores ingresados.");
 
-                return Ok(pago);
+                return Ok(PagoRegistrado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar cobro de cuenta por cobrar.");
+                Logger.LogError(ex, "Error al registrar cobro de cuenta por cobrar.");
                 return StatusCode(500, "Ocurrió un error interno al registrar el cobro de la cuenta por cobrar.");
             }
         }

@@ -13,26 +13,26 @@ namespace Lab_APIRest.Controllers.Reactivos
     [Authorize(Roles = "administrador,laboratorista")]
     public class MovimientosController : ControllerBase
     {
-        private readonly IMovimientoService _service;
-        private readonly ILogger<MovimientosController> _logger;
+        private readonly IMovimientoService MovimientoService;
+        private readonly ILogger<MovimientosController> Logger;
 
-        public MovimientosController(IMovimientoService service, ILogger<MovimientosController> logger)
+        public MovimientosController(IMovimientoService MovimientoService, ILogger<MovimientosController> Logger)
         {
-            _service = service;
-            _logger = logger;
+            this.MovimientoService = MovimientoService;
+            this.Logger = Logger;
         }
 
         [HttpPost("filtrar")]
-        public async Task<ActionResult<List<MovimientoReactivoDto>>> FiltrarMovimientos([FromBody] MovimientoReactivoFiltroDto filtro)
+        public async Task<ActionResult<List<MovimientoReactivoDto>>> FiltrarMovimientos([FromBody] MovimientoReactivoFiltroDto Filtro)
         {
             try
             {
-                var lista = await _service.GetMovimientosAsync(filtro);
-                return Ok(lista);
+                var Movimientos = await MovimientoService.ObtenerMovimientosAsync(Filtro);
+                return Ok(Movimientos);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al filtrar los movimientos de reactivos.");
+                Logger.LogError(ex, "Error al filtrar los movimientos de reactivos.");
                 return StatusCode(500, "Ocurrió un error interno al obtener los movimientos.");
             }
         }

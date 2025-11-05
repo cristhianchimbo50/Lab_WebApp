@@ -4,16 +4,14 @@ namespace Lab_APIRest.Services.Examenes
 {
     public interface IExamenReactivoAsociacionService
     {
-        Task<List<AsociacionReactivoDto>> ObtenerTodasAsync();
-        Task<List<AsociacionReactivoDto>> BuscarPorExamenAsync(string nombreExamen);
-        Task<List<AsociacionReactivoDto>> BuscarPorReactivoAsync(string nombreReactivo);
-        Task<AsociacionReactivoDto?> ObtenerPorIdAsync(int idExamenReactivo);
-        Task<AsociacionReactivoDto> CrearAsync(AsociacionReactivoDto dto);
-        Task<bool> EditarAsync(int id, AsociacionReactivoDto dto);
-        Task<bool> EliminarAsync(int id);
-        Task<List<AsociacionReactivoDto>> ObtenerPorExamenIdAsync(int idExamen);
-        Task<bool> GuardarPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones);
-
-
+        Task<List<AsociacionReactivoDto>> ObtenerTodas();
+        Task<List<AsociacionReactivoDto>> BuscarPorExamen(string NombreExamen);
+        Task<List<AsociacionReactivoDto>> BuscarPorReactivo(string NombreReactivo);
+        Task<AsociacionReactivoDto?> ObtenerPorId(int IdExamenReactivo);
+        Task<AsociacionReactivoDto> Crear(AsociacionReactivoDto AsociacionDto);
+        Task<bool> Editar(int IdExamenReactivo, AsociacionReactivoDto AsociacionDto);
+        Task<bool> Eliminar(int IdExamenReactivo);
+        Task<List<AsociacionReactivoDto>> ObtenerPorExamenId(int IdExamen);
+        Task<bool> GuardarPorExamen(int IdExamen, List<AsociacionReactivoDto> Asociaciones);
     }
 }

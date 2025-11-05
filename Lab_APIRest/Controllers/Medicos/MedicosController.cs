@@ -10,49 +10,49 @@ namespace Lab_APIRest.Controllers.Medicos
     [Authorize(Roles = "administrador,recepcionista")]
     public class MedicosController : ControllerBase
     {
-        private readonly IMedicoService _service;
-        private readonly ILogger<MedicosController> _logger;
+        private readonly IMedicoService ServicioMedico;
+        private readonly ILogger<MedicosController> Registro;
 
-        public MedicosController(IMedicoService service, ILogger<MedicosController> logger)
+        public MedicosController(IMedicoService ServicioMedico, ILogger<MedicosController> Registro)
         {
-            _service = service;
-            _logger = logger;
+            this.ServicioMedico = ServicioMedico;
+            this.Registro = Registro;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MedicoDto>>> ObtenerMedicos()
         {
-            var medicos = await _service.GetMedicosAsync();
-            return Ok(medicos);
+            var ListaMedicos = await ServicioMedico.ObtenerMedicosAsync();
+            return Ok(ListaMedicos);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<MedicoDto>> ObtenerMedico(int id)
+        [HttpGet("{IdMedico:int}")]
+        public async Task<ActionResult<MedicoDto>> ObtenerMedico(int IdMedico)
         {
-            var medico = await _service.GetMedicoByIdAsync(id);
-            if (medico == null)
+            var MedicoEncontrado = await ServicioMedico.ObtenerMedicoPorIdAsync(IdMedico);
+            if (MedicoEncontrado == null)
                 return NotFound("No se encontró el médico solicitado.");
 
-            return Ok(medico);
+            return Ok(MedicoEncontrado);
         }
 
         [HttpGet("buscar")]
-        public async Task<ActionResult<List<MedicoDto>>> BuscarMedicos([FromQuery] string campo, [FromQuery] string valor)
+        public async Task<ActionResult<List<MedicoDto>>> BuscarMedicos([FromQuery] string CampoBusqueda, [FromQuery] string ValorBusqueda)
         {
-            if (string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
+            if (string.IsNullOrWhiteSpace(CampoBusqueda) || string.IsNullOrWhiteSpace(ValorBusqueda))
                 return BadRequest("Debe proporcionar un campo y valor de búsqueda.");
 
             try
             {
-                List<MedicoDto> medicos = campo.ToLower() switch
+                List<MedicoDto> ListaMedicos = CampoBusqueda.ToLower() switch
                 {
-                    "nombre" => await _service.GetMedicosPorNombreAsync(valor),
-                    "especialidad" => await _service.GetMedicosPorEspecialidadAsync(valor),
-                    "correo" => await _service.GetMedicosPorCorreoAsync(valor),
+                    "nombre" => await ServicioMedico.ObtenerMedicosPorNombreAsync(ValorBusqueda),
+                    "especialidad" => await ServicioMedico.ObtenerMedicosPorEspecialidadAsync(ValorBusqueda),
+                    "correo" => await ServicioMedico.ObtenerMedicosPorCorreoAsync(ValorBusqueda),
                     _ => throw new ArgumentException("Campo de búsqueda no soportado. Use: nombre, especialidad o correo.")
                 };
 
-                return Ok(medicos);
+                return Ok(ListaMedicos);
             }
             catch (ArgumentException ex)
             {
@@ -60,54 +60,54 @@ namespace Lab_APIRest.Controllers.Medicos
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al buscar médicos.");
+                Registro.LogError(ex, "Error al buscar médicos.");
                 return StatusCode(500, "Error interno al realizar la búsqueda de médicos.");
             }
         }
 
         [Authorize(Roles = "administrador,recepcionista")]
         [HttpPost]
-        public async Task<ActionResult<MedicoDto>> RegistrarMedico([FromBody] MedicoDto dto)
+        public async Task<ActionResult<MedicoDto>> RegistrarMedico([FromBody] MedicoDto DatosMedico)
         {
             try
             {
-                var medico = await _service.CrearMedicoAsync(dto);
-                return CreatedAtAction(nameof(ObtenerMedico), new { id = medico.IdMedico }, medico);
+                var MedicoCreado = await ServicioMedico.RegistrarMedicoAsync(DatosMedico);
+                return CreatedAtAction(nameof(ObtenerMedico), new { IdMedico = MedicoCreado.IdMedico }, MedicoCreado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar médico.");
+                Registro.LogError(ex, "Error al registrar médico.");
                 return StatusCode(500, "Ocurrió un error interno al registrar el médico.");
             }
         }
 
         [Authorize(Roles = "administrador,recepcionista")]
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> EditarMedico(int id, [FromBody] MedicoDto dto)
+        [HttpPut("{IdMedico:int}")]
+        public async Task<IActionResult> EditarMedico(int IdMedico, [FromBody] MedicoDto DatosMedico)
         {
-            if (id != dto.IdMedico)
+            if (IdMedico != DatosMedico.IdMedico)
                 return BadRequest("El identificador del médico no coincide.");
 
-            var exito = await _service.EditarMedicoAsync(id, dto);
-            if (!exito) return NotFound("Médico no encontrado.");
+            var ExitoOperacion = await ServicioMedico.EditarMedicoAsync(IdMedico, DatosMedico);
+            if (!ExitoOperacion) return NotFound("Médico no encontrado.");
 
             return NoContent();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular/{id:int}")]
-        public async Task<IActionResult> AnularMedico(int id)
+        [HttpPut("anular/{IdMedico:int}")]
+        public async Task<IActionResult> AnularMedico(int IdMedico)
         {
             try
             {
-                var exito = await _service.AnularMedicoAsync(id);
-                if (!exito) return NotFound("Médico no encontrado.");
+                var ExitoOperacion = await ServicioMedico.AnularMedicoAsync(IdMedico);
+                if (!ExitoOperacion) return NotFound("Médico no encontrado.");
 
                 return Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al anular médico con ID {id}.");
+                Registro.LogError(ex, $"Error al anular médico con ID {IdMedico}.");
                 return StatusCode(500, "Ocurrió un error interno al anular el médico.");
             }
         }

@@ -11,171 +11,171 @@ namespace Lab_APIRest.Services.Auth
 {
     public class AuthService : IAuthService
     {
-        private readonly LabDbContext _db;
-        private readonly TokenService _tokenService;
-        private readonly IMemoryCache _cache;
-        private readonly ILogger<AuthService> _logger;
-        private readonly PasswordHasher<object> _hasher = new();
-        private readonly EmailService _emailService;
+        private readonly LabDbContext Contexto;
+        private readonly TokenService TokenService;
+        private readonly IMemoryCache Cache;
+        private readonly ILogger<AuthService> Logger;
+        private readonly PasswordHasher<object> Hasher = new();
+        private readonly EmailService EmailService;
 
         private const int MaxIntentos = 5;
         private static readonly TimeSpan LockoutTiempo = TimeSpan.FromMinutes(15);
 
         public AuthService(
-            LabDbContext db,
-            TokenService tokenService,
-            IMemoryCache cache,
-            ILogger<AuthService> logger,
-            EmailService emailService)
+            LabDbContext Contexto,
+            TokenService TokenService,
+            IMemoryCache Cache,
+            ILogger<AuthService> Logger,
+            EmailService EmailService)
         {
-            _db = db;
-            _tokenService = tokenService;
-            _cache = cache;
-            _logger = logger;
-            _emailService = emailService;
+            this.Contexto = Contexto;
+            this.TokenService = TokenService;
+            this.Cache = Cache;
+            this.Logger = Logger;
+            this.EmailService = EmailService;
         }
 
-        public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto, CancellationToken ct)
+        public async Task<LoginResponseDto?> IniciarSesionAsync(LoginRequestDto Solicitud, CancellationToken Ct)
         {
-            var email = (dto.CorreoUsuario ?? "").Trim().ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(dto.Clave))
+            var Email = (Solicitud.CorreoUsuario ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Solicitud.Clave))
                 return null;
 
-            string cacheKey = $"login_intentos_{email}";
-            if (_cache.TryGetValue<int>(cacheKey, out int intentos) && intentos >= MaxIntentos)
+            string CacheKey = $"login_intentos_{Email}";
+            if (Cache.TryGetValue<int>(CacheKey, out int Intentos) && Intentos >= MaxIntentos)
                 return null;
 
-            var usuario = await _db.usuarios.AsNoTracking()
-                .FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == email, ct);
+            var UsuarioEntidad = await Contexto.usuarios.AsNoTracking()
+                .FirstOrDefaultAsync(U => U.correo_usuario.ToLower() == Email, Ct);
 
-            if (usuario is null)
+            if (UsuarioEntidad is null)
             {
-                RegistrarIntentoFallido(email);
+                RegistrarIntentoFallido(Email);
                 return null;
             }
 
-            var claveOk = _hasher.VerifyHashedPassword(null!, usuario.clave_usuario, dto.Clave) != PasswordVerificationResult.Failed;
-            if (!claveOk)
+            var ClaveOk = Hasher.VerifyHashedPassword(null!, UsuarioEntidad.clave_usuario, Solicitud.Clave) != PasswordVerificationResult.Failed;
+            if (!ClaveOk)
             {
-                RegistrarIntentoFallido(email);
+                RegistrarIntentoFallido(Email);
                 return null;
             }
 
-            if (!usuario.activo)
+            if (!UsuarioEntidad.activo)
                 return null;
 
-            _cache.Remove(cacheKey);
+            Cache.Remove(CacheKey);
 
-            if (usuario.es_contrasenia_temporal == true)
+            if (UsuarioEntidad.es_contrasenia_temporal == true)
             {
-                if (usuario.fecha_expira_temporal.HasValue && usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
+                if (UsuarioEntidad.fecha_expira_temporal.HasValue && UsuarioEntidad.fecha_expira_temporal.Value < DateTime.UtcNow)
                 {
                     return new LoginResponseDto
                     {
-                        IdUsuario = usuario.id_usuario,
-                        CorreoUsuario = usuario.correo_usuario,
-                        Nombre = usuario.nombre,
-                        Rol = usuario.rol,
+                        IdUsuario = UsuarioEntidad.id_usuario,
+                        CorreoUsuario = UsuarioEntidad.correo_usuario,
+                        Nombre = UsuarioEntidad.nombre,
+                        Rol = UsuarioEntidad.rol,
                         EsContraseniaTemporal = true,
                         AccessToken = null,
-                        ExpiresAtUtc = usuario.fecha_expira_temporal.Value,
+                        ExpiresAtUtc = UsuarioEntidad.fecha_expira_temporal.Value,
                         Mensaje = "La contraseña temporal ha expirado. Solicite una nueva."
                     };
                 }
 
                 return new LoginResponseDto
                 {
-                    IdUsuario = usuario.id_usuario,
-                    CorreoUsuario = usuario.correo_usuario,
-                    Nombre = usuario.nombre,
-                    Rol = usuario.rol,
+                    IdUsuario = UsuarioEntidad.id_usuario,
+                    CorreoUsuario = UsuarioEntidad.correo_usuario,
+                    Nombre = UsuarioEntidad.nombre,
+                    Rol = UsuarioEntidad.rol,
                     EsContraseniaTemporal = true,
                     AccessToken = null,
-                    ExpiresAtUtc = (DateTime)usuario.fecha_expira_temporal,
+                    ExpiresAtUtc = (DateTime)UsuarioEntidad.fecha_expira_temporal!,
                     Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
                 };
             }
 
             try
             {
-                var usuarioActualizar = new Infrastructure.EF.Models.usuario
+                var UsuarioActualizar = new Infrastructure.EF.Models.usuario
                 {
-                    id_usuario = usuario.id_usuario,
+                    id_usuario = UsuarioEntidad.id_usuario,
                     ultimo_acceso = DateTime.UtcNow
                 };
-                _db.usuarios.Attach(usuarioActualizar);
-                _db.Entry(usuarioActualizar).Property(x => x.ultimo_acceso).IsModified = true;
-                await _db.SaveChangesAsync(ct);
+                Contexto.usuarios.Attach(UsuarioActualizar);
+                Contexto.Entry(UsuarioActualizar).Property(x => x.ultimo_acceso).IsModified = true;
+                await Contexto.SaveChangesAsync(Ct);
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogWarning(ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", usuario.id_usuario);
+                Logger.LogWarning(Ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", UsuarioEntidad.id_usuario);
             }
 
-            int? idPaciente = null;
-            if (usuario.rol == "paciente")
+            int? IdPaciente = null;
+            if (UsuarioEntidad.rol == "paciente")
             {
-                var paciente = await _db.pacientes.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.id_usuario == usuario.id_usuario, ct);
-                if (paciente != null)
-                    idPaciente = paciente.id_paciente;
+                var PacienteEntidad = await Contexto.pacientes.AsNoTracking()
+                    .FirstOrDefaultAsync(P => P.id_usuario == UsuarioEntidad.id_usuario, Ct);
+                if (PacienteEntidad != null)
+                    IdPaciente = PacienteEntidad.id_paciente;
             }
 
-            (string token, DateTime exp) = _tokenService.CreateToken(
-                usuario.id_usuario,
-                usuario.correo_usuario,
-                usuario.nombre,
-                usuario.rol,
+            (string Token, DateTime ExpiraUtc) = TokenService.CreateToken(
+                UsuarioEntidad.id_usuario,
+                UsuarioEntidad.correo_usuario,
+                UsuarioEntidad.nombre,
+                UsuarioEntidad.rol,
                 false,
-                idPaciente
+                IdPaciente
             );
 
             return new LoginResponseDto
             {
-                IdUsuario = usuario.id_usuario,
-                CorreoUsuario = usuario.correo_usuario,
-                Nombre = usuario.nombre,
-                Rol = usuario.rol,
+                IdUsuario = UsuarioEntidad.id_usuario,
+                CorreoUsuario = UsuarioEntidad.correo_usuario,
+                Nombre = UsuarioEntidad.nombre,
+                Rol = UsuarioEntidad.rol,
                 EsContraseniaTemporal = false,
-                AccessToken = token,
-                ExpiresAtUtc = exp,
+                AccessToken = Token,
+                ExpiresAtUtc = ExpiraUtc,
                 Mensaje = "Inicio de sesión exitoso. La sesión expirará en 1 hora."
             };
         }
 
-        private void RegistrarIntentoFallido(string email)
+        private void RegistrarIntentoFallido(string Email)
         {
-            string cacheKey = $"login_intentos_{email}";
-            int intentos = _cache.TryGetValue(cacheKey, out int actuales) ? actuales : 0;
-            intentos++;
-            _cache.Set(cacheKey, intentos, LockoutTiempo);
+            string CacheKey = $"login_intentos_{Email}";
+            int Intentos = Cache.TryGetValue(CacheKey, out int actuales) ? actuales : 0;
+            Intentos++;
+            Cache.Set(CacheKey, Intentos, LockoutTiempo);
         }
 
-        public async Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct)
+        public async Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto Cambio, CancellationToken Ct)
         {
-            var correo = dto.CorreoUsuario.Trim().ToLowerInvariant();
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
+            var Correo = Cambio.CorreoUsuario.Trim().ToLowerInvariant();
+            var UsuarioEntidad = await Contexto.usuarios.FirstOrDefaultAsync(U => U.correo_usuario.ToLower() == Correo, Ct);
 
-            if (usuario == null)
+            if (UsuarioEntidad == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            if (usuario.es_contrasenia_temporal == true &&
-                usuario.fecha_expira_temporal.HasValue &&
-                usuario.fecha_expira_temporal.Value < DateTime.UtcNow)
+            if (UsuarioEntidad.es_contrasenia_temporal == true &&
+                UsuarioEntidad.fecha_expira_temporal.HasValue &&
+                UsuarioEntidad.fecha_expira_temporal.Value < DateTime.UtcNow)
             {
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña temporal ha expirado. Solicite una nueva." };
             }
 
-            var verificacion = _hasher.VerifyHashedPassword(null!, usuario.clave_usuario, dto.ContraseniaActual);
-            if (verificacion == PasswordVerificationResult.Failed)
+            var Verificacion = Hasher.VerifyHashedPassword(null!, UsuarioEntidad.clave_usuario, Cambio.ContraseniaActual);
+            if (Verificacion == PasswordVerificationResult.Failed)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
-            var nuevaHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
-            usuario.clave_usuario = nuevaHash;
-            usuario.es_contrasenia_temporal = false;
-            usuario.fecha_expira_temporal = null;
+            var NuevaHash = Hasher.HashPassword(null!, Cambio.NuevaContrasenia);
+            UsuarioEntidad.clave_usuario = NuevaHash;
+            UsuarioEntidad.es_contrasenia_temporal = false;
+            UsuarioEntidad.fecha_expira_temporal = null;
 
-            await _db.SaveChangesAsync(ct);
+            await Contexto.SaveChangesAsync(Ct);
 
             return new CambiarContraseniaResponseDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }

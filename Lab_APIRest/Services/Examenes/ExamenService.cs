@@ -7,189 +7,189 @@ namespace Lab_APIRest.Services.Examenes
 {
     public class ExamenService : IExamenService
     {
-        private readonly LabDbContext _context;
+        private readonly LabDbContext Contexto;
 
-        public ExamenService(LabDbContext context)
+        public ExamenService(LabDbContext Contexto)
         {
-            _context = context;
+            this.Contexto = Contexto;
         }
 
-        public async Task<List<ExamenDto>> GetExamenesAsync()
+        public async Task<List<ExamenDto>> ObtenerExamenesAsync()
         {
-            return await _context.examen
+            return await Contexto.examen
                 .AsNoTracking()
-                .Select(e => new ExamenDto
+                .Select(entidadExamen => new ExamenDto
                 {
-                    IdExamen = e.id_examen,
-                    NombreExamen = e.nombre_examen,
-                    ValorReferencia = e.valor_referencia,
-                    Unidad = e.unidad,
-                    Precio = e.precio,
-                    Anulado = e.anulado ?? false,
-                    Estudio = e.estudio,
-                    TipoMuestra = e.tipo_muestra,
-                    TiempoEntrega = e.tiempo_entrega,
-                    TipoExamen = e.tipo_examen,
-                    Tecnica = e.tecnica,
-                    TituloExamen = e.titulo_examen
+                    IdExamen = entidadExamen.id_examen,
+                    NombreExamen = entidadExamen.nombre_examen,
+                    ValorReferencia = entidadExamen.valor_referencia,
+                    Unidad = entidadExamen.unidad,
+                    Precio = entidadExamen.precio,
+                    Anulado = entidadExamen.anulado ?? false,
+                    Estudio = entidadExamen.estudio,
+                    TipoMuestra = entidadExamen.tipo_muestra,
+                    TiempoEntrega = entidadExamen.tiempo_entrega,
+                    TipoExamen = entidadExamen.tipo_examen,
+                    Tecnica = entidadExamen.tecnica,
+                    TituloExamen = entidadExamen.titulo_examen
                 })
                 .ToListAsync();
         }
 
-        public async Task<ExamenDto?> GetExamenByIdAsync(int id)
+        public async Task<ExamenDto?> ObtenerExamenPorIdAsync(int IdExamen)
         {
-            var e = await _context.examen.AsNoTracking().FirstOrDefaultAsync(x => x.id_examen == id);
-            if (e == null) return null;
+            var entidadExamen = await Contexto.examen.AsNoTracking().FirstOrDefaultAsync(x => x.id_examen == IdExamen);
+            if (entidadExamen == null) return null;
             return new ExamenDto
             {
-                IdExamen = e.id_examen,
-                NombreExamen = e.nombre_examen,
-                ValorReferencia = e.valor_referencia,
-                Unidad = e.unidad,
-                Precio = e.precio,
-                Anulado = e.anulado ?? false,
-                Estudio = e.estudio,
-                TipoMuestra = e.tipo_muestra,
-                TiempoEntrega = e.tiempo_entrega,
-                TipoExamen = e.tipo_examen,
-                Tecnica = e.tecnica,
-                TituloExamen = e.titulo_examen
+                IdExamen = entidadExamen.id_examen,
+                NombreExamen = entidadExamen.nombre_examen,
+                ValorReferencia = entidadExamen.valor_referencia,
+                Unidad = entidadExamen.unidad,
+                Precio = entidadExamen.precio,
+                Anulado = entidadExamen.anulado ?? false,
+                Estudio = entidadExamen.estudio,
+                TipoMuestra = entidadExamen.tipo_muestra,
+                TiempoEntrega = entidadExamen.tiempo_entrega,
+                TipoExamen = entidadExamen.tipo_examen,
+                Tecnica = entidadExamen.tecnica,
+                TituloExamen = entidadExamen.titulo_examen
             };
         }
 
-        public async Task<List<ExamenDto>> BuscarExamenesPorNombreAsync(string nombre)
+        public async Task<List<ExamenDto>> BuscarExamenesPorNombreAsync(string Nombre)
         {
-            return await _context.examen
+            return await Contexto.examen
                 .AsNoTracking()
-                .Where(e => e.nombre_examen.Contains(nombre))
-                .Select(e => new ExamenDto
+                .Where(entidadExamen => entidadExamen.nombre_examen.Contains(Nombre))
+                .Select(entidadExamen => new ExamenDto
                 {
-                    IdExamen = e.id_examen,
-                    NombreExamen = e.nombre_examen,
-                    ValorReferencia = e.valor_referencia,
-                    Unidad = e.unidad,
-                    Precio = e.precio,
-                    Anulado = e.anulado ?? false,
-                    Estudio = e.estudio,
-                    TipoMuestra = e.tipo_muestra,
-                    TiempoEntrega = e.tiempo_entrega,
-                    TipoExamen = e.tipo_examen,
-                    Tecnica = e.tecnica,
-                    TituloExamen = e.titulo_examen
+                    IdExamen = entidadExamen.id_examen,
+                    NombreExamen = entidadExamen.nombre_examen,
+                    ValorReferencia = entidadExamen.valor_referencia,
+                    Unidad = entidadExamen.unidad,
+                    Precio = entidadExamen.precio,
+                    Anulado = entidadExamen.anulado ?? false,
+                    Estudio = entidadExamen.estudio,
+                    TipoMuestra = entidadExamen.tipo_muestra,
+                    TiempoEntrega = entidadExamen.tiempo_entrega,
+                    TipoExamen = entidadExamen.tipo_examen,
+                    Tecnica = entidadExamen.tecnica,
+                    TituloExamen = entidadExamen.titulo_examen
                 })
                 .ToListAsync();
         }
 
-        public async Task<ExamenDto> CrearExamenAsync(ExamenDto dto)
+        public async Task<ExamenDto> RegistrarExamenAsync(ExamenDto DatosExamen)
         {
-            var examen = new examen
+            var entidad = new examen
             {
-                nombre_examen = dto.NombreExamen,
-                valor_referencia = dto.ValorReferencia,
-                unidad = dto.Unidad,
-                precio = dto.Precio,
+                nombre_examen = DatosExamen.NombreExamen,
+                valor_referencia = DatosExamen.ValorReferencia,
+                unidad = DatosExamen.Unidad,
+                precio = DatosExamen.Precio,
                 anulado = false,
-                estudio = dto.Estudio,
-                tipo_muestra = dto.TipoMuestra,
-                tiempo_entrega = dto.TiempoEntrega,
-                tipo_examen = dto.TipoExamen,
-                tecnica = dto.Tecnica,
-                titulo_examen = dto.TituloExamen
+                estudio = DatosExamen.Estudio,
+                tipo_muestra = DatosExamen.TipoMuestra,
+                tiempo_entrega = DatosExamen.TiempoEntrega,
+                tipo_examen = DatosExamen.TipoExamen,
+                tecnica = DatosExamen.Tecnica,
+                titulo_examen = DatosExamen.TituloExamen
             };
-            _context.examen.Add(examen);
-            await _context.SaveChangesAsync();
+            Contexto.examen.Add(entidad);
+            await Contexto.SaveChangesAsync();
 
-            dto.IdExamen = examen.id_examen;
-            dto.Anulado = false;
-            return dto;
+            DatosExamen.IdExamen = entidad.id_examen;
+            DatosExamen.Anulado = false;
+            return DatosExamen;
         }
 
-        public async Task<bool> EditarExamenAsync(int id, ExamenDto dto)
+        public async Task<bool> EditarExamenAsync(int IdExamen, ExamenDto DatosExamen)
         {
-            var examen = await _context.examen.FindAsync(id);
-            if (examen == null) return false;
+            var entidad = await Contexto.examen.FindAsync(IdExamen);
+            if (entidad == null) return false;
 
-            examen.nombre_examen = dto.NombreExamen;
-            examen.valor_referencia = dto.ValorReferencia;
-            examen.unidad = dto.Unidad;
-            examen.precio = dto.Precio;
-            examen.estudio = dto.Estudio;
-            examen.tipo_muestra = dto.TipoMuestra;
-            examen.tiempo_entrega = dto.TiempoEntrega;
-            examen.tipo_examen = dto.TipoExamen;
-            examen.tecnica = dto.Tecnica;
-            examen.titulo_examen = dto.TituloExamen;
-            examen.anulado = dto.Anulado;
+            entidad.nombre_examen = DatosExamen.NombreExamen;
+            entidad.valor_referencia = DatosExamen.ValorReferencia;
+            entidad.unidad = DatosExamen.Unidad;
+            entidad.precio = DatosExamen.Precio;
+            entidad.estudio = DatosExamen.Estudio;
+            entidad.tipo_muestra = DatosExamen.TipoMuestra;
+            entidad.tiempo_entrega = DatosExamen.TiempoEntrega;
+            entidad.tipo_examen = DatosExamen.TipoExamen;
+            entidad.tecnica = DatosExamen.Tecnica;
+            entidad.titulo_examen = DatosExamen.TituloExamen;
+            entidad.anulado = DatosExamen.Anulado;
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> AnularExamenAsync(int id)
+        public async Task<bool> AnularExamenAsync(int IdExamen)
         {
-            var examen = await _context.examen.FindAsync(id);
-            if (examen == null) return false;
+            var entidad = await Contexto.examen.FindAsync(IdExamen);
+            if (entidad == null) return false;
 
-            examen.anulado = true;
-            await _context.SaveChangesAsync();
+            entidad.anulado = true;
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
         //Para examenes compuestos
 
-        public async Task<List<ExamenDto>> ObtenerHijosDeExamenAsync(int idExamenPadre)
+        public async Task<List<ExamenDto>> ObtenerHijosDeExamenAsync(int IdExamenPadre)
         {
-            var hijos = await _context.examen_composicion
-                .Where(ec => ec.id_examen_padre == idExamenPadre)
-                .Join(_context.examen,
+            var hijos = await Contexto.examen_composicion
+                .Where(ec => ec.id_examen_padre == IdExamenPadre)
+                .Join(Contexto.examen,
                     ec => ec.id_examen_hijo,
                     e => e.id_examen,
-                    (ec, e) => new ExamenDto
+                    (ec, entidadExamen) => new ExamenDto
                     {
-                        IdExamen = e.id_examen,
-                        NombreExamen = e.nombre_examen,
-                        ValorReferencia = e.valor_referencia,
-                        Unidad = e.unidad,
-                        Precio = e.precio,
-                        Anulado = e.anulado ?? false,
-                        Estudio = e.estudio,
-                        TipoMuestra = e.tipo_muestra,
-                        TiempoEntrega = e.tiempo_entrega,
-                        TipoExamen = e.tipo_examen,
-                        Tecnica = e.tecnica,
-                        TituloExamen = e.titulo_examen
+                        IdExamen = entidadExamen.id_examen,
+                        NombreExamen = entidadExamen.nombre_examen,
+                        ValorReferencia = entidadExamen.valor_referencia,
+                        Unidad = entidadExamen.unidad,
+                        Precio = entidadExamen.precio,
+                        Anulado = entidadExamen.anulado ?? false,
+                        Estudio = entidadExamen.estudio,
+                        TipoMuestra = entidadExamen.tipo_muestra,
+                        TiempoEntrega = entidadExamen.tiempo_entrega,
+                        TipoExamen = entidadExamen.tipo_examen,
+                        Tecnica = entidadExamen.tecnica,
+                        TituloExamen = entidadExamen.titulo_examen
                     })
                 .ToListAsync();
 
             return hijos;
         }
 
-        public async Task<bool> AgregarExamenHijoAsync(int idExamenPadre, int idExamenHijo)
+        public async Task<bool> AgregarExamenHijoAsync(int IdExamenPadre, int IdExamenHijo)
         {
-            var existe = await _context.examen_composicion
-                .AnyAsync(x => x.id_examen_padre == idExamenPadre && x.id_examen_hijo == idExamenHijo);
+            var existe = await Contexto.examen_composicion
+                .AnyAsync(x => x.id_examen_padre == IdExamenPadre && x.id_examen_hijo == IdExamenHijo);
 
             if (existe) return false;
 
             var composicion = new examen_composicion
             {
-                id_examen_padre = idExamenPadre,
-                id_examen_hijo = idExamenHijo
+                id_examen_padre = IdExamenPadre,
+                id_examen_hijo = IdExamenHijo
             };
-            _context.examen_composicion.Add(composicion);
-            await _context.SaveChangesAsync();
+            Contexto.examen_composicion.Add(composicion);
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> EliminarExamenHijoAsync(int idExamenPadre, int idExamenHijo)
+        public async Task<bool> EliminarExamenHijoAsync(int IdExamenPadre, int IdExamenHijo)
         {
-            var composicion = await _context.examen_composicion
-                .FirstOrDefaultAsync(x => x.id_examen_padre == idExamenPadre && x.id_examen_hijo == idExamenHijo);
+            var composicion = await Contexto.examen_composicion
+                .FirstOrDefaultAsync(x => x.id_examen_padre == IdExamenPadre && x.id_examen_hijo == IdExamenHijo);
 
             if (composicion == null) return false;
 
-            _context.examen_composicion.Remove(composicion);
-            await _context.SaveChangesAsync();
+            Contexto.examen_composicion.Remove(composicion);
+            await Contexto.SaveChangesAsync();
             return true;
         }
 

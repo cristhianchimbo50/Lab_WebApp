@@ -7,16 +7,16 @@ namespace Lab_APIRest.Services.Medicos
 {
     public class MedicoService : IMedicoService
     {
-        private readonly LabDbContext _context;
+        private readonly LabDbContext Contexto;
 
-        public MedicoService(LabDbContext context)
+        public MedicoService(LabDbContext Contexto)
         {
-            _context = context;
+            this.Contexto = Contexto;
         }
 
-        public async Task<List<MedicoDto>> GetMedicosAsync()
+        public async Task<List<MedicoDto>> ObtenerMedicosAsync()
         {
-            return await _context.medicos
+            return await Contexto.medicos
                 .Select(m => new MedicoDto
                 {
                     IdMedico = m.id_medico,
@@ -29,9 +29,9 @@ namespace Lab_APIRest.Services.Medicos
                 .ToListAsync();
         }
 
-        public async Task<MedicoDto?> GetMedicoByIdAsync(int id)
+        public async Task<MedicoDto?> ObtenerMedicoPorIdAsync(int IdMedico)
         {
-            var m = await _context.medicos.FindAsync(id);
+            var m = await Contexto.medicos.FindAsync(IdMedico);
             if (m == null) return null;
             return new MedicoDto
             {
@@ -44,10 +44,10 @@ namespace Lab_APIRest.Services.Medicos
             };
         }
 
-        public async Task<List<MedicoDto>> GetMedicosPorNombreAsync(string nombre)
+        public async Task<List<MedicoDto>> ObtenerMedicosPorNombreAsync(string Nombre)
         {
-            return await _context.medicos
-                .Where(m => m.nombre_medico.Contains(nombre))
+            return await Contexto.medicos
+                .Where(m => m.nombre_medico.Contains(Nombre))
                 .Select(m => new MedicoDto
                 {
                     IdMedico = m.id_medico,
@@ -60,10 +60,10 @@ namespace Lab_APIRest.Services.Medicos
                 .ToListAsync();
         }
 
-        public async Task<List<MedicoDto>> GetMedicosPorEspecialidadAsync(string especialidad)
+        public async Task<List<MedicoDto>> ObtenerMedicosPorEspecialidadAsync(string Especialidad)
         {
-            return await _context.medicos
-                .Where(m => m.especialidad.Contains(especialidad))
+            return await Contexto.medicos
+                .Where(m => m.especialidad.Contains(Especialidad))
                 .Select(m => new MedicoDto
                 {
                     IdMedico = m.id_medico,
@@ -76,9 +76,9 @@ namespace Lab_APIRest.Services.Medicos
                 .ToListAsync();
         }
 
-        public async Task<MedicoDto?> GetMedicoPorCorreoAsync(string correo)
+        public async Task<MedicoDto?> ObtenerMedicoPorCorreoAsync(string Correo)
         {
-            var m = await _context.medicos.FirstOrDefaultAsync(x => x.correo == correo);
+            var m = await Contexto.medicos.FirstOrDefaultAsync(x => x.correo == Correo);
             if (m == null) return null;
             return new MedicoDto
             {
@@ -91,53 +91,53 @@ namespace Lab_APIRest.Services.Medicos
             };
         }
 
-        public async Task<MedicoDto> CrearMedicoAsync(MedicoDto dto)
+        public async Task<MedicoDto> RegistrarMedicoAsync(MedicoDto DatosMedico)
         {
             var medico = new medico
             {
-                nombre_medico = dto.NombreMedico,
-                especialidad = dto.Especialidad,
-                telefono = dto.Telefono,
-                correo = dto.Correo,
+                nombre_medico = DatosMedico.NombreMedico,
+                especialidad = DatosMedico.Especialidad,
+                telefono = DatosMedico.Telefono,
+                correo = DatosMedico.Correo,
                 anulado = false
             };
-            _context.medicos.Add(medico);
-            await _context.SaveChangesAsync();
+            Contexto.medicos.Add(medico);
+            await Contexto.SaveChangesAsync();
 
-            dto.IdMedico = medico.id_medico;
-            dto.Anulado = false;
-            return dto;
+            DatosMedico.IdMedico = medico.id_medico;
+            DatosMedico.Anulado = false;
+            return DatosMedico;
         }
 
-        public async Task<bool> EditarMedicoAsync(int id, MedicoDto dto)
+        public async Task<bool> EditarMedicoAsync(int IdMedico, MedicoDto DatosMedico)
         {
-            var medico = await _context.medicos.FindAsync(id);
+            var medico = await Contexto.medicos.FindAsync(IdMedico);
             if (medico == null) return false;
 
-            medico.nombre_medico = dto.NombreMedico;
-            medico.especialidad = dto.Especialidad;
-            medico.telefono = dto.Telefono;
-            medico.correo = dto.Correo;
-            medico.anulado = dto.Anulado;
+            medico.nombre_medico = DatosMedico.NombreMedico;
+            medico.especialidad = DatosMedico.Especialidad;
+            medico.telefono = DatosMedico.Telefono;
+            medico.correo = DatosMedico.Correo;
+            medico.anulado = DatosMedico.Anulado;
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> AnularMedicoAsync(int id)
+        public async Task<bool> AnularMedicoAsync(int IdMedico)
         {
-            var medico = await _context.medicos.FindAsync(id);
+            var medico = await Contexto.medicos.FindAsync(IdMedico);
             if (medico == null) return false;
 
             medico.anulado = true;
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<List<MedicoDto>> GetMedicosPorCorreoAsync(string correo)
+        public async Task<List<MedicoDto>> ObtenerMedicosPorCorreoAsync(string Correo)
         {
-            return await _context.medicos
-                .Where(m => m.correo.Contains(correo))
+            return await Contexto.medicos
+                .Where(m => m.correo.Contains(Correo))
                 .Select(m => new MedicoDto
                 {
                     IdMedico = m.id_medico,
@@ -151,7 +151,7 @@ namespace Lab_APIRest.Services.Medicos
 
         public async Task<List<MedicoDto>> ListarMedicosAsync()
         {
-            return await _context.medicos
+            return await Contexto.medicos
                 .Where(x => x.anulado == false)
                 .Select(m => new MedicoDto
                 {

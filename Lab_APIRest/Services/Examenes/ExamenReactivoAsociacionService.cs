@@ -6,16 +6,16 @@ namespace Lab_APIRest.Services.Examenes
 {
     public class ExamenReactivoAsociacionService : IExamenReactivoAsociacionService
     {
-        private readonly LabDbContext _context;
+        private readonly LabDbContext Contexto;
 
-        public ExamenReactivoAsociacionService(LabDbContext context)
+        public ExamenReactivoAsociacionService(LabDbContext contexto)
         {
-            _context = context;
+            Contexto = contexto;
         }
 
-        public async Task<List<AsociacionReactivoDto>> ObtenerTodasAsync()
+        public async Task<List<AsociacionReactivoDto>> ObtenerTodas()
         {
-            return await _context.examen_reactivos
+            return await Contexto.examen_reactivos
                 .Include(er => er.id_examenNavigation)
                 .Include(er => er.id_reactivoNavigation)
                 .Select(er => new AsociacionReactivoDto
@@ -31,12 +31,12 @@ namespace Lab_APIRest.Services.Examenes
                 .ToListAsync();
         }
 
-        public async Task<List<AsociacionReactivoDto>> BuscarPorExamenAsync(string nombreExamen)
+        public async Task<List<AsociacionReactivoDto>> BuscarPorExamen(string NombreExamen)
         {
-            return await _context.examen_reactivos
+            return await Contexto.examen_reactivos
                 .Include(er => er.id_examenNavigation)
                 .Include(er => er.id_reactivoNavigation)
-                .Where(er => er.id_examenNavigation.nombre_examen.Contains(nombreExamen))
+                .Where(er => er.id_examenNavigation.nombre_examen.Contains(NombreExamen))
                 .Select(er => new AsociacionReactivoDto
                 {
                     IdExamenReactivo = er.id_examen_reactivo,
@@ -50,12 +50,12 @@ namespace Lab_APIRest.Services.Examenes
                 .ToListAsync();
         }
 
-        public async Task<List<AsociacionReactivoDto>> BuscarPorReactivoAsync(string nombreReactivo)
+        public async Task<List<AsociacionReactivoDto>> BuscarPorReactivo(string NombreReactivo)
         {
-            return await _context.examen_reactivos
+            return await Contexto.examen_reactivos
                 .Include(er => er.id_examenNavigation)
                 .Include(er => er.id_reactivoNavigation)
-                .Where(er => er.id_reactivoNavigation.nombre_reactivo.Contains(nombreReactivo))
+                .Where(er => er.id_reactivoNavigation.nombre_reactivo.Contains(NombreReactivo))
                 .Select(er => new AsociacionReactivoDto
                 {
                     IdExamenReactivo = er.id_examen_reactivo,
@@ -69,12 +69,12 @@ namespace Lab_APIRest.Services.Examenes
                 .ToListAsync();
         }
 
-        public async Task<AsociacionReactivoDto?> ObtenerPorIdAsync(int idExamenReactivo)
+        public async Task<AsociacionReactivoDto?> ObtenerPorId(int IdExamenReactivo)
         {
-            var er = await _context.examen_reactivos
+            var er = await Contexto.examen_reactivos
                 .Include(e => e.id_examenNavigation)
                 .Include(e => e.id_reactivoNavigation)
-                .FirstOrDefaultAsync(e => e.id_examen_reactivo == idExamenReactivo);
+                .FirstOrDefaultAsync(e => e.id_examen_reactivo == IdExamenReactivo);
 
             if (er == null) return null;
 
@@ -90,52 +90,52 @@ namespace Lab_APIRest.Services.Examenes
             };
         }
 
-        public async Task<AsociacionReactivoDto> CrearAsync(AsociacionReactivoDto dto)
+        public async Task<AsociacionReactivoDto> Crear(AsociacionReactivoDto AsociacionDto)
         {
-            var entity = new Infrastructure.EF.Models.examen_reactivo
+            var entidad = new Infrastructure.EF.Models.examen_reactivo
             {
-                id_examen = dto.IdExamen,
-                id_reactivo = dto.IdReactivo,
-                cantidad_usada = dto.CantidadUsada,
-                unidad = dto.Unidad
+                id_examen = AsociacionDto.IdExamen,
+                id_reactivo = AsociacionDto.IdReactivo,
+                cantidad_usada = AsociacionDto.CantidadUsada,
+                unidad = AsociacionDto.Unidad
             };
-            _context.examen_reactivos.Add(entity);
-            await _context.SaveChangesAsync();
+            Contexto.examen_reactivos.Add(entidad);
+            await Contexto.SaveChangesAsync();
 
-            dto.IdExamenReactivo = entity.id_examen_reactivo;
-            return dto;
+            AsociacionDto.IdExamenReactivo = entidad.id_examen_reactivo;
+            return AsociacionDto;
         }
 
-        public async Task<bool> EditarAsync(int id, AsociacionReactivoDto dto)
+        public async Task<bool> Editar(int IdExamenReactivo, AsociacionReactivoDto AsociacionDto)
         {
-            var entity = await _context.examen_reactivos.FindAsync(id);
-            if (entity == null) return false;
+            var entidad = await Contexto.examen_reactivos.FindAsync(IdExamenReactivo);
+            if (entidad == null) return false;
 
-            entity.id_examen = dto.IdExamen;
-            entity.id_reactivo = dto.IdReactivo;
-            entity.cantidad_usada = dto.CantidadUsada;
-            entity.unidad = dto.Unidad;
+            entidad.id_examen = AsociacionDto.IdExamen;
+            entidad.id_reactivo = AsociacionDto.IdReactivo;
+            entidad.cantidad_usada = AsociacionDto.CantidadUsada;
+            entidad.unidad = AsociacionDto.Unidad;
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> EliminarAsync(int id)
+        public async Task<bool> Eliminar(int IdExamenReactivo)
         {
-            var entity = await _context.examen_reactivos.FindAsync(id);
-            if (entity == null) return false;
+            var entidad = await Contexto.examen_reactivos.FindAsync(IdExamenReactivo);
+            if (entidad == null) return false;
 
-            _context.examen_reactivos.Remove(entity);
-            await _context.SaveChangesAsync();
+            Contexto.examen_reactivos.Remove(entidad);
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<List<AsociacionReactivoDto>> ObtenerPorExamenIdAsync(int idExamen)
+        public async Task<List<AsociacionReactivoDto>> ObtenerPorExamenId(int IdExamen)
         {
-            return await _context.examen_reactivos
+            return await Contexto.examen_reactivos
                 .Include(er => er.id_examenNavigation)
                 .Include(er => er.id_reactivoNavigation)
-                .Where(er => er.id_examen == idExamen)
+                .Where(er => er.id_examen == IdExamen)
                 .Select(er => new AsociacionReactivoDto
                 {
                     IdExamenReactivo = er.id_examen_reactivo,
@@ -149,27 +149,27 @@ namespace Lab_APIRest.Services.Examenes
                 .ToListAsync();
         }
 
-        public async Task<bool> GuardarPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones)
+        public async Task<bool> GuardarPorExamen(int IdExamen, List<AsociacionReactivoDto> Asociaciones)
         {
-            var actuales = await _context.examen_reactivos
-                .Where(er => er.id_examen == idExamen)
+            var actuales = await Contexto.examen_reactivos
+                .Where(er => er.id_examen == IdExamen)
                 .ToListAsync();
 
-            _context.examen_reactivos.RemoveRange(actuales);
+            Contexto.examen_reactivos.RemoveRange(actuales);
 
-            foreach (var dto in asociaciones)
+            foreach (var AsociacionDto in Asociaciones)
             {
-                var entity = new Infrastructure.EF.Models.examen_reactivo
+                var entidad = new Infrastructure.EF.Models.examen_reactivo
                 {
-                    id_examen = idExamen,
-                    id_reactivo = dto.IdReactivo,
-                    cantidad_usada = dto.CantidadUsada,
-                    unidad = dto.Unidad
+                    id_examen = IdExamen,
+                    id_reactivo = AsociacionDto.IdReactivo,
+                    cantidad_usada = AsociacionDto.CantidadUsada,
+                    unidad = AsociacionDto.Unidad
                 };
-                _context.examen_reactivos.Add(entity);
+                Contexto.examen_reactivos.Add(entidad);
             }
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
     }

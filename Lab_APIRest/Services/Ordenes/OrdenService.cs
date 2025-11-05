@@ -10,18 +10,18 @@ namespace Lab_APIRest.Services.Ordenes
 {
     public class OrdenService : IOrdenService
     {
-        private readonly LabDbContext _context;
-        private readonly PdfTicketService _pdfTicketService;
+        private readonly LabDbContext Contexto;
+        private readonly PdfTicketService ServicioPdfTicket;
 
-        public OrdenService(LabDbContext context, PdfTicketService pdfTicketService)
+        public OrdenService(LabDbContext Contexto, PdfTicketService ServicioPdfTicket)
         {
-            _context = context;
-            _pdfTicketService = pdfTicketService;
+            this.Contexto = Contexto;
+            this.ServicioPdfTicket = ServicioPdfTicket;
         }
 
-        public async Task<List<object>> GetOrdenesAsync()
+        public async Task<List<object>> ObtenerOrdenesAsync()
         {
-            var data = await _context.ordens
+            var ListaOrdenes = await Contexto.ordens
                 .Include(o => o.id_pacienteNavigation)
                 .Select(o => new
                 {
@@ -39,39 +39,39 @@ namespace Lab_APIRest.Services.Ordenes
                 .OrderByDescending(x => x.IdOrden)
                 .ToListAsync();
 
-            return data.Cast<object>().ToList();
+            return ListaOrdenes.Cast<object>().ToList();
         }
 
-        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int id)
+        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int IdOrden)
         {
-            var orden = await _context.ordens
+            var entidadOrden = await Contexto.ordens
                 .Include(o => o.id_pacienteNavigation)
                 .Include(o => o.id_medicoNavigation)
                 .Include(o => o.detalle_ordens)
                     .ThenInclude(d => d.id_examenNavigation)
                 .Include(o => o.detalle_ordens)
                     .ThenInclude(d => d.id_resultadoNavigation)
-                .FirstOrDefaultAsync(o => o.id_orden == id);
+                .FirstOrDefaultAsync(o => o.id_orden == IdOrden);
 
-            if (orden == null)
+            if (entidadOrden == null)
                 return null;
 
-            var dto = new OrdenDetalleDto
+            var detalleDto = new OrdenDetalleDto
             {
-                IdOrden = orden.id_orden,
-                NumeroOrden = orden.numero_orden,
-                FechaOrden = orden.fecha_orden,
-                EstadoPago = orden.estado_pago,
-                IdPaciente = (int)orden.id_paciente,
-                CedulaPaciente = orden.id_pacienteNavigation?.cedula_paciente,
-                NombrePaciente = orden.id_pacienteNavigation?.nombre_paciente,
-                DireccionPaciente = orden.id_pacienteNavigation?.direccion_paciente,
-                CorreoPaciente = orden.id_pacienteNavigation?.correo_electronico_paciente,
-                TelefonoPaciente = orden.id_pacienteNavigation?.telefono_paciente,
-                IdMedico = orden.id_medico,
-                NombreMedico = orden.id_medicoNavigation?.nombre_medico,
-                Anulado = orden.anulado ?? false,
-                Examenes = orden.detalle_ordens.Select(d => new ExamenDetalleDto
+                IdOrden = entidadOrden.id_orden,
+                NumeroOrden = entidadOrden.numero_orden,
+                FechaOrden = entidadOrden.fecha_orden,
+                EstadoPago = entidadOrden.estado_pago,
+                IdPaciente = (int)entidadOrden.id_paciente,
+                CedulaPaciente = entidadOrden.id_pacienteNavigation?.cedula_paciente,
+                NombrePaciente = entidadOrden.id_pacienteNavigation?.nombre_paciente,
+                DireccionPaciente = entidadOrden.id_pacienteNavigation?.direccion_paciente,
+                CorreoPaciente = entidadOrden.id_pacienteNavigation?.correo_electronico_paciente,
+                TelefonoPaciente = entidadOrden.id_pacienteNavigation?.telefono_paciente,
+                IdMedico = entidadOrden.id_medico,
+                NombreMedico = entidadOrden.id_medicoNavigation?.nombre_medico,
+                Anulado = entidadOrden.anulado ?? false,
+                Examenes = entidadOrden.detalle_ordens.Select(d => new ExamenDetalleDto
                 {
                     IdExamen = d.id_examen ?? 0,
                     NombreExamen = d.id_examenNavigation!.nombre_examen,
@@ -81,53 +81,53 @@ namespace Lab_APIRest.Services.Ordenes
                 }).ToList()
             };
 
-            return dto;
+            return detalleDto;
         }
 
-        public async Task<bool> AnularOrdenAsync(int id)
+        public async Task<bool> AnularOrdenAsync(int IdOrden)
         {
-            var orden = await _context.ordens
+            var entidadOrden = await Contexto.ordens
                 .Include(o => o.detalle_ordens)
                     .ThenInclude(d => d.id_resultadoNavigation)
                         .ThenInclude(r => r.detalle_resultados)
-                .FirstOrDefaultAsync(o => o.id_orden == id);
+                .FirstOrDefaultAsync(o => o.id_orden == IdOrden);
 
-            if (orden == null)
+            if (entidadOrden == null)
                 return false;
 
-            orden.anulado = true;
+            entidadOrden.anulado = true;
 
-            var resultados = orden.detalle_ordens
+            var listaResultados = entidadOrden.detalle_ordens
                 .Where(d => d.id_resultadoNavigation != null)
                 .Select(d => d.id_resultadoNavigation!)
                 .Distinct()
                 .ToList();
 
-            foreach (var r in resultados)
+            foreach (var resultado in listaResultados)
             {
-                r.anulado = true;
-                foreach (var det in r.detalle_resultados)
-                    det.anulado = true;
+                resultado.anulado = true;
+                foreach (var detalle in resultado.detalle_resultados)
+                    detalle.anulado = true;
             }
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto dto)
+        public async Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto DatosOrden)
         {
-            var lastOrder = await _context.ordens.OrderByDescending(o => o.id_orden).FirstOrDefaultAsync();
-            int nextOrderNumber = 1;
+            var ultimaOrden = await Contexto.ordens.OrderByDescending(o => o.id_orden).FirstOrDefaultAsync();
+            int numeroSiguiente = 1;
 
-            if (lastOrder != null && !string.IsNullOrEmpty(lastOrder.numero_orden))
+            if (ultimaOrden != null && !string.IsNullOrEmpty(ultimaOrden.numero_orden))
             {
-                var parts = lastOrder.numero_orden.Split('-');
-                if (parts.Length == 2 && int.TryParse(parts[1], out int lastNumber))
-                    nextOrderNumber = lastNumber + 1;
+                var partes = ultimaOrden.numero_orden.Split('-');
+                if (partes.Length == 2 && int.TryParse(partes[1], out int ultimoNumero))
+                    numeroSiguiente = ultimoNumero + 1;
             }
 
-            string numeroOrden = $"ORD-{nextOrderNumber:D5}";
-            var ordenDto = dto.Orden;
+            string numeroOrden = $"ORD-{numeroSiguiente:D5}";
+            var ordenDto = DatosOrden.Orden;
 
             var entidad = new orden
             {
@@ -149,8 +149,8 @@ namespace Lab_APIRest.Services.Ordenes
                 }).ToList()
             };
 
-            _context.ordens.Add(entidad);
-            await _context.SaveChangesAsync();
+            Contexto.ordens.Add(entidad);
+            await Contexto.SaveChangesAsync();
 
             return new OrdenRespuestaDto
             {
@@ -159,21 +159,21 @@ namespace Lab_APIRest.Services.Ordenes
             };
         }
 
-        public async Task<byte[]?> ObtenerTicketPdfAsync(int id)
+        public async Task<byte[]?> ObtenerTicketPdfAsync(int IdOrden)
         {
-            var orden = await _context.ordens
+            var entidadOrden = await Contexto.ordens
                 .Include(o => o.id_pacienteNavigation)
                 .Include(o => o.id_medicoNavigation)
                 .Include(o => o.detalle_ordens!)
                     .ThenInclude(d => d.id_examenNavigation)
-                .FirstOrDefaultAsync(o => o.id_orden == id);
+                .FirstOrDefaultAsync(o => o.id_orden == IdOrden);
 
-            if (orden == null)
+            if (entidadOrden == null)
                 return null;
 
             int edadPaciente = 0;
 
-            if (orden.id_pacienteNavigation?.fecha_nac_paciente is DateOnly fechaNacimiento)
+            if (entidadOrden.id_pacienteNavigation?.fecha_nac_paciente is DateOnly fechaNacimiento)
             {
                 var hoy = DateTime.Today;
                 var fechaNac = fechaNacimiento.ToDateTime(TimeOnly.MinValue);
@@ -185,67 +185,67 @@ namespace Lab_APIRest.Services.Ordenes
 
             var ordenDto = new OrdenTicketDto
             {
-                NumeroOrden = orden.numero_orden,
-                FechaOrden = orden.fecha_orden.ToDateTime(TimeOnly.MinValue),
-                NombrePaciente = orden.id_pacienteNavigation?.nombre_paciente ?? "(Sin nombre)",
-                CedulaPaciente = orden.id_pacienteNavigation?.cedula_paciente ?? "(Sin cédula)",
+                NumeroOrden = entidadOrden.numero_orden,
+                FechaOrden = entidadOrden.fecha_orden.ToDateTime(TimeOnly.MinValue),
+                NombrePaciente = entidadOrden.id_pacienteNavigation?.nombre_paciente ?? "(Sin nombre)",
+                CedulaPaciente = entidadOrden.id_pacienteNavigation?.cedula_paciente ?? "(Sin cédula)",
                 EdadPaciente = edadPaciente,
-                NombreMedico = orden.id_medicoNavigation?.nombre_medico ?? "(Sin médico)",
-                Total = orden.total,
-                TotalPagado = orden.total_pagado ?? 0,
-                SaldoPendiente = orden.saldo_pendiente ?? 0,
-                TipoPago = orden.estado_pago ?? "Desconocido",
-                Examenes = orden.detalle_ordens.Select(d => new ExamenTicketDto
+                NombreMedico = entidadOrden.id_medicoNavigation?.nombre_medico ?? "(Sin médico)",
+                Total = entidadOrden.total,
+                TotalPagado = entidadOrden.total_pagado ?? 0,
+                SaldoPendiente = entidadOrden.saldo_pendiente ?? 0,
+                TipoPago = entidadOrden.estado_pago ?? "Desconocido",
+                Examenes = entidadOrden.detalle_ordens.Select(d => new ExamenTicketDto
                 {
                     NombreExamen = d.id_examenNavigation?.nombre_examen ?? "(Sin examen)",
                     Precio = d.precio ?? 0
                 }).ToList()
             };
-            return _pdfTicketService.GenerarTicketOrden(ordenDto);
+            return ServicioPdfTicket.GenerarTicketOrden(ordenDto);
         }
 
-        public async Task<bool> AnularOrdenCompletaAsync(int idOrden)
+        public async Task<bool> AnularOrdenCompletaAsync(int IdOrden)
         {
-            var orden = await _context.ordens
+            var entidadOrden = await Contexto.ordens
                 .Include(o => o.detalle_ordens)
                 .Include(o => o.resultados)
                     .ThenInclude(r => r.detalle_resultados)
                 .Include(o => o.pagos)
                     .ThenInclude(p => p.detalle_pagos)
-                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
+                .FirstOrDefaultAsync(o => o.id_orden == IdOrden);
 
-            if (orden == null || orden.anulado == true)
+            if (entidadOrden == null || entidadOrden.anulado == true)
                 return false;
 
-            orden.anulado = true;
-            orden.estado_pago = "ANULADO";
+            entidadOrden.anulado = true;
+            entidadOrden.estado_pago = "ANULADO";
 
-            foreach (var d in orden.detalle_ordens)
-                d.anulado = true;
+            foreach (var detalle in entidadOrden.detalle_ordens)
+                detalle.anulado = true;
 
-            foreach (var r in orden.resultados)
+            foreach (var resultado in entidadOrden.resultados)
             {
-                r.anulado = true;
-                foreach (var dr in r.detalle_resultados)
-                    dr.anulado = true;
+                resultado.anulado = true;
+                foreach (var detalleResultado in resultado.detalle_resultados)
+                    detalleResultado.anulado = true;
             }
 
-            foreach (var p in orden.pagos)
+            foreach (var pago in entidadOrden.pagos)
             {
-                p.anulado = true;
-                foreach (var dp in p.detalle_pagos)
-                    dp.anulado = true;
+                pago.anulado = true;
+                foreach (var detallePago in pago.detalle_pagos)
+                    detallePago.anulado = true;
             }
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<List<object>> GetOrdenesPorPacienteAsync(int idPaciente)
+        public async Task<List<object>> ObtenerOrdenesPorPacienteAsync(int IdPaciente)
         {
-            var data = await _context.ordens
+            var ListaOrdenes = await Contexto.ordens
                 .Include(o => o.id_pacienteNavigation)
-                .Where(o => o.id_paciente == idPaciente)
+                .Where(o => o.id_paciente == IdPaciente)
                 .Select(o => new
                 {
                     IdOrden = o.id_orden,
@@ -260,39 +260,39 @@ namespace Lab_APIRest.Services.Ordenes
                 .OrderByDescending(x => x.IdOrden)
                 .ToListAsync();
 
-            return data.Cast<object>().ToList();
+            return ListaOrdenes.Cast<object>().ToList();
         }
 
-        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden)
+        public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int IdOrden)
         {
-            return await ObtenerDetalleOrdenOriginalAsync(idOrden);
+            return await ObtenerDetalleOrdenOriginalAsync(IdOrden);
         }
 
-        private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
+        private static readonly ConcurrentDictionary<int, bool> OrdenesNotificadas = new();
 
-        public async Task VerificarYNotificarResultadosCompletosAsync(int idOrden)
+        public async Task VerificarYNotificarResultadosCompletosAsync(int IdOrden)
         {
-            var orden = await _context.ordens
+            var entidadOrden = await Contexto.ordens
                 .Include(o => o.id_pacienteNavigation)
                 .Include(o => o.detalle_ordens)
                     .ThenInclude(d => d.id_resultadoNavigation)
-                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
+                .FirstOrDefaultAsync(o => o.id_orden == IdOrden);
 
-            if (orden == null) return;
+            if (entidadOrden == null) return;
 
-            bool todosConResultado = orden.detalle_ordens.All(d => d.id_resultado != null);
-            if (!todosConResultado || _ordenesNotificadas.ContainsKey(idOrden))
+            bool todosConResultado = entidadOrden.detalle_ordens.All(d => d.id_resultado != null);
+            if (!todosConResultado || OrdenesNotificadas.ContainsKey(IdOrden))
                 return;
 
-            var correo = orden.id_pacienteNavigation?.correo_electronico_paciente;
-            var nombre = orden.id_pacienteNavigation?.nombre_paciente;
-            if (string.IsNullOrWhiteSpace(correo)) return;
+            var correoPaciente = entidadOrden.id_pacienteNavigation?.correo_electronico_paciente;
+            var nombrePaciente = entidadOrden.id_pacienteNavigation?.nombre_paciente;
+            if (string.IsNullOrWhiteSpace(correoPaciente)) return;
 
             string asunto = "Resultados disponibles - Laboratorio La Inmaculada";
             string cuerpo = $@"
         <div style='font-family:Arial,sans-serif;color:#333;'>
-            <h3>Estimado/a {nombre},</h3>
-            <p>Le informamos que todos los resultados de su orden <strong>{orden.numero_orden}</strong> están disponibles.</p>
+            <h3>Estimado/a {nombrePaciente},</h3>
+            <p>Le informamos que todos los resultados de su orden <strong>{entidadOrden.numero_orden}</strong> están disponibles.</p>
             <p>Puede consultarlos ingresando a su cuenta en:
             <a href='https://labinmaculada.com/login'>Portal de Resultados</a>.</p>
             <p style='margin-top:20px;'>Gracias por confiar en nosotros.<br>
@@ -300,8 +300,8 @@ namespace Lab_APIRest.Services.Ordenes
         </div>";
 
             var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-            await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
-            _ordenesNotificadas.TryAdd(idOrden, true);
+            await emailService.EnviarCorreoAsync(correoPaciente, nombrePaciente ?? "Paciente", asunto, cuerpo);
+            OrdenesNotificadas.TryAdd(IdOrden, true);
 
         }
 

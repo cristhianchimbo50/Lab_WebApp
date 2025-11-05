@@ -10,99 +10,99 @@ namespace Lab_APIRest.Controllers.Examenes
     [Authorize(Roles = "administrador,laboratorista,recepcionista")]
     public class ExamenesController : ControllerBase
     {
-        private readonly IExamenService _service;
-        private readonly ILogger<ExamenesController> _logger;
+        private readonly IExamenService ServicioExamen;
+        private readonly ILogger<ExamenesController> Registro;
 
-        public ExamenesController(IExamenService service, ILogger<ExamenesController> logger)
+        public ExamenesController(IExamenService ServicioExamen, ILogger<ExamenesController> Registro)
         {
-            _service = service;
-            _logger = logger;
+            this.ServicioExamen = ServicioExamen;
+            this.Registro = Registro;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ExamenDto>>> ObtenerExamenes()
         {
-            var examenes = await _service.GetExamenesAsync();
-            return Ok(examenes);
+            var ListaExamenes = await ServicioExamen.ObtenerExamenesAsync();
+            return Ok(ListaExamenes);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<ExamenDto>> ObtenerExamen(int id)
+        [HttpGet("{IdExamen:int}")]
+        public async Task<ActionResult<ExamenDto>> ObtenerExamen(int IdExamen)
         {
-            var examen = await _service.GetExamenByIdAsync(id);
-            if (examen == null) return NotFound("Examen no encontrado.");
-            return Ok(examen);
+            var ExamenEncontrado = await ServicioExamen.ObtenerExamenPorIdAsync(IdExamen);
+            if (ExamenEncontrado == null) return NotFound("Examen no encontrado.");
+            return Ok(ExamenEncontrado);
         }
 
         [HttpGet("buscar")]
-        public async Task<ActionResult<List<ExamenDto>>> BuscarExamenes([FromQuery] string nombre)
+        public async Task<ActionResult<List<ExamenDto>>> BuscarExamenes([FromQuery] string Nombre)
         {
-            if (string.IsNullOrWhiteSpace(nombre))
+            if (string.IsNullOrWhiteSpace(Nombre))
                 return BadRequest("Debe proporcionar un nombre válido.");
 
-            var examenes = await _service.BuscarExamenesPorNombreAsync(nombre);
-            return Ok(examenes);
+            var ListaEncontrada = await ServicioExamen.BuscarExamenesPorNombreAsync(Nombre);
+            return Ok(ListaEncontrada);
         }
 
         [Authorize(Roles = "administrador")]
         [HttpPost]
-        public async Task<ActionResult<ExamenDto>> RegistrarExamen([FromBody] ExamenDto dto)
+        public async Task<ActionResult<ExamenDto>> RegistrarExamen([FromBody] ExamenDto DatosExamen)
         {
             try
             {
-                var examen = await _service.CrearExamenAsync(dto);
-                return CreatedAtAction(nameof(ObtenerExamen), new { id = examen.IdExamen }, examen);
+                var ExamenCreado = await ServicioExamen.RegistrarExamenAsync(DatosExamen);
+                return CreatedAtAction(nameof(ObtenerExamen), new { IdExamen = ExamenCreado.IdExamen }, ExamenCreado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar examen.");
+                Registro.LogError(ex, "Error al registrar examen.");
                 return StatusCode(500, "Error interno al registrar el examen.");
             }
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> EditarExamen(int id, [FromBody] ExamenDto dto)
+        [HttpPut("{IdExamen:int}")]
+        public async Task<IActionResult> EditarExamen(int IdExamen, [FromBody] ExamenDto DatosExamen)
         {
-            if (id != dto.IdExamen) return BadRequest("El identificador no coincide.");
+            if (IdExamen != DatosExamen.IdExamen) return BadRequest("El identificador no coincide.");
 
-            var exito = await _service.EditarExamenAsync(id, dto);
-            if (!exito) return NotFound("Examen no encontrado.");
+            var ExitoEdicion = await ServicioExamen.EditarExamenAsync(IdExamen, DatosExamen);
+            if (!ExitoEdicion) return NotFound("Examen no encontrado.");
             return NoContent();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular/{id:int}")]
-        public async Task<IActionResult> AnularExamen(int id)
+        [HttpPut("anular/{IdExamen:int}")]
+        public async Task<IActionResult> AnularExamen(int IdExamen)
         {
-            var exito = await _service.AnularExamenAsync(id);
-            if (!exito) return NotFound("Examen no encontrado.");
+            var ExitoAnular = await ServicioExamen.AnularExamenAsync(IdExamen);
+            if (!ExitoAnular) return NotFound("Examen no encontrado.");
             return Ok();
         }
 
         [Authorize(Roles = "administrador,laboratorista")]
-        [HttpGet("{id:int}/hijos")]
-        public async Task<ActionResult<List<ExamenDto>>> ObtenerHijos(int id)
+        [HttpGet("{IdExamen:int}/hijos")]
+        public async Task<ActionResult<List<ExamenDto>>> ObtenerHijos(int IdExamen)
         {
-            var hijos = await _service.ObtenerHijosDeExamenAsync(id);
-            return Ok(hijos);
+            var Hijos = await ServicioExamen.ObtenerHijosDeExamenAsync(IdExamen);
+            return Ok(Hijos);
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPost("{idPadre:int}/hijos/{idHijo:int}")]
-        public async Task<IActionResult> AgregarHijo(int idPadre, int idHijo)
+        [HttpPost("{IdPadre:int}/hijos/{IdHijo:int}")]
+        public async Task<IActionResult> AgregarHijo(int IdPadre, int IdHijo)
         {
-            var result = await _service.AgregarExamenHijoAsync(idPadre, idHijo);
-            if (!result) return Conflict("La relación ya existe o los datos no son válidos.");
+            var Resultado = await ServicioExamen.AgregarExamenHijoAsync(IdPadre, IdHijo);
+            if (!Resultado) return Conflict("La relación ya existe o los datos no son válidos.");
             return Ok();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpDelete("{idPadre:int}/hijos/{idHijo:int}")]
-        public async Task<IActionResult> EliminarHijo(int idPadre, int idHijo)
+        [HttpDelete("{IdPadre:int}/hijos/{IdHijo:int}")]
+        public async Task<IActionResult> EliminarHijo(int IdPadre, int IdHijo)
         {
-            var result = await _service.EliminarExamenHijoAsync(idPadre, idHijo);
-            if (!result) return NotFound();
+            var Resultado = await ServicioExamen.EliminarExamenHijoAsync(IdPadre, IdHijo);
+            if (!Resultado) return NotFound();
             return Ok();
         }
     }

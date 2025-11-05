@@ -9,150 +9,149 @@ namespace Lab_APIRest.Services.Usuarios
 {
     public class UsuariosService : IUsuariosService
     {
-        private readonly LabDbContext _db;
-        private readonly EmailService _emailService;
-        private readonly PasswordHasher<object> _hasher = new();
+        private readonly LabDbContext Contexto;
+        private readonly EmailService EmailService;
+        private readonly PasswordHasher<object> Hasher = new();
 
-        public UsuariosService(LabDbContext db, EmailService emailService)
+        public UsuariosService(LabDbContext Contexto, EmailService EmailService)
         {
-            _db = db;
-            _emailService = emailService;
+            this.Contexto = Contexto;
+            this.EmailService = EmailService;
         }
 
-        public async Task<List<UsuarioListadoDto>> GetUsuariosAsync(UsuarioFiltroDto filtro, CancellationToken ct = default)
+        public async Task<List<UsuarioListadoDto>> ListarUsuariosAsync(UsuarioFiltroDto Filtro, CancellationToken Ct = default)
         {
-            var query = _db.usuarios
-                .Where(x => x.rol != "paciente");
+            var Consulta = Contexto.usuarios
+                .Where(UsuarioEntidad => UsuarioEntidad.rol != "paciente");
 
-            if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                query = query.Where(x => x.nombre.Contains(filtro.Nombre));
-            if (!string.IsNullOrWhiteSpace(filtro.Correo))
-                query = query.Where(x => x.correo_usuario.Contains(filtro.Correo));
-            if (!string.IsNullOrWhiteSpace(filtro.Rol))
-                query = query.Where(x => x.rol == filtro.Rol);
-            if (filtro.Activo.HasValue)
-                query = query.Where(x => x.activo == filtro.Activo.Value);
+            if (!string.IsNullOrWhiteSpace(Filtro.Nombre))
+                Consulta = Consulta.Where(UsuarioEntidad => UsuarioEntidad.nombre.Contains(Filtro.Nombre));
+            if (!string.IsNullOrWhiteSpace(Filtro.Correo))
+                Consulta = Consulta.Where(UsuarioEntidad => UsuarioEntidad.correo_usuario.Contains(Filtro.Correo));
+            if (!string.IsNullOrWhiteSpace(Filtro.Rol))
+                Consulta = Consulta.Where(UsuarioEntidad => UsuarioEntidad.rol == Filtro.Rol);
+            if (Filtro.Activo.HasValue)
+                Consulta = Consulta.Where(UsuarioEntidad => UsuarioEntidad.activo == Filtro.Activo.Value);
 
-            return await query
-                .OrderBy(x => x.nombre)
-                .Select(x => new UsuarioListadoDto
+            return await Consulta
+                .OrderBy(UsuarioEntidad => UsuarioEntidad.nombre)
+                .Select(UsuarioEntidad => new UsuarioListadoDto
                 {
-                    IdUsuario = x.id_usuario,
-                    NombreUsuario = x.nombre,
-                    CorreoUsuario = x.correo_usuario,
-                    Rol = x.rol,
-                    Activo = x.activo,
-                    EsContraseniaTemporal = x.es_contrasenia_temporal,
-                    FechaCreacion = x.fecha_creacion,
-                    UltimoAcceso = x.ultimo_acceso,
-                    FechaExpiraTemporal = x.fecha_expira_temporal
+                    IdUsuario = UsuarioEntidad.id_usuario,
+                    NombreUsuario = UsuarioEntidad.nombre,
+                    CorreoUsuario = UsuarioEntidad.correo_usuario,
+                    Rol = UsuarioEntidad.rol,
+                    Activo = UsuarioEntidad.activo,
+                    EsContraseniaTemporal = UsuarioEntidad.es_contrasenia_temporal,
+                    FechaCreacion = UsuarioEntidad.fecha_creacion,
+                    UltimoAcceso = UsuarioEntidad.ultimo_acceso,
+                    FechaExpiraTemporal = UsuarioEntidad.fecha_expira_temporal
                 })
-                .ToListAsync(ct);
+                .ToListAsync(Ct);
         }
 
-        public async Task<UsuarioListadoDto?> GetUsuarioPorIdAsync(int idUsuario, CancellationToken ct = default)
+        public async Task<UsuarioListadoDto?> ObtenerUsuarioPorIdAsync(int IdUsuario, CancellationToken Ct = default)
         {
-            var x = await _db.usuarios.FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol != "paciente", ct);
-            if (x == null) return null;
+            var UsuarioEntidad = await Contexto.usuarios.FirstOrDefaultAsync(Usuario => Usuario.id_usuario == IdUsuario && Usuario.rol != "paciente", Ct);
+            if (UsuarioEntidad == null) return null;
             return new UsuarioListadoDto
             {
-                IdUsuario = x.id_usuario,
-                NombreUsuario = x.nombre,
-                CorreoUsuario = x.correo_usuario,
-                Rol = x.rol,
-                Activo = x.activo,
-                EsContraseniaTemporal = x.es_contrasenia_temporal,
-                FechaCreacion = x.fecha_creacion,
-                UltimoAcceso = x.ultimo_acceso,
-                FechaExpiraTemporal = x.fecha_expira_temporal
+                IdUsuario = UsuarioEntidad.id_usuario,
+                NombreUsuario = UsuarioEntidad.nombre,
+                CorreoUsuario = UsuarioEntidad.correo_usuario,
+                Rol = UsuarioEntidad.rol,
+                Activo = UsuarioEntidad.activo,
+                EsContraseniaTemporal = UsuarioEntidad.es_contrasenia_temporal,
+                FechaCreacion = UsuarioEntidad.fecha_creacion,
+                UltimoAcceso = UsuarioEntidad.ultimo_acceso,
+                FechaExpiraTemporal = UsuarioEntidad.fecha_expira_temporal
             };
         }
 
-        public async Task<int> CrearUsuarioAsync(UsuarioCrearDto dto, CancellationToken ct = default)
+        public async Task<int> CrearUsuarioAsync(UsuarioCrearDto Usuario, CancellationToken Ct = default)
         {
-            var nuevaTemporal = GenerarContraseniaTemporal();
-            var usuario = new usuario
+            var NuevaTemporal = GenerarContraseniaTemporal();
+            var UsuarioEntidad = new usuario
             {
-                nombre = dto.NombreUsuario,
-                correo_usuario = dto.CorreoUsuario,
-                rol = dto.Rol,
+                nombre = Usuario.NombreUsuario,
+                correo_usuario = Usuario.CorreoUsuario,
+                rol = Usuario.Rol,
                 activo = true,
                 es_contrasenia_temporal = true,
                 fecha_creacion = DateTime.UtcNow,
-                clave_usuario = _hasher.HashPassword(null!, nuevaTemporal),
+                clave_usuario = Hasher.HashPassword(null!, NuevaTemporal),
                 fecha_expira_temporal = DateTime.UtcNow.AddDays(3)
             };
 
-            _db.usuarios.Add(usuario);
-            await _db.SaveChangesAsync(ct);
+            Contexto.usuarios.Add(UsuarioEntidad);
+            await Contexto.SaveChangesAsync(Ct);
 
-            await _emailService.EnviarCorreoAsync(
-                usuario.correo_usuario,
-                usuario.nombre,
+            await EmailService.EnviarCorreoAsync(
+                UsuarioEntidad.correo_usuario,
+                UsuarioEntidad.nombre,
                 "Credenciales de acceso al la aplicación web",
-                $@"<h2>Bienvenido(a) {usuario.nombre}</h2>
-                <p>Tu usuario: <b>{usuario.correo_usuario}</b></p>
-                <p>Contraseña temporal: <b>{nuevaTemporal}</b></p>
+                $@"<h2>Bienvenido(a) {UsuarioEntidad.nombre}</h2>
+                <p>Tu usuario: <b>{UsuarioEntidad.correo_usuario}</b></p>
+                <p>Contraseña temporal: <b>{NuevaTemporal}</b></p>
                 <p>Debes cambiar tu contraseña en el primer ingreso.</p>"
             );
 
-            return usuario.id_usuario;
+            return UsuarioEntidad.id_usuario;
         }
 
-        public async Task<bool> EditarUsuarioAsync(UsuarioEditarDto dto, CancellationToken ct = default)
+        public async Task<bool> EditarUsuarioAsync(UsuarioEditarDto Usuario, CancellationToken Ct = default)
         {
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(x => x.id_usuario == dto.IdUsuario && x.rol != "paciente", ct);
-            if (usuario == null) return false;
+            var UsuarioEntidad = await Contexto.usuarios.FirstOrDefaultAsync(X => X.id_usuario == Usuario.IdUsuario && X.rol != "paciente", Ct);
+            if (UsuarioEntidad == null) return false;
 
-            usuario.nombre = dto.NombreUsuario;
-            usuario.correo_usuario = dto.CorreoUsuario;
-            usuario.rol = dto.Rol;
-            usuario.activo = dto.Activo;
-            usuario.es_contrasenia_temporal = dto.EsContraseniaTemporal;
+            UsuarioEntidad.nombre = Usuario.NombreUsuario;
+            UsuarioEntidad.correo_usuario = Usuario.CorreoUsuario;
+            UsuarioEntidad.rol = Usuario.Rol;
+            UsuarioEntidad.activo = Usuario.Activo;
+            UsuarioEntidad.es_contrasenia_temporal = Usuario.EsContraseniaTemporal;
 
-            await _db.SaveChangesAsync(ct);
+            await Contexto.SaveChangesAsync(Ct);
             return true;
         }
 
-        public async Task<bool> CambiarEstadoAsync(int idUsuario, bool activo, string correoUsuarioActual, CancellationToken ct = default)
+        public async Task<bool> CambiarEstadoAsync(int IdUsuario, bool Activo, string CorreoUsuarioActual, CancellationToken Ct = default)
         {
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(x => x.id_usuario == idUsuario && x.rol != "paciente", ct);
-            if (usuario == null) return false;
+            var UsuarioEntidad = await Contexto.usuarios.FirstOrDefaultAsync(Usuario => Usuario.id_usuario == IdUsuario && Usuario.rol != "paciente", Ct);
+            if (UsuarioEntidad == null) return false;
 
-            if (usuario.correo_usuario.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
+            if (UsuarioEntidad.correo_usuario.Trim().ToLowerInvariant() == CorreoUsuarioActual.Trim().ToLowerInvariant())
                 throw new InvalidOperationException("No puedes deshabilitar tu propio usuario.");
 
 
-            usuario.activo = activo;
-            await _db.SaveChangesAsync(ct);
+            UsuarioEntidad.activo = Activo;
+            await Contexto.SaveChangesAsync(Ct);
             return true;
         }
 
-
-        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int idUsuario, CancellationToken ct = default)
+        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int IdUsuario, CancellationToken Ct = default)
         {
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol != "paciente", ct);
-            if (usuario == null) return null;
-            var nuevaTemp = GenerarContraseniaTemporal();
-            usuario.clave_usuario = _hasher.HashPassword(null!, nuevaTemp);
-            usuario.es_contrasenia_temporal = true;
-            usuario.fecha_expira_temporal = DateTime.UtcNow.AddDays(3);
-            await _db.SaveChangesAsync(ct);
+            var UsuarioEntidad = await Contexto.usuarios.FirstOrDefaultAsync(Usuario => Usuario.id_usuario == IdUsuario && Usuario.rol != "paciente", Ct);
+            if (UsuarioEntidad == null) return null;
+            var NuevaTemporal = GenerarContraseniaTemporal();
+            UsuarioEntidad.clave_usuario = Hasher.HashPassword(null!, NuevaTemporal);
+            UsuarioEntidad.es_contrasenia_temporal = true;
+            UsuarioEntidad.fecha_expira_temporal = DateTime.UtcNow.AddDays(3);
+            await Contexto.SaveChangesAsync(Ct);
 
-            await _emailService.EnviarCorreoAsync(
-                usuario.correo_usuario,
-                usuario.nombre,
+            await EmailService.EnviarCorreoAsync(
+                UsuarioEntidad.correo_usuario,
+                UsuarioEntidad.nombre,
                 "Nueva contraseña temporal",
                 $@"<h2>Contraseña temporal generada</h2>
-                <p>Tu usuario: <b>{usuario.correo_usuario}</b></p>
-                <p>Nueva contraseña temporal: <b>{nuevaTemp}</b></p>
+                <p>Tu usuario: <b>{UsuarioEntidad.correo_usuario}</b></p>
+                <p>Nueva contraseña temporal: <b>{NuevaTemporal}</b></p>
                 <p>Debes cambiarla en el primer acceso.</p>"
             );
 
             return new UsuarioReenviarDto
             {
-                IdUsuario = usuario.id_usuario,
-                NuevaTemporal = nuevaTemp
+                IdUsuario = UsuarioEntidad.id_usuario,
+                NuevaTemporal = NuevaTemporal
             };
         }
 

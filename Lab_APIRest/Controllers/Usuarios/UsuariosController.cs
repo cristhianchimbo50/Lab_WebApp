@@ -9,72 +9,67 @@ namespace Lab_APIRest.Controllers.Usuarios
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
     {
-        private readonly IUsuariosService _service;
+        private readonly IUsuariosService UsuariosService;
 
-        public UsuariosController(IUsuariosService service)
+        public UsuariosController(IUsuariosService UsuariosService)
         {
-            _service = service;
+            this.UsuariosService = UsuariosService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<UsuarioListadoDto>>> GetUsuarios([FromQuery] UsuarioFiltroDto filtro, CancellationToken ct)
+        public async Task<ActionResult<List<UsuarioListadoDto>>> ListarUsuarios([FromQuery] UsuarioFiltroDto Filtro, CancellationToken Ct)
         {
-            var result = await _service.GetUsuariosAsync(filtro, ct);
-            return Ok(result);
+            var Resultados = await UsuariosService.ListarUsuariosAsync(Filtro, Ct);
+            return Ok(Resultados);
         }
 
-        [HttpGet("{idUsuario}")]
-        public async Task<ActionResult<UsuarioListadoDto>> GetUsuarioPorId(int idUsuario, CancellationToken ct)
+        [HttpGet("{IdUsuario}")]
+        public async Task<ActionResult<UsuarioListadoDto>> ObtenerUsuarioPorId(int IdUsuario, CancellationToken Ct)
         {
-            var result = await _service.GetUsuarioPorIdAsync(idUsuario, ct);
-            if (result == null) return NotFound();
-            return Ok(result);
+            var Resultado = await UsuariosService.ObtenerUsuarioPorIdAsync(IdUsuario, Ct);
+            if (Resultado == null) return NotFound();
+            return Ok(Resultado);
         }
 
         [HttpPost]
-        public async Task<ActionResult<int>> CrearUsuario([FromBody] UsuarioCrearDto dto, CancellationToken ct)
+        public async Task<ActionResult<int>> CrearUsuario([FromBody] UsuarioCrearDto Usuario, CancellationToken Ct)
         {
-            var id = await _service.CrearUsuarioAsync(dto, ct);
-            return Ok(id);
+            var IdGenerado = await UsuariosService.CrearUsuarioAsync(Usuario, Ct);
+            return Ok(IdGenerado);
         }
 
-        [HttpPut("{idUsuario}")]
-        public async Task<ActionResult> EditarUsuario(int idUsuario, [FromBody] UsuarioEditarDto dto, CancellationToken ct)
+        [HttpPut("{IdUsuario}")]
+        public async Task<ActionResult> EditarUsuario(int IdUsuario, [FromBody] UsuarioEditarDto Usuario, CancellationToken Ct)
         {
-            if (idUsuario != dto.IdUsuario) return BadRequest();
-            var ok = await _service.EditarUsuarioAsync(dto, ct);
-            if (!ok) return NotFound();
+            if (IdUsuario != Usuario.IdUsuario) return BadRequest();
+            var OkEditar = await UsuariosService.EditarUsuarioAsync(Usuario, Ct);
+            if (!OkEditar) return NotFound();
             return Ok();
         }
 
-        [HttpPut("{id}/estado")]
-        public async Task<IActionResult> CambiarEstado(int id, [FromBody] bool activo, CancellationToken ct)
+        [HttpPut("{IdUsuario}/estado")]
+        public async Task<IActionResult> CambiarEstado(int IdUsuario, [FromBody] bool Activo, CancellationToken Ct)
         {
-
-
-            var correoActual = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
+            var CorreoActual = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
 
             try
             {
-                var exito = await _service.CambiarEstadoAsync(id, activo, correoActual, ct);
-                if (!exito) return NotFound();
+                var Exito = await UsuariosService.CambiarEstadoAsync(IdUsuario, Activo, CorreoActual, Ct);
+                if (!Exito) return NotFound();
                 return Ok();
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException Ex)
             {
-                return BadRequest(new { Mensaje = ex.Message });
+                return BadRequest(new { Mensaje = Ex.Message });
             }
         }
 
-
-
-
-        [HttpPut("{idUsuario}/reenviar")]
-        public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporales(int idUsuario, CancellationToken ct)
+        [HttpPut("{IdUsuario}/reenviar")]
+        public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporales(int IdUsuario, CancellationToken Ct)
         {
-            var result = await _service.ReenviarCredencialesTemporalesAsync(idUsuario, ct);
-            if (result == null) return NotFound();
-            return Ok(result);
+            var Resultado = await UsuariosService.ReenviarCredencialesTemporalesAsync(IdUsuario, Ct);
+            if (Resultado == null) return NotFound();
+            return Ok(Resultado);
         }
     }
 }

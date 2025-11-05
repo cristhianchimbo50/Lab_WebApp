@@ -4,17 +4,17 @@ namespace Lab_APIRest.Services.Ordenes
 {
     public interface IOrdenService
     {
-        Task<List<object>> GetOrdenesAsync();
-        Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int id);
-        Task<bool> AnularOrdenAsync(int id);
-        Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto dto);
-        Task<byte[]?> ObtenerTicketPdfAsync(int id);
-        Task<bool> AnularOrdenCompletaAsync(int idOrden);
+        Task<List<object>> ObtenerOrdenesAsync();
+        Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int IdOrden);
+        Task<bool> AnularOrdenAsync(int IdOrden);
+        Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto DatosOrden);
+        Task<byte[]?> ObtenerTicketPdfAsync(int IdOrden);
+        Task<bool> AnularOrdenCompletaAsync(int IdOrden);
 
-        Task<List<object>> GetOrdenesPorPacienteAsync(int idPaciente);
-        Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden);
+        Task<List<object>> ObtenerOrdenesPorPacienteAsync(int IdPaciente);
+        Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int IdOrden);
 
-        Task VerificarYNotificarResultadosCompletosAsync(int idOrden);
+        Task VerificarYNotificarResultadosCompletosAsync(int IdOrden);
 
 
     }

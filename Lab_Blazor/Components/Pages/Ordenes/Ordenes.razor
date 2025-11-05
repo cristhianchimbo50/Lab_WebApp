@@ -46,7 +46,7 @@
         }
         else
         {
-            <h4 class="mb-4 d-flex align-items-center justify-content-between flex-wrap">
+            <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
                 <span><i class="bi bi-file-medical text-primary fs-4 me-2"></i>@(esPaciente ? "Mis Órdenes" : "Gestión de Órdenes")</span>
                 @if (!esPaciente)
                 {
@@ -54,7 +54,7 @@
                         <i class="bi bi-plus-circle-fill me-1"></i>Nueva Orden
                     </button>
                 }
-            </h4>
+            </h3>
 
             @if (!isRendered)
             {

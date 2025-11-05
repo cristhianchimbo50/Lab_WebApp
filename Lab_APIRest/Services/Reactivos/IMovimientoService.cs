@@ -4,6 +4,6 @@ namespace Lab_APIRest.Services.Reactivos
 {
     public interface IMovimientoService
     {
-        Task<List<MovimientoReactivoDto>> GetMovimientosAsync(MovimientoReactivoFiltroDto filtro);
+        Task<List<MovimientoReactivoDto>> ObtenerMovimientosAsync(MovimientoReactivoFiltroDto Filtro);
     }
 }

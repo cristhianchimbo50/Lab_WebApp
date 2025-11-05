@@ -10,88 +10,88 @@ namespace Lab_APIRest.Controllers.Auth
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly IAuthService _authService;
-        private readonly ILogger<AuthController> _logger;
+        private readonly IAuthService AuthService;
+        private readonly ILogger<AuthController> Logger;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService AuthService, ILogger<AuthController> Logger)
         {
-            _authService = authService;
-            _logger = logger;
+            this.AuthService = AuthService;
+            this.Logger = Logger;
         }
 
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDto dto, CancellationToken ct)
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto Solicitud, CancellationToken Ct)
         {
             try
             {
-                var result = await _authService.LoginAsync(dto, ct);
+                var Resultado = await AuthService.IniciarSesionAsync(Solicitud, Ct);
 
-                if (result == null)
+                if (Resultado == null)
                     return Unauthorized(new { Mensaje = "Credenciales inválidas o la cuenta está bloqueada." });
 
-                if (result.EsContraseniaTemporal && string.IsNullOrEmpty(result.AccessToken))
+                if (Resultado.EsContraseniaTemporal && string.IsNullOrEmpty(Resultado.AccessToken))
                 {
-                    if (result.ExpiresAtUtc != null && result.ExpiresAtUtc < DateTime.UtcNow)
+                    if (Resultado.ExpiresAtUtc != null && Resultado.ExpiresAtUtc < DateTime.UtcNow)
                         return BadRequest(new
                         {
                             Mensaje = "La contraseña temporal ha expirado. Solicite una nueva en recepción.",
-                            Expiracion = result.ExpiresAtUtc
+                            Expiracion = Resultado.ExpiresAtUtc
                         });
 
                     return Ok(new
                     {
                         Mensaje = "Debe cambiar su contraseña temporal antes de continuar.",
-                        result.CorreoUsuario,
-                        result.Nombre,
-                        result.Rol,
-                        result.EsContraseniaTemporal,
-                        result.ExpiresAtUtc
+                        Resultado.CorreoUsuario,
+                        Resultado.Nombre,
+                        Resultado.Rol,
+                        Resultado.EsContraseniaTemporal,
+                        Resultado.ExpiresAtUtc
                     });
                 }
 
-                return Ok(result);
+                return Ok(Resultado);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException Ex)
             {
-                _logger.LogWarning(ex, "Operación inválida en inicio de sesión.");
-                return BadRequest(new { Mensaje = ex.Message });
+                Logger.LogWarning(Ex, "Operación inválida en inicio de sesión.");
+                return BadRequest(new { Mensaje = Ex.Message });
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error en inicio de sesión.");
+                Logger.LogError(Ex, "Error en inicio de sesión.");
                 return StatusCode(500, new { Mensaje = "Ocurrió un error interno al procesar la solicitud de inicio de sesión." });
             }
         }
 
         [AllowAnonymous]
         [HttpPost("cambiar-contrasenia")]
-        public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto dto, CancellationToken ct)
+        public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto Cambio, CancellationToken Ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Datos inválidos en la solicitud." });
 
             try
             {
-                var resultado = await _authService.CambiarContraseniaAsync(dto, ct);
+                var Resultado = await AuthService.CambiarContraseniaAsync(Cambio, Ct);
 
-                if (!resultado.Exito)
-                    return BadRequest(resultado);
+                if (!Resultado.Exito)
+                    return BadRequest(Resultado);
 
-                return Ok(resultado);
+                return Ok(Resultado);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException Ex)
             {
-                _logger.LogWarning(ex, "Error de validación al cambiar la contraseña.");
-                return BadRequest(new CambiarContraseniaResponseDto { Exito = false, Mensaje = ex.Message });
+                Logger.LogWarning(Ex, "Error de validación al cambiar la contraseña.");
+                return BadRequest(new CambiarContraseniaResponseDto { Exito = false, Mensaje = Ex.Message });
             }
             catch (KeyNotFoundException)
             {
                 return NotFound(new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." });
             }
-            catch (Exception ex)
+            catch (Exception Ex)
             {
-                _logger.LogError(ex, "Error al cambiar la contraseña.");
+                Logger.LogError(Ex, "Error al cambiar la contraseña.");
                 return StatusCode(500, new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Error interno del servidor." });
             }
         }

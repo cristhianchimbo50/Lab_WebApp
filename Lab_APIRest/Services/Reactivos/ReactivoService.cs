@@ -7,159 +7,159 @@ namespace Lab_APIRest.Services.Reactivos
 {
     public class ReactivoService : IReactivoService
     {
-        private readonly LabDbContext _context;
+        private readonly LabDbContext Contexto;
 
-        public ReactivoService(LabDbContext context)
+        public ReactivoService(LabDbContext contexto)
         {
-            _context = context;
+            this.Contexto = contexto;
         }
 
-        public async Task<List<ReactivoDto>> GetReactivosAsync()
+        public async Task<List<ReactivoDto>> ObtenerReactivosAsync()
         {
-            return await _context.reactivos
-                .Where(r => !(r.anulado ?? false))
-                .Select(r => new ReactivoDto
+            return await Contexto.reactivos
+                .Where(ReactivoEntidad => !(ReactivoEntidad.anulado ?? false))
+                .Select(ReactivoEntidad => new ReactivoDto
                 {
-                    IdReactivo = r.id_reactivo,
-                    NombreReactivo = r.nombre_reactivo,
-                    Fabricante = r.fabricante,
-                    Unidad = r.unidad,
-                    Anulado = r.anulado ?? false,
-                    CantidadDisponible = (decimal)r.cantidad_disponible
+                    IdReactivo = ReactivoEntidad.id_reactivo,
+                    NombreReactivo = ReactivoEntidad.nombre_reactivo,
+                    Fabricante = ReactivoEntidad.fabricante,
+                    Unidad = ReactivoEntidad.unidad,
+                    Anulado = ReactivoEntidad.anulado ?? false,
+                    CantidadDisponible = (decimal)ReactivoEntidad.cantidad_disponible
                 })
                 .ToListAsync();
         }
 
 
-        public async Task<ReactivoDto?> GetReactivoPorIdAsync(int id)
+        public async Task<ReactivoDto?> ObtenerReactivoPorIdAsync(int IdReactivo)
         {
-            var r = await _context.reactivos.FindAsync(id);
-            if (r == null) return null;
+            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
+            if (ReactivoEntidad == null) return null;
             return new ReactivoDto
             {
-                IdReactivo = r.id_reactivo,
-                NombreReactivo = r.nombre_reactivo,
-                Fabricante = r.fabricante,
-                Unidad = r.unidad,
-                Anulado = r.anulado ?? false,
-                CantidadDisponible = (decimal)r.cantidad_disponible
+                IdReactivo = ReactivoEntidad.id_reactivo,
+                NombreReactivo = ReactivoEntidad.nombre_reactivo,
+                Fabricante = ReactivoEntidad.fabricante,
+                Unidad = ReactivoEntidad.unidad,
+                Anulado = ReactivoEntidad.anulado ?? false,
+                CantidadDisponible = (decimal)ReactivoEntidad.cantidad_disponible
             };
         }
 
-        public async Task<ReactivoDto> CrearReactivoAsync(ReactivoDto dto)
+        public async Task<ReactivoDto> CrearReactivoAsync(ReactivoDto Reactivo)
         {
-            var reactivo = new reactivo
+            var ReactivoEntidad = new reactivo
             {
-                nombre_reactivo = dto.NombreReactivo,
-                fabricante = dto.Fabricante,
-                unidad = dto.Unidad,
+                nombre_reactivo = Reactivo.NombreReactivo,
+                fabricante = Reactivo.Fabricante,
+                unidad = Reactivo.Unidad,
                 anulado = false,
-                cantidad_disponible = dto.CantidadDisponible
+                cantidad_disponible = Reactivo.CantidadDisponible
             };
-            _context.reactivos.Add(reactivo);
-            await _context.SaveChangesAsync();
-            dto.IdReactivo = reactivo.id_reactivo;
-            return dto;
+            Contexto.reactivos.Add(ReactivoEntidad);
+            await Contexto.SaveChangesAsync();
+            Reactivo.IdReactivo = ReactivoEntidad.id_reactivo;
+            return Reactivo;
         }
 
-        public async Task<bool> EditarReactivoAsync(int id, ReactivoDto dto)
+        public async Task<bool> EditarReactivoAsync(int IdReactivo, ReactivoDto Reactivo)
         {
-            var reactivo = await _context.reactivos.FindAsync(id);
-            if (reactivo == null) return false;
+            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
+            if (ReactivoEntidad == null) return false;
 
-            reactivo.nombre_reactivo = dto.NombreReactivo;
-            reactivo.fabricante = dto.Fabricante;
-            reactivo.unidad = dto.Unidad;
-            reactivo.cantidad_disponible = dto.CantidadDisponible;
-            reactivo.anulado = dto.Anulado;
+            ReactivoEntidad.nombre_reactivo = Reactivo.NombreReactivo;
+            ReactivoEntidad.fabricante = Reactivo.Fabricante;
+            ReactivoEntidad.unidad = Reactivo.Unidad;
+            ReactivoEntidad.cantidad_disponible = Reactivo.CantidadDisponible;
+            ReactivoEntidad.anulado = Reactivo.Anulado;
 
-            await _context.SaveChangesAsync();
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> AnularReactivoAsync(int id)
+        public async Task<bool> AnularReactivoAsync(int IdReactivo)
         {
-            var reactivo = await _context.reactivos.FindAsync(id);
-            if (reactivo == null) return false;
+            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
+            if (ReactivoEntidad == null) return false;
 
-            reactivo.anulado = true;
-            await _context.SaveChangesAsync();
+            ReactivoEntidad.anulado = true;
+            await Contexto.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        public async Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> Ingresos)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var Transaccion = await Contexto.Database.BeginTransactionAsync();
             try
             {
-                foreach (var ingreso in ingresos)
+                foreach (var Ingreso in Ingresos)
                 {
-                    var reactivo = await _context.reactivos
-                        .FirstOrDefaultAsync(r => r.id_reactivo == ingreso.IdReactivo);
+                    var ReactivoEntidad = await Contexto.reactivos
+                        .FirstOrDefaultAsync(r => r.id_reactivo == Ingreso.IdReactivo);
 
-                    if (reactivo == null)
+                    if (ReactivoEntidad == null)
                         continue;
 
-                    var movimiento = new Infrastructure.EF.Models.movimiento_reactivo
+                    var MovimientoEntidad = new Infrastructure.EF.Models.movimiento_reactivo
                     {
-                        id_reactivo = ingreso.IdReactivo,
+                        id_reactivo = Ingreso.IdReactivo,
                         tipo_movimiento = "INGRESO",
-                        cantidad = ingreso.Cantidad,
-                        fecha_movimiento = ingreso.FechaMovimiento,
-                        observacion = ingreso.Observacion
+                        cantidad = Ingreso.Cantidad,
+                        fecha_movimiento = Ingreso.FechaMovimiento,
+                        observacion = Ingreso.Observacion
                     };
-                    await _context.movimiento_reactivos.AddAsync(movimiento);
+                    await Contexto.movimiento_reactivos.AddAsync(MovimientoEntidad);
 
-                    reactivo.cantidad_disponible += ingreso.Cantidad;
-                    _context.reactivos.Update(reactivo);
+                    ReactivoEntidad.cantidad_disponible += Ingreso.Cantidad;
+                    Contexto.reactivos.Update(ReactivoEntidad);
                 }
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await Contexto.SaveChangesAsync();
+                await Transaccion.CommitAsync();
                 return true;
             }
             catch
             {
-                await transaction.RollbackAsync();
+                await Transaccion.RollbackAsync();
                 return false;
             }
         }
 
 
-        public async Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        public async Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> Egresos)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var Transaccion = await Contexto.Database.BeginTransactionAsync();
             try
             {
-                foreach (var egreso in egresos)
+                foreach (var Egreso in Egresos)
                 {
-                    var reactivo = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == egreso.IdReactivo);
-                    if (reactivo == null) continue;
+                    var ReactivoEntidad = await Contexto.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == Egreso.IdReactivo);
+                    if (ReactivoEntidad == null) continue;
 
-                    if (reactivo.cantidad_disponible < egreso.Cantidad)
-                        throw new InvalidOperationException($"Stock insuficiente para {reactivo.nombre_reactivo}");
+                    if (ReactivoEntidad.cantidad_disponible < Egreso.Cantidad)
+                        throw new InvalidOperationException($"Stock insuficiente para {ReactivoEntidad.nombre_reactivo}");
 
-                    var movimiento = new movimiento_reactivo
+                    var MovimientoEntidad = new movimiento_reactivo
                     {
-                        id_reactivo = egreso.IdReactivo,
+                        id_reactivo = Egreso.IdReactivo,
                         tipo_movimiento = "EGRESO",
-                        cantidad = egreso.Cantidad,
-                        fecha_movimiento = egreso.FechaMovimiento,
-                        observacion = egreso.Observacion,
-                        id_detalle_resultado = egreso.IdDetalleResultado
+                        cantidad = Egreso.Cantidad,
+                        fecha_movimiento = Egreso.FechaMovimiento,
+                        observacion = Egreso.Observacion,
+                        id_detalle_resultado = Egreso.IdDetalleResultado
                     };
-                    await _context.movimiento_reactivos.AddAsync(movimiento);
-                    reactivo.cantidad_disponible -= egreso.Cantidad;
-                    _context.reactivos.Update(reactivo);
+                    await Contexto.movimiento_reactivos.AddAsync(MovimientoEntidad);
+                    ReactivoEntidad.cantidad_disponible -= Egreso.Cantidad;
+                    Contexto.reactivos.Update(ReactivoEntidad);
                 }
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await Contexto.SaveChangesAsync();
+                await Transaccion.CommitAsync();
                 return true;
             }
             catch
             {
-                await transaction.RollbackAsync();
+                await Transaccion.RollbackAsync();
                 return false;
             }
         }
