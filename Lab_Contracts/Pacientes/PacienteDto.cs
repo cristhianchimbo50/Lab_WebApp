@@ -20,7 +20,7 @@ namespace Lab_Contracts.Pacientes
         [Range(0, 130, ErrorMessage = "La edad no es valida")]
         public int EdadPaciente { get; set; }
 
-        [StringLength(150, ErrorMessage = "La direccoin es muy larga")]
+        [StringLength(150, ErrorMessage = "La direccion es muy larga")]
         public string DireccionPaciente { get; set; } = string.Empty;
 
         [EmailAddress(ErrorMessage = "Correo no valido")]
