@@ -44,7 +44,10 @@ namespace Lab_Blazor.Services.Pacientes
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?campo={campo}&valor={valor}");
+            var campoQuery = Uri.EscapeDataString(campo ?? string.Empty);
+            var valorQuery = Uri.EscapeDataString(valor ?? string.Empty);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda={campoQuery}&ValorBusqueda={valorQuery}");
             AddTokenHeader(request);
 
             var response = await _http.SendAsync(request);
@@ -130,7 +133,8 @@ namespace Lab_Blazor.Services.Pacientes
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?campo=cedula&valor={cedula}");
+            var cedulaQuery = Uri.EscapeDataString(cedula ?? string.Empty);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda=cedula&ValorBusqueda={cedulaQuery}");
             AddTokenHeader(request);
 
             var response = await _http.SendAsync(request);

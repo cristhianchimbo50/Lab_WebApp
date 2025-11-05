@@ -94,6 +94,10 @@ else
     {
         if (firstRender)
         {
+            // Mostrar el formulario cuanto antes para reducir latencia percibida
+            _checkedAuth = true;
+            StateHasChanged();
+
             if (AuthProvider is CustomAuthenticationStateProvider custom)
                 await custom.SignOutAsync();
 
@@ -106,9 +110,7 @@ else
 
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            redirectUrl = query["returnUrl"];
-            _checkedAuth = true;
-            StateHasChanged();
+            redirectUrl = query["returnUrl"];            
         }
     }
 

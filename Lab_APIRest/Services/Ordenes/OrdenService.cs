@@ -42,6 +42,100 @@ namespace Lab_APIRest.Services.Ordenes
             return ListaOrdenes.Cast<object>().ToList();
         }
 
+        public async Task<PagedResultDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto Filtro)
+        {
+            var query = Contexto.ordens
+                .Include(o => o.id_pacienteNavigation)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (Filtro.FechaDesde.HasValue)
+                query = query.Where(o => o.fecha_orden >= Filtro.FechaDesde.Value);
+            if (Filtro.FechaHasta.HasValue)
+                query = query.Where(o => o.fecha_orden <= Filtro.FechaHasta.Value);
+
+            if (!(Filtro.IncluirAnuladas && Filtro.IncluirVigentes))
+            {
+                if (Filtro.IncluirAnuladas && !Filtro.IncluirVigentes)
+                    query = query.Where(o => o.anulado == true);
+                else if (!Filtro.IncluirAnuladas && Filtro.IncluirVigentes)
+                    query = query.Where(o => o.anulado == false || o.anulado == null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Filtro.ValorBusqueda))
+            {
+                var val = Filtro.ValorBusqueda.ToLower();
+                switch (Filtro.CriterioBusqueda)
+                {
+                    case "numero":
+                        query = query.Where(o => (o.numero_orden ?? "").ToLower().Contains(val));
+                        break;
+                    case "cedula":
+                        query = query.Where(o => (o.id_pacienteNavigation!.cedula_paciente ?? "").ToLower().Contains(val));
+                        break;
+                    case "nombre":
+                        query = query.Where(o => (o.id_pacienteNavigation!.nombre_paciente ?? "").ToLower().Contains(val));
+                        break;
+                    case "estadoPago":
+                        query = query.Where(o => (o.estado_pago ?? "").ToLower().Contains(val));
+                        break;
+                }
+            }
+
+            if (Filtro.IdPaciente.HasValue)
+            {
+                var idPac = Filtro.IdPaciente.Value;
+                query = query.Where(o => o.id_paciente == idPac);
+            }
+
+            // Total antes de paginar
+            var totalCount = await query.CountAsync();
+
+            // Ordenamiento
+            bool asc = Filtro.SortAsc;
+            query = Filtro.SortBy switch
+            {
+                nameof(OrdenDto.NumeroOrden) => asc ? query.OrderBy(o => o.numero_orden) : query.OrderByDescending(o => o.numero_orden),
+                nameof(OrdenDto.CedulaPaciente) => asc ? query.OrderBy(o => o.id_pacienteNavigation!.cedula_paciente) : query.OrderByDescending(o => o.id_pacienteNavigation!.cedula_paciente),
+                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.id_pacienteNavigation!.nombre_paciente) : query.OrderByDescending(o => o.id_pacienteNavigation!.nombre_paciente),
+                nameof(OrdenDto.FechaOrden) => asc ? query.OrderBy(o => o.fecha_orden) : query.OrderByDescending(o => o.fecha_orden),
+                nameof(OrdenDto.Total) => asc ? query.OrderBy(o => o.total) : query.OrderByDescending(o => o.total),
+                nameof(OrdenDto.TotalPagado) => asc ? query.OrderBy(o => o.total_pagado) : query.OrderByDescending(o => o.total_pagado),
+                nameof(OrdenDto.SaldoPendiente) => asc ? query.OrderBy(o => o.saldo_pendiente) : query.OrderByDescending(o => o.saldo_pendiente),
+                _ => query.OrderByDescending(o => o.id_orden)
+            };
+
+            // Paginación segura
+            var pageNumber = Filtro.PageNumber < 1 ? 1 : Filtro.PageNumber;
+            var pageSize = Filtro.PageSize <= 0 ? 10 : Math.Min(Filtro.PageSize, 200);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new OrdenDto
+                {
+                    IdOrden = o.id_orden,
+                    NumeroOrden = o.numero_orden!,
+                    CedulaPaciente = o.id_pacienteNavigation!.cedula_paciente,
+                    NombrePaciente = o.id_pacienteNavigation!.nombre_paciente,
+                    FechaOrden = o.fecha_orden,
+                    Total = o.total,
+                    TotalPagado = o.total_pagado ?? 0m,
+                    SaldoPendiente = o.saldo_pendiente ?? 0m,
+                    EstadoPago = o.estado_pago!,
+                    Anulado = o.anulado ?? false
+                })
+                .ToListAsync();
+
+            return new PagedResultDto<OrdenDto>
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Items = items
+            };
+        }
+
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int IdOrden)
         {
             var entidadOrden = await Contexto.ordens

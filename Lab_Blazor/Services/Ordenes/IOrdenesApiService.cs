@@ -26,6 +26,9 @@ namespace Lab_Blazor.Services.Ordenes
 
         Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int idOrden);
 
+        // Nuevo: búsqueda filtrada paginada
+        Task<PagedResultDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto filtro);
+
     }
 
 }

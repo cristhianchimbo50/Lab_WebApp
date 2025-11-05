@@ -1,4 +1,4 @@
-﻿    @page "/nueva-orden"
+﻿@page "/nueva-orden"
 @rendermode InteractiveServer
 
 @using Lab_Blazor.Services.Examenes
@@ -16,7 +16,7 @@
 @using System.Linq
 @using Lab_Blazor.Services.Auth
 @inject SesionVerificacionService SesionService
-@inject IOrdenesApiService OrdenApi
+@inject IOrdenesApiService OrdenesApi
 @inject NavigationManager Navigation
 @inject IPacientesApiService PacientesApi
 @inject IMedicosApiService MedicosApi
@@ -28,17 +28,17 @@
 <PageTitle>Registrar Orden</PageTitle>
 
 <AuthorizeView>
-    <Authorized Context="authState">
+    <Authorized Context="EstadoAutenticacion">
         @{
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
-            ?? user.FindFirst("role")?.Value
-            ?? user.FindFirst("roles")?.Value
+            var Usuario = EstadoAutenticacion.User;
+            var Rol = Usuario.FindFirst(ClaimTypes.Role)?.Value
+            ?? Usuario.FindFirst("role")?.Value
+            ?? Usuario.FindFirst("roles")?.Value
             ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista";
+            bool PuedeVer = Rol is "administrador" or "recepcionista";
         }
 
-        @if (!puedeVer)
+        @if (!PuedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -59,7 +59,7 @@
                 <i class="bi bi-file-earmark-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden
             </h3>
 
-            @if (!cargado)
+            @if (!ContenidoCargado)
             {
                 <div class="d-flex align-items-center text-primary">
                     <div class="spinner-border me-2" role="status"></div>
@@ -67,18 +67,18 @@
             }
             else
             {
-                <EditForm Model="orden" OnValidSubmit="MostrarPagoModal">
+                <EditForm Model="OrdenActual" OnValidSubmit="AbrirModalPago">
                     <div class="card shadow-sm mb-4">
                         <div class="card-body row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Fecha de la Orden</label>
-                                <InputDate class="form-control" @bind-Value="FechaOrdenSeleccionada" TValue="DateOnly" disabled />
+                                <InputDate class="form-control" @bind-Value="FechaOrden" TValue="DateOnly" disabled />
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Cédula del Paciente</label>
                                 <div class="input-group">
-                                    <InputText class="form-control" @bind-Value="Cedula" placeholder="Ingrese cédula" />
+                                    <InputText class="form-control" @bind-Value="CedulaPaciente" placeholder="Ingrese cédula" />
                                     <button type="button" class="btn btn-outline-primary" @onclick="BuscarPorCedula">
                                         <i class="bi bi-search"></i>
                                     </button>
@@ -87,7 +87,7 @@
                             </div>
                         </div>
 
-                        @if (PacienteActual is not null)
+                        @if (PacienteSeleccionado is not null)
                         {
                             <div class="card border-0 shadow-sm mt-3">
                                 <div class="card-header bg-light fw-semibold">
@@ -97,23 +97,23 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label fw-semibold">Nombre</label>
-                                            <input class="form-control" value="@PacienteActual.NombrePaciente" disabled />
+                                            <input class="form-control" value="@PacienteSeleccionado.NombrePaciente" disabled />
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label fw-semibold">Cédula</label>
-                                            <input class="form-control" value="@PacienteActual.CedulaPaciente" disabled />
+                                            <input class="form-control" value="@PacienteSeleccionado.CedulaPaciente" disabled />
                                         </div>
                                         <div class="col-md-5">
                                             <label class="form-label fw-semibold">Correo Electrónico</label>
-                                            <input class="form-control" value="@PacienteActual.CorreoElectronicoPaciente" disabled />
+                                            <input class="form-control" value="@PacienteSeleccionado.CorreoElectronicoPaciente" disabled />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label fw-semibold">Teléfono</label>
-                                            <input class="form-control" value="@PacienteActual.TelefonoPaciente" disabled />
+                                            <input class="form-control" value="@PacienteSeleccionado.TelefonoPaciente" disabled />
                                         </div>
                                         <div class="col-md-8">
                                             <label class="form-label fw-semibold">Dirección</label>
-                                            <input class="form-control" value="@PacienteActual.DireccionPaciente" disabled />
+                                            <input class="form-control" value="@PacienteSeleccionado.DireccionPaciente" disabled />
                                         </div>
                                     </div>
                                 </div>
@@ -127,9 +127,9 @@
                             <div class="input-group">
                                 <select class="form-select" @bind="MedicoIdSeleccionado">
                                     <option value="">-- Seleccione un médico --</option>
-                                    @foreach (var medico in Medicos)
+                                    @foreach (var Medico in ListaMedicos)
                                     {
-                                        <option value="@medico.IdMedico">@medico.NombreMedico</option>
+                                        <option value="@Medico.IdMedico">@Medico.NombreMedico</option>
                                     }
                                 </select>
                                 <button class="btn btn-secondary" type="button" @onclick="AbrirModalNuevoMedico">
@@ -158,7 +158,7 @@
                     <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
                         <div class="modal-dialog modal-lg modal-dialog-centered">
                             <div class="modal-content shadow-lg border-0">
-                                <EditForm Model="@NuevoPaciente" OnValidSubmit="RegistrarNuevoPaciente">
+                                <EditForm Model="@PacienteNuevo" OnValidSubmit="RegistrarNuevoPaciente">
                                     <div class="modal-header bg-primary text-white">
                                         <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Registrar Paciente</h5>
                                         <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalRegistrarPaciente"></button>
@@ -169,32 +169,32 @@
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <label class="form-label">Cédula</label>
-                                                <InputText class="form-control" @bind-Value="NuevoPaciente.CedulaPaciente" readonly />
+                                                <InputText class="form-control" @bind-Value="PacienteNuevo.CedulaPaciente" readonly />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Nombre</label>
                                                 <InputText class="form-control text-uppercase"
-                                                           @bind-Value="NuevoPaciente.NombrePaciente"
-                                                           @oninput="(e => NuevoPaciente.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @bind-Value="PacienteNuevo.NombrePaciente"
+                                                           @oninput="(e => PacienteNuevo.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
 
                                             <div class="col-md-6">
                                                 <label class="form-label">Fecha Nacimiento</label>
-                                                <InputDate class="form-control" @bind-Value="NuevoPaciente.FechaNacPaciente" TValue="DateTime" />
+                                                <InputDate class="form-control" @bind-Value="PacienteNuevo.FechaNacPaciente" TValue="DateTime" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Correo</label>
-                                                <InputText class="form-control" @bind-Value="NuevoPaciente.CorreoElectronicoPaciente" />
+                                                <InputText class="form-control" @bind-Value="PacienteNuevo.CorreoElectronicoPaciente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Teléfono</label>
-                                                <InputText class="form-control" @bind-Value="NuevoPaciente.TelefonoPaciente" />
+                                                <InputText class="form-control" @bind-Value="PacienteNuevo.TelefonoPaciente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Dirección</label>
                                                 <InputText class="form-control text-uppercase"
-                                                           @bind-Value="NuevoPaciente.DireccionPaciente"
-                                                           @oninput="(e => NuevoPaciente.DireccionPaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @bind-Value="PacienteNuevo.DireccionPaciente"
+                                                           @oninput="(e => PacienteNuevo.DireccionPaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
 
                                         </div>
@@ -246,14 +246,14 @@
                                             <tbody>
                                                 @if (PacientesEncontrados.Any())
                                                 {
-                                                    @foreach (var p in PacientesEncontrados)
+                                                    @foreach (var Paciente in PacientesEncontrados)
                                                     {
                                                         <tr>
-                                                            <td>@p.CedulaPaciente</td>
-                                                            <td>@p.NombrePaciente</td>
-                                                            <td>@p.CorreoElectronicoPaciente</td>
+                                                            <td>@Paciente.CedulaPaciente</td>
+                                                            <td>@Paciente.NombrePaciente</td>
+                                                            <td>@Paciente.CorreoElectronicoPaciente</td>
                                                             <td>
-                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPaciente(p)">
+                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPaciente(Paciente)">
                                                                     <i class="bi bi-check-lg"></i>
                                                                 </button>
                                                             </td>
@@ -281,7 +281,7 @@
                     <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
                         <div class="modal-dialog modal-md modal-dialog-centered">
                             <div class="modal-content shadow-lg border-0">
-                                <EditForm Model="@NuevoMedico" OnValidSubmit="GuardarNuevoMedico">
+                                <EditForm Model="@MedicoNuevo" OnValidSubmit="GuardarNuevoMedico">
                                     <div class="modal-header bg-primary text-white">
                                         <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Registrar Médico</h5>
                                         <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalMedico"></button>
@@ -292,18 +292,18 @@
                                         <div class="mb-3">
                                             <label class="form-label">Nombre</label>
                                             <InputText class="form-control text-uppercase"
-                                                       @bind-Value="NuevoMedico.NombreMedico"
-                                                       @oninput="(e => NuevoMedico.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                       @bind-Value="MedicoNuevo.NombreMedico"
+                                                       @oninput="(e => MedicoNuevo.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Especialidad</label>
                                             <InputText class="form-control text-uppercase"
-                                                       @bind-Value="NuevoMedico.Especialidad"
-                                                       @oninput="(e => NuevoMedico.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                       @bind-Value="MedicoNuevo.Especialidad"
+                                                       @oninput="(e => MedicoNuevo.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Teléfono</label>
-                                            <InputText class="form-control" @bind-Value="NuevoMedico.Telefono" />
+                                            <InputText class="form-control" @bind-Value="MedicoNuevo.Telefono" />
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -353,14 +353,14 @@
                                             <tbody>
                                                 @if (ExamenesDisponibles.Any())
                                                 {
-                                                    @foreach (var ex in ExamenesDisponibles)
+                                                    @foreach (var Examen in ExamenesDisponibles)
                                                     {
                                                         <tr class="text-center">
-                                                            <td>@ex.NombreExamen</td>
-                                                            <td>@ex.Estudio</td>
-                                                            <td>@ex.Precio.ToString("C")</td>
+                                                            <td>@Examen.NombreExamen</td>
+                                                            <td>@Examen.Estudio</td>
+                                                            <td>@Examen.Precio.ToString("C")</td>
                                                             <td>
-                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarExamen(ex)">
+                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarExamen(Examen)">
                                                                     <i class="bi bi-check-lg"></i>
                                                                 </button>
                                                             </td>
@@ -411,14 +411,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var ex in ExamenesSeleccionados)
+                                    @foreach (var Examen in ExamenesSeleccionados)
                                     {
                                         <tr>
-                                            <td>@ex.NombreExamen</td>
-                                            <td>@ex.Estudio</td>
-                                            <td>@ex.Precio.ToString("C")</td>
+                                            <td>@Examen.NombreExamen</td>
+                                            <td>@Examen.Estudio</td>
+                                            <td>@Examen.Precio.ToString("C")</td>
                                             <td>
-                                                <button class="btn btn-outline-danger btn-sm" title="Quitar examen" @onclick="() => QuitarExamen(ex)">
+                                                <button class="btn btn-outline-danger btn-sm" title="Quitar examen" @onclick="() => QuitarExamen(Examen)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </td>
@@ -454,11 +454,11 @@
                                         </div>
                                         <div class="mb-2">
                                             <label>Efectivo</label>
-                                            <InputNumber class="form-control" @bind-Value="Efectivo" />
+                                            <InputNumber class="form-control" @bind-Value="MontoEfectivo" />
                                         </div>
                                         <div class="mb-2">
                                             <label>Transferencia</label>
-                                            <InputNumber class="form-control" @bind-Value="Transferencia" />
+                                            <InputNumber class="form-control" @bind-Value="MontoTransferencia" />
                                         </div>
 
                                         @if (ObtenerCambio() > 0)
@@ -525,21 +525,21 @@
 </AuthorizeView>
 
 @code {
-    private bool cargado;
-    private string Cedula = "";
-    private DateOnly FechaOrdenSeleccionada = DateOnly.FromDateTime(DateTime.Now);
-    private PacienteDto? PacienteActual;
-    private PacienteDto NuevoPaciente = new();
+    private bool ContenidoCargado;
+    private string CedulaPaciente = "";
+    private DateOnly FechaOrden = DateOnly.FromDateTime(DateTime.Now);
+    private PacienteDto? PacienteSeleccionado;
+    private PacienteDto PacienteNuevo = new();
     private List<PacienteDto> PacientesEncontrados = new();
-    private List<MedicoDto> Medicos = new();
-    private MedicoDto? MedicoActual;
-    private MedicoDto NuevoMedico = new();
+    private List<MedicoDto> ListaMedicos = new();
+    private MedicoDto? MedicoSeleccionado;
+    private MedicoDto MedicoNuevo = new();
     private List<ExamenDto> ExamenesDisponibles = new();
     private List<ExamenDto> ExamenesSeleccionados = new();
-    private OrdenDto orden = new();
+    private OrdenDto OrdenActual = new();
     private PagoDto PagoActual = new();
-    private decimal Efectivo;
-    private decimal Transferencia;
+    private decimal MontoEfectivo;
+    private decimal MontoTransferencia;
     private bool MostrarModalRegistrarPaciente;
     private bool MostrarModalBuscarPaciente;
     private bool MostrarModalMedico;
@@ -551,23 +551,23 @@
 
     private int? MedicoIdSeleccionado
     {
-        get => MedicoActual?.IdMedico;
-        set => MedicoActual = Medicos.FirstOrDefault(m => m.IdMedico == value);
+        get => MedicoSeleccionado?.IdMedico;
+        set => MedicoSeleccionado = ListaMedicos.FirstOrDefault(m => m.IdMedico == value);
     }
 
-    private bool _sesionVerificada = false;
+    private bool SesionVerificada = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_sesionVerificada)
+        if (firstRender && !SesionVerificada)
         {
-            _sesionVerificada = true;
+            SesionVerificada = true;
 
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            Medicos = await MedicosApi.ListarMedicosAsync();
-            cargado = true;
+            ListaMedicos = await MedicosApi.ListarMedicosAsync();
+            ContenidoCargado = true;
             StateHasChanged();
         }
     }
@@ -576,7 +576,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (string.IsNullOrWhiteSpace(Cedula))
+        if (string.IsNullOrWhiteSpace(CedulaPaciente))
         {
             MostrarModalBuscarPaciente = true;
             ValorBusquedaPaciente = "";
@@ -585,26 +585,26 @@
             return;
         }
 
-        var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(Cedula);
+        var Paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(CedulaPaciente);
 
-        if (paciente != null)
+        if (Paciente != null)
         {
-            PacienteActual = paciente;
+            PacienteSeleccionado = Paciente;
         }
         else
         {
-            var deseaRegistrar = await JS.InvokeAsync<bool>("confirm", "No se encontró paciente con esa cédula. ¿Desea registrarlo?");
-            if (!deseaRegistrar) return;
+            var DeseaRegistrar = await JS.InvokeAsync<bool>("confirm", "No se encontró paciente con esa cédula. ¿Desea registrarlo?");
+            if (!DeseaRegistrar) return;
 
-            if (!ValidarCedula(Cedula))
+            if (!ValidarCedula(CedulaPaciente))
             {
                 await JS.InvokeVoidAsync("alert", "La cédula ingresada no es válida.");
                 return;
             }
 
-            NuevoPaciente = new PacienteDto
+            PacienteNuevo = new PacienteDto
             {
-                CedulaPaciente = Cedula,
+                CedulaPaciente = CedulaPaciente,
                 FechaNacPaciente = DateTime.Today.AddYears(-20)
             };
             MostrarModalRegistrarPaciente = true;
@@ -625,30 +625,30 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var (exito, msg, paciente) = await PacientesApi.CrearPacienteAsync(NuevoPaciente);
-        await JS.InvokeVoidAsync("alert", msg);
+        var (Exito, Mensaje, Paciente) = await PacientesApi.CrearPacienteAsync(PacienteNuevo);
+        await JS.InvokeVoidAsync("alert", Mensaje);
 
-        if (exito && paciente != null)
+        if (Exito && Paciente != null)
         {
-            PacienteActual = paciente;
-            Cedula = paciente.CedulaPaciente;
+            PacienteSeleccionado = Paciente;
+            CedulaPaciente = Paciente.CedulaPaciente;
             MostrarModalRegistrarPaciente = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
             StateHasChanged();
         }
     }
 
-    private async Task SeleccionarPaciente(PacienteDto p)
+    private async Task SeleccionarPaciente(PacienteDto Paciente)
     {
-        PacienteActual = p;
-        Cedula = p.CedulaPaciente;
+        PacienteSeleccionado = Paciente;
+        CedulaPaciente = Paciente.CedulaPaciente;
         MostrarModalBuscarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task AbrirModalNuevoMedico()
     {
-        NuevoMedico = new MedicoDto();
+        MedicoNuevo = new MedicoDto();
         MostrarModalMedico = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -657,18 +657,18 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var res = await MedicosApi.CrearMedicoAsync(NuevoMedico);
-        if (res.IsSuccessStatusCode)
+        var Respuesta = await MedicosApi.CrearMedicoAsync(MedicoNuevo);
+        if (Respuesta.IsSuccessStatusCode)
         {
-            Medicos = await MedicosApi.ListarMedicosAsync();
-            MedicoActual = Medicos.FirstOrDefault(m => m.NombreMedico == NuevoMedico.NombreMedico);
+            ListaMedicos = await MedicosApi.ListarMedicosAsync();
+            MedicoSeleccionado = ListaMedicos.FirstOrDefault(m => m.NombreMedico == MedicoNuevo.NombreMedico);
             MostrarModalMedico = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
         }
         else
         {
-            var msg = await res.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al crear médico: {msg}");
+            var Mensaje = await Respuesta.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al crear médico: {Mensaje}");
         }
     }
 
@@ -679,26 +679,26 @@
         ExamenesDisponibles = await ExamenesApi.ListarExamenesAsync(TextoBuscarExamen);
     }
 
-    private void SeleccionarExamen(ExamenDto examen)
+    private void SeleccionarExamen(ExamenDto Examen)
     {
-        if (!ExamenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
-            ExamenesSeleccionados.Add(examen);
+        if (!ExamenesSeleccionados.Any(e => e.IdExamen == Examen.IdExamen))
+            ExamenesSeleccionados.Add(Examen);
         MostrarModalExamen = false;
     }
 
-    private void QuitarExamen(ExamenDto examen) =>
-        ExamenesSeleccionados.Remove(examen);
+    private void QuitarExamen(ExamenDto Examen) =>
+        ExamenesSeleccionados.Remove(Examen);
 
-    private void MostrarPagoModal()
+    private void AbrirModalPago()
     {
-        if (PacienteActual == null || MedicoActual == null || !ExamenesSeleccionados.Any())
+        if (PacienteSeleccionado == null || MedicoSeleccionado == null || !ExamenesSeleccionados.Any())
         {
             JS.InvokeVoidAsync("alert", "Debe seleccionar paciente, médico y al menos un examen.");
             return;
         }
 
-        Efectivo = 0;
-        Transferencia = 0;
+        MontoEfectivo = 0;
+        MontoTransferencia = 0;
         PagoActual = new PagoDto();
         MostrarModalPago = true;
         StateHasChanged();
@@ -708,90 +708,90 @@
         ExamenesSeleccionados.Sum(e => e.Precio);
 
     private decimal ObtenerSaldoPendiente() =>
-        Math.Max(0, CalcularTotal() - (Efectivo + Transferencia));
+        Math.Max(0, CalcularTotal() - (MontoEfectivo + MontoTransferencia));
 
     private decimal ObtenerCambio() =>
-        Math.Max(0, (Efectivo + Transferencia) - CalcularTotal());
+        Math.Max(0, (MontoEfectivo + MontoTransferencia) - CalcularTotal());
 
     private async Task GuardarPago()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var pagado = Efectivo + Transferencia;
-        var saldo = ObtenerSaldoPendiente();
+        var TotalPagado = MontoEfectivo + MontoTransferencia;
+        var SaldoPendiente = ObtenerSaldoPendiente();
 
-        orden.IdPaciente = PacienteActual!.IdPaciente;
-        orden.IdMedico = MedicoActual!.IdMedico;
-        orden.FechaOrden = FechaOrdenSeleccionada;
-        orden.Total = CalcularTotal();
-        orden.SaldoPendiente = saldo;
-        orden.TotalPagado = pagado;
-        orden.EstadoPago = saldo == 0 ? "PAGADO" : "PENDIENTE";
-        orden.Anulado = false;
-        orden.LiquidadoConvenio = false;
-        orden.NumeroOrden = "";
-        orden.Observacion = "";
-        orden.Detalles = ExamenesSeleccionados
+        OrdenActual.IdPaciente = PacienteSeleccionado!.IdPaciente;
+        OrdenActual.IdMedico = MedicoSeleccionado!.IdMedico;
+        OrdenActual.FechaOrden = FechaOrden;
+        OrdenActual.Total = CalcularTotal();
+        OrdenActual.SaldoPendiente = SaldoPendiente;
+        OrdenActual.TotalPagado = TotalPagado;
+        OrdenActual.EstadoPago = SaldoPendiente == 0 ? "PAGADO" : "PENDIENTE";
+        OrdenActual.Anulado = false;
+        OrdenActual.LiquidadoConvenio = false;
+        OrdenActual.NumeroOrden = "";
+        OrdenActual.Observacion = "";
+        OrdenActual.Detalles = ExamenesSeleccionados
             .Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio })
             .ToList();
 
-        var dto = new OrdenCompletaDto
+        var DtoOrdenCompleta = new OrdenCompletaDto
         {
-            Orden = orden,
+            Orden = OrdenActual,
             IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList()
         };
 
-        var response = await OrdenApi.CrearOrdenHttpResponseAsync(dto);
+        var RespuestaOrden = await OrdenesApi.CrearOrdenHttpResponseAsync(DtoOrdenCompleta);
 
-        if (response.IsSuccessStatusCode)
+        if (RespuestaOrden.IsSuccessStatusCode)
         {
-            var resp = await response.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
-            if (resp != null && resp.IdOrden > 0)
+            var RespuestaContenido = await RespuestaOrden.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
+            if (RespuestaContenido != null && RespuestaContenido.IdOrden > 0)
             {
-                var observacion = string.IsNullOrWhiteSpace(PagoActual.Observacion)
+                var Observacion = string.IsNullOrWhiteSpace(PagoActual.Observacion)
                     ? "PAGO DESDE ORDEN"
                     : PagoActual.Observacion;
 
-                var pago = new PagoDto
+                var Pago = new PagoDto
                 {
-                    IdOrden = resp.IdOrden,
+                    IdOrden = RespuestaContenido.IdOrden,
                     FechaPago = DateTime.Now,
-                    MontoPagado = pagado,
-                    Observacion = observacion,
+                    MontoPagado = TotalPagado,
+                    Observacion = Observacion,
                     DetallePagos = new List<DetallePagoDto>
                 {
-                    new() { TipoPago = "EFECTIVO", Monto = Efectivo },
-                    new() { TipoPago = "TRANSFERENCIA", Monto = Transferencia }
+                    new() { TipoPago = "EFECTIVO", Monto = MontoEfectivo },
+                    new() { TipoPago = "TRANSFERENCIA", Monto = MontoTransferencia }
                 }
                 };
 
-                await PagosApi.RegistrarPagoAsync(pago);
+                await PagosApi.RegistrarPagoAsync(Pago);
                 Navigation.NavigateTo("/ordenes");
             }
             else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
         }
         else
         {
-            var msg = await response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {msg}");
+            var Msg = await RespuestaOrden.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {Msg}");
         }
     }
 
-    private bool ValidarCedula(string cedula)
+    private bool ValidarCedula(string Cedula)
     {
-        if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit))
+        if (string.IsNullOrWhiteSpace(Cedula) || Cedula.Length != 10 || !Cedula.All(char.IsDigit))
             return false;
 
         int suma = 0;
         for (int i = 0; i < 9; i++)
         {
-            int digito = int.Parse(cedula[i].ToString());
+            int digito = int.Parse(Cedula[i].ToString());
             int coef = (i % 2 == 0) ? 2 : 1;
             int producto = digito * coef;
             suma += (producto >= 10) ? (producto - 9) : producto;
         }
 
-        int ultimoDigito = int.Parse(cedula[9].ToString());
+        int ultimoDigito = int.Parse(Cedula[9].ToString());
         int digitoCalculado = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
         return ultimoDigito == digitoCalculado;
     }

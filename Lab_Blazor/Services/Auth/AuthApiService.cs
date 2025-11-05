@@ -28,9 +28,6 @@ namespace Lab_Blazor.Services.Auth
                     if (loginResp.EsContraseniaTemporal && string.IsNullOrEmpty(loginResp.AccessToken))
                         return (true, "Debe cambiar su contraseña antes de continuar.", loginResp, true);
 
-                    await _js.InvokeVoidAsync("localStorage.setItem", "jwt", loginResp.AccessToken);
-                    await _js.InvokeVoidAsync("localStorage.setItem", "usuario", JsonSerializer.Serialize(loginResp));
-
                     return (true, loginResp.Mensaje ?? "Inicio de sesión exitoso.", loginResp, false);
                 }
             }

@@ -27,6 +27,24 @@ namespace Lab_Blazor.Services.Ordenes
             return await response.Content.ReadFromJsonAsync<List<OrdenDto>>() ?? new();
         }
 
+        public async Task<PagedResultDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto filtro)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/ordenes/buscar")
+            {
+                Content = JsonContent.Create(filtro)
+            };
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<PagedResultDto<OrdenDto>>()
+                   ?? new PagedResultDto<OrdenDto> { Items = new List<OrdenDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
+        }
+
         public async Task<OrdenDto?> GetOrdenPorIdAsync(int id)
         {
             if (!await SetAuthHeaderAsync())
@@ -176,38 +194,15 @@ namespace Lab_Blazor.Services.Ordenes
             if (!response.IsSuccessStatusCode)
                 return (null, false);
 
-            var jsonString = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+            var root = doc.RootElement;
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            try
-            {
-                using var doc = JsonDocument.Parse(jsonString);
-                var root = doc.RootElement;
-
-                OrdenDetalleDto? detalle = null;
-                bool tieneSaldo = false;
-
-                if (root.TryGetProperty("dto", out var dtoElement))
-                {
-                    detalle = JsonSerializer.Deserialize<OrdenDetalleDto>(dtoElement.GetRawText(), options);
-                }
-
-                if (root.TryGetProperty("tieneSaldoPendiente", out var saldoElement))
-                {
-                    tieneSaldo = saldoElement.GetBoolean();
-                }
-
-                return (detalle, tieneSaldo);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deserializando detalle: {ex.Message}");
-                return (null, false);
-            }
+            var detalle = root.TryGetProperty("detalleOrden", out var detEl)
+                ? JsonSerializer.Deserialize<OrdenDetalleDto>(detEl.GetRawText(), options)
+                : null;
+            var tieneSaldo = root.TryGetProperty("tieneSaldoPendiente", out var saldoEl) && saldoEl.GetBoolean();
+            return (detalle, tieneSaldo);
         }
 
         public async Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int idOrden)

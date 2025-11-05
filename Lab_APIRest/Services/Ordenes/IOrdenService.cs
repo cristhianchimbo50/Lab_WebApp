@@ -5,6 +5,7 @@ namespace Lab_APIRest.Services.Ordenes
     public interface IOrdenService
     {
         Task<List<object>> ObtenerOrdenesAsync();
+        Task<PagedResultDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto Filtro);
         Task<OrdenDetalleDto?> ObtenerDetalleOrdenOriginalAsync(int IdOrden);
         Task<bool> AnularOrdenAsync(int IdOrden);
         Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto DatosOrden);

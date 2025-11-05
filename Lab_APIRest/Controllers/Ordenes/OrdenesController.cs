@@ -29,6 +29,14 @@ namespace Lab_APIRest.Controllers
         }
 
         [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [HttpPost("buscar")]
+        public async Task<IActionResult> BuscarOrdenes([FromBody] OrdenFiltroDto Filtro)
+        {
+            var Resultado = await ServicioOrden.BuscarOrdenesAsync(Filtro);
+            return Ok(Resultado);
+        }
+
+        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
         [HttpGet("detalle/{IdOrden}")]
         public async Task<IActionResult> ObtenerDetalleOrden(int IdOrden)
         {

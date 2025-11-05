@@ -37,27 +37,44 @@ namespace Lab_APIRest.Services.Auth
 
         public async Task<LoginResponseDto?> IniciarSesionAsync(LoginRequestDto Solicitud, CancellationToken Ct)
         {
-            var Email = (Solicitud.CorreoUsuario ?? "").Trim().ToLowerInvariant();
+            var Email = (Solicitud.CorreoUsuario ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Solicitud.Clave))
                 return null;
 
-            string CacheKey = $"login_intentos_{Email}";
+            // Normalizar a minúsculas solo en memoria; no aplicar ToLower a la columna para preservar uso de índices.
+            var emailNorm = Email.ToLowerInvariant();
+
+            string CacheKey = $"login_intentos_{emailNorm}";
             if (Cache.TryGetValue<int>(CacheKey, out int Intentos) && Intentos >= MaxIntentos)
                 return null;
 
-            var UsuarioEntidad = await Contexto.usuarios.AsNoTracking()
-                .FirstOrDefaultAsync(U => U.correo_usuario.ToLower() == Email, Ct);
+            // Proyección ligera para evitar materializar columnas no usadas y acelerar consulta
+            var UsuarioEntidad = await Contexto.usuarios
+                .AsNoTracking()
+                .Where(U => U.correo_usuario == Email || U.correo_usuario == emailNorm)
+                .Select(u => new
+                {
+                    u.id_usuario,
+                    u.correo_usuario,
+                    u.nombre,
+                    u.rol,
+                    u.clave_usuario,
+                    u.activo,
+                    u.es_contrasenia_temporal,
+                    u.fecha_expira_temporal
+                })
+                .FirstOrDefaultAsync(Ct);
 
             if (UsuarioEntidad is null)
             {
-                RegistrarIntentoFallido(Email);
+                RegistrarIntentoFallido(emailNorm);
                 return null;
             }
 
             var ClaveOk = Hasher.VerifyHashedPassword(null!, UsuarioEntidad.clave_usuario, Solicitud.Clave) != PasswordVerificationResult.Failed;
             if (!ClaveOk)
             {
-                RegistrarIntentoFallido(Email);
+                RegistrarIntentoFallido(emailNorm);
                 return null;
             }
 
@@ -77,7 +94,7 @@ namespace Lab_APIRest.Services.Auth
                         Nombre = UsuarioEntidad.nombre,
                         Rol = UsuarioEntidad.rol,
                         EsContraseniaTemporal = true,
-                        AccessToken = null,
+                        AccessToken = null!,
                         ExpiresAtUtc = UsuarioEntidad.fecha_expira_temporal.Value,
                         Mensaje = "La contraseña temporal ha expirado. Solicite una nueva."
                     };
@@ -90,8 +107,8 @@ namespace Lab_APIRest.Services.Auth
                     Nombre = UsuarioEntidad.nombre,
                     Rol = UsuarioEntidad.rol,
                     EsContraseniaTemporal = true,
-                    AccessToken = null,
-                    ExpiresAtUtc = (DateTime)UsuarioEntidad.fecha_expira_temporal!,
+                    AccessToken = null!,
+                    ExpiresAtUtc = UsuarioEntidad.fecha_expira_temporal ?? DateTime.UtcNow,
                     Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
                 };
             }
@@ -116,7 +133,9 @@ namespace Lab_APIRest.Services.Auth
             if (UsuarioEntidad.rol == "paciente")
             {
                 var PacienteEntidad = await Contexto.pacientes.AsNoTracking()
-                    .FirstOrDefaultAsync(P => P.id_usuario == UsuarioEntidad.id_usuario, Ct);
+                    .Where(P => P.id_usuario == UsuarioEntidad.id_usuario)
+                    .Select(p => new { p.id_paciente })
+                    .FirstOrDefaultAsync(Ct);
                 if (PacienteEntidad != null)
                     IdPaciente = PacienteEntidad.id_paciente;
             }
