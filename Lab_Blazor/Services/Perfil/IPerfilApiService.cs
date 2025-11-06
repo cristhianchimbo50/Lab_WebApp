@@ -4,6 +4,6 @@ namespace Lab_Blazor.Services.Perfil
 {
     public interface IPerfilApiService
     {
-        Task<PerfilResponseDto?> ObtenerPerfilAsync();
+        Task<PerfilResponseDto?> ObtenerDetallePerfilAsync();
     }
 }

@@ -98,7 +98,7 @@ else
             StateHasChanged();
 
             if (AuthProvider is CustomAuthenticationStateProvider custom)
-                await custom.SignOutAsync();
+                await custom.CerrarSesionAsync();
 
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated ?? false)
@@ -120,7 +120,7 @@ else
 
         try
         {
-            var (exito, mensaje, usuario, requiereCambio) = await AuthApi.LoginAsync(loginModel);
+            var (exito, mensaje, usuario, requiereCambio) = await AuthApi.IniciarSesionAsync(loginModel);
 
             if (!exito || usuario is null)
             {
@@ -131,7 +131,7 @@ else
 
             if (AuthProvider is CustomAuthenticationStateProvider customAuth)
             {
-                await customAuth.SignInAsync(usuario);
+                await customAuth.IniciarSesionAsync(usuario);
 
                 if (requiereCambio)
                 {

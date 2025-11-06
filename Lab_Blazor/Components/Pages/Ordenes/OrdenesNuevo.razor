@@ -617,15 +617,15 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         PacientesEncontrados = string.IsNullOrWhiteSpace(ValorBusquedaPaciente)
-            ? await PacientesApi.ObtenerPacientesAsync()
-            : await PacientesApi.BuscarPacientesAsync(FiltroBusquedaPaciente, ValorBusquedaPaciente);
+            ? await PacientesApi.ListarPacientesAsync()
+            : await PacientesApi.ListarPacientesAsync(FiltroBusquedaPaciente, ValorBusquedaPaciente);
     }
 
     private async Task RegistrarNuevoPaciente()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var (Exito, Mensaje, Paciente) = await PacientesApi.CrearPacienteAsync(PacienteNuevo);
+        var (Exito, Mensaje, Paciente) = await PacientesApi.GuardarPacienteAsync(PacienteNuevo);
         await JS.InvokeVoidAsync("alert", Mensaje);
 
         if (Exito && Paciente != null)
@@ -657,7 +657,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var Respuesta = await MedicosApi.CrearMedicoAsync(MedicoNuevo);
+        var Respuesta = await MedicosApi.GuardarMedicoAsync(MedicoNuevo);
         if (Respuesta.IsSuccessStatusCode)
         {
             ListaMedicos = await MedicosApi.ListarMedicosAsync();
@@ -741,7 +741,7 @@
             IdsExamenes = ExamenesSeleccionados.Select(e => e.IdExamen).ToList()
         };
 
-        var RespuestaOrden = await OrdenesApi.CrearOrdenHttpResponseAsync(DtoOrdenCompleta);
+        var RespuestaOrden = await OrdenesApi.GuardarOrdenHttpAsync(DtoOrdenCompleta);
 
         if (RespuestaOrden.IsSuccessStatusCode)
         {
@@ -765,7 +765,7 @@
                 }
                 };
 
-                await PagosApi.RegistrarPagoAsync(Pago);
+                await PagosApi.GuardarPagoAsync(Pago);
                 Navigation.NavigateTo("/ordenes");
             }
             else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");

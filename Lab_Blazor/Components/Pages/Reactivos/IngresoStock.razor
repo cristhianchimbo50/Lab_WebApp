@@ -333,7 +333,7 @@
         try
         {
             cargado = false;
-            var lista = await ReactivosApi.ObtenerReactivosAsync();
+            var lista = await ReactivosApi.ListarReactivosAsync();
 
             if (string.IsNullOrWhiteSpace(criterioBusqueda) && string.IsNullOrWhiteSpace(valorBusqueda))
             {
@@ -439,7 +439,7 @@
             return;
         }
 
-        var response = await ReactivosApi.RegistrarIngresosAsync(seleccionados);
+        var response = await ReactivosApi.RegistrarIngresosReactivosAsync(seleccionados);
 
         if (response.IsSuccessStatusCode)
         {

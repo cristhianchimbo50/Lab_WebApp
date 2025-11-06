@@ -256,7 +256,7 @@
         filtro.PageNumber = CurrentPage;
         filtro.PageSize = PageSize;
 
-        Resultado = await PagosApi.ListarCuentasPorCobrarAsync(filtro, CurrentPage, PageSize);
+        Resultado = await PagosApi.ListarCuentasPorCobrarPaginadoAsync(filtro);
 
         await JS.InvokeVoidAsync("mostrarToastAsync", "Datos cargados correctamente.", "success");
     }

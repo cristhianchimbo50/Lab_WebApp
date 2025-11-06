@@ -211,7 +211,7 @@
         try
         {
             Buscando = true;
-            Resultado = await MedicosApiService.BuscarMedicosAsync(Filtro);
+            Resultado = await MedicosApiService.ListarMedicosPaginadosAsync(Filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
         }
         catch
@@ -273,7 +273,9 @@
     private async Task ValidarYGuardar()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        HttpResponseMessage result = MedicoActual.IdMedico == 0 ? await MedicosApiService.CrearMedicoAsync(MedicoActual) : await MedicosApiService.EditarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
+        HttpResponseMessage result = MedicoActual.IdMedico == 0
+            ? await MedicosApiService.GuardarMedicoAsync(MedicoActual)  
+            : await MedicosApiService.GuardarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
         if (result.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Médico guardado correctamente.", "success"); modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarMedicos();
@@ -297,7 +299,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?") )
         {
-            medico.Anulado = false; var result = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
+            medico.Anulado = false; var result = await MedicosApiService.GuardarMedicoAsync(medico.IdMedico, medico); 
             if (result.IsSuccessStatusCode)
             { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico reactivado correctamente.", "success"); await BuscarMedicos(); }
         }

@@ -286,7 +286,7 @@
         await JS.InvokeVoidAsync("localStorage.removeItem", "usuario");
 
         if (AuthProvider is CustomAuthenticationStateProvider customAuth)
-            await customAuth.SignOutAsync();
+            await customAuth.CerrarSesionAsync();
 
         Navigation.NavigateTo("/login", forceLoad: true);
     }

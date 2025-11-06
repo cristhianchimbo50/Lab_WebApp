@@ -147,8 +147,8 @@
 
         try
         {
-            var Respuesta = await PerfilService.ObtenerPerfilAsync();
-            PerfilUsuario = Respuesta?.Perfil;
+            var respuesta = await PerfilService.ObtenerDetallePerfilAsync();
+            PerfilUsuario = respuesta?.Perfil;
         }
         catch (Exception ex)
         {

@@ -368,8 +368,8 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        examenSeleccionado = await ExamenesApi.GetExamenPorIdAsync(id);
-        reactivosAsociados = await AsociacionesApi.ObtenerPorExamenIdAsync(id) ?? new();
+        examenSeleccionado = await ExamenesApi.ObtenerDetalleExamenAsync(id);
+        reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(id) ?? new();
     }
 
     private async Task MostrarModalExamen()
@@ -395,7 +395,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (!todosLosExamenes.Any())
-            todosLosExamenes = await ExamenesApi.GetExamenesAsync();
+            todosLosExamenes = await ExamenesApi.ListarExamenesAsync();
 
         var val = valorBusquedaExamen.Trim().ToLower();
 
@@ -407,7 +407,7 @@
         {
             examenesEncontrados = criterioBusquedaExamen switch
             {
-                "estudio" => todosLosExamenes.Where(e => e.Estudio.ToLower().Contains(val)).ToList(),
+                "estudio" => todosLosExamenes.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
                 _ => todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
             };
         }
@@ -420,7 +420,7 @@
         examenSeleccionado = examen;
         mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
-        reactivosAsociados = await AsociacionesApi.ObtenerPorExamenIdAsync(examen.IdExamen) ?? new();
+        reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(examen.IdExamen) ?? new();
         CurrentPage = 1;
     }
 
@@ -447,7 +447,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (!todosLosReactivos.Any())
-            todosLosReactivos = await ReactivosApi.ObtenerReactivosAsync();
+            todosLosReactivos = await ReactivosApi.ListarReactivosAsync();
 
         var val = valorBusquedaReactivo.Trim().ToLower();
 
@@ -501,7 +501,7 @@
             return;
         }
 
-        var exito = await AsociacionesApi.GuardarPorExamenAsync(examenSeleccionado.IdExamen, reactivosAsociados);
+        var exito = await AsociacionesApi.GuardarAsociacionesPorExamenAsync(examenSeleccionado.IdExamen, reactivosAsociados);
         if (exito)
             Navigation.NavigateTo("/asociaciones-reactivos", true);
         else

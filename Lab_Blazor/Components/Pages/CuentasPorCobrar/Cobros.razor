@@ -347,7 +347,6 @@
     private async Task CargarOrdenesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         var filtro = new PagoFiltroDto { Cedula = cedula, IncluirAnulados = false };
         var ordenes = await PagosApi.ListarCuentasPorCobrarAsync(filtro);
         ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
@@ -358,11 +357,10 @@
     private async Task CargarPagosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         pagosPrevios.Clear();
         foreach (var orden in ordenesSeleccionadas)
         {
-            var pagos = await PagosApi.ListarPagosPorOrdenAsync(orden.IdOrden);
+            var pagos = await PagosApi.ListarPagosAsync(orden.IdOrden);
             foreach (var pago in pagos)
                 if (pago.DetallePagos != null)
                     pagosPrevios.AddRange(pago.DetallePagos.Select(d => new DetallePagoDto
@@ -450,7 +448,7 @@
             if (!await SesionService.VerificarOSalirAsync()) return;
 
             pagoDto.IdOrden = orden.IdOrden;
-            var response = await PagosApi.RegistrarCobroCuentaPorCobrarAsync(pagoDto);
+            var response = await PagosApi.GuardarCobroCuentaPorCobrarAsync(pagoDto);
             if (response == null)
                 errores = true;
             if (cobroTotal <= 0)

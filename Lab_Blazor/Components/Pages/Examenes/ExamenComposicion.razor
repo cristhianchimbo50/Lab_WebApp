@@ -177,7 +177,7 @@
 
             if (puedeVer && IdExamenPadre.HasValue)
             {
-                ExamenPadre = await ExamenesApiService.GetExamenPorIdAsync(IdExamenPadre.Value);
+                ExamenPadre = await ExamenesApiService.ObtenerDetalleExamenAsync(IdExamenPadre.Value);
                 NombreExamenPadre = ExamenPadre?.NombreExamen;
                 await CargarComposiciones();
                 await CargarExamenesDisponibles();
@@ -194,14 +194,14 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (IdExamenPadre.HasValue)
-            Composiciones = await ExamenComposicionApiService.ObtenerComposicionesPorExamenPadreAsync(IdExamenPadre.Value);
+            Composiciones = await ExamenComposicionApiService.ListarComposicionesPorPadreAsync(IdExamenPadre.Value);
     }
 
     private async Task CargarExamenesDisponibles()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var todos = await ExamenesApiService.GetExamenesAsync();
+        var todos = await ExamenesApiService.ListarExamenesAsync();
         ExamenesDisponibles = todos
             .Where(x => x.IdExamen != IdExamenPadre && !Composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
             .OrderBy(x => x.NombreExamen)
@@ -224,7 +224,7 @@
             IdExamenHijo = IdExamenHijoSeleccionado.Value
         };
 
-        var Response = await ExamenComposicionApiService.CrearComposicionAsync(Dto);
+        var Response = await ExamenComposicionApiService.GuardarComposicionAsync(Dto);
         if (Response.IsSuccessStatusCode)
         {
             await CargarComposiciones();

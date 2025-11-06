@@ -281,7 +281,7 @@
         try
         {
             Buscando = true;
-            Resultado = await ReactivosApiService.BuscarReactivosAsync(Filtro);
+            Resultado = await ReactivosApiService.ListarReactivosPaginadosAsync(Filtro);
         }
         catch
         {
@@ -377,8 +377,8 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         HttpResponseMessage result = ReactivoActual.IdReactivo == 0
-            ? await ReactivosApiService.CrearReactivoAsync(ReactivoActual)
-            : await ReactivosApiService.EditarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
+            ? await ReactivosApiService.GuardarReactivoAsync(ReactivoActual)
+            : await ReactivosApiService.GuardarReactivoAsync(ReactivoActual.IdReactivo, ReactivoActual);
 
         if (result.IsSuccessStatusCode)
         {
@@ -415,7 +415,7 @@
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el reactivo {reactivo.NombreReactivo}?"))
         {
             reactivo.Anulado = false;
-            var result = await ReactivosApiService.EditarReactivoAsync(reactivo.IdReactivo, reactivo);
+            var result = await ReactivosApiService.GuardarReactivoAsync(reactivo.IdReactivo, reactivo);
             if (result.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo reactivado correctamente.", "success");

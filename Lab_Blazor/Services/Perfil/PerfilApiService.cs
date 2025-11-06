@@ -10,18 +10,16 @@ namespace Lab_Blazor.Services.Perfil
         public PerfilApiService(IHttpClientFactory FactoryHttp, ProtectedSessionStorage AlmacenamientoSesion, IJSRuntime JsRuntime)
             : base(FactoryHttp, AlmacenamientoSesion, JsRuntime) { }
 
-        public async Task<PerfilResponseDto?> ObtenerPerfilAsync()
+        public async Task<PerfilResponseDto?> ObtenerDetallePerfilAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Solicitud = new HttpRequestMessage(HttpMethod.Get, "api/ajustes/perfil");
-            AddTokenHeader(Solicitud);
-
-            var RespuestaHttp = await _http.SendAsync(Solicitud);
-            RespuestaHttp.EnsureSuccessStatusCode();
-
-            return await RespuestaHttp.Content.ReadFromJsonAsync<PerfilResponseDto>();
+            var solicitud = new HttpRequestMessage(HttpMethod.Get, "api/ajustes/perfil");
+            AddTokenHeader(solicitud);
+            var respuesta = await _http.SendAsync(solicitud);
+            respuesta.EnsureSuccessStatusCode();
+            return await respuesta.Content.ReadFromJsonAsync<PerfilResponseDto>();
         }
     }
 }

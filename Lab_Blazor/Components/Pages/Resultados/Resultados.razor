@@ -304,7 +304,7 @@
             else if (!IncluirAnulados && IncluirVigentes) Filtro.Anulado = false;
             else Filtro.Anulado = null;
 
-            Resultado = await ResultadosApi.BuscarResultadosPaginadosAsync(Filtro);
+            Resultado = await ResultadosApi.ListarResultadosPaginadosAsync(Filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados cargados correctamente.", "success");
         }
         catch
@@ -378,7 +378,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (DetalleActual == null) { await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning"); return; }
         if (DetalleActual.Anulado) { await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning"); return; }
-        var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(new List<int> { DetalleActual.IdResultado });
+        var pdfBytes = await ResultadosApi.GenerarResultadosPdfAsync(new List<int> { DetalleActual.IdResultado });
         if (pdfBytes == null || pdfBytes.Length == 0) { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al generar el PDF del resultado.", "danger"); return; }
         var base64Pdf = Convert.ToBase64String(pdfBytes); pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }

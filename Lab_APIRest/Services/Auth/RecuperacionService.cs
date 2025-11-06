@@ -45,7 +45,7 @@ namespace Lab_APIRest.Services.Auth
             _db.recuperacion_contrasenias.Add(registro);
             await _db.SaveChangesAsync(ct);
 
-            var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; //Debo cambiar para produccion
+            var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; //Debo cambiar para produccionojoooooooooo
             var asunto = "Recuperación de Contraseña - Laboratorio Clínico <strong>'La Inmaculada'</strong>";
             var cuerpoHtml = $@"
                 <p>Hola <b>{usuario.nombre}</b>,</p>

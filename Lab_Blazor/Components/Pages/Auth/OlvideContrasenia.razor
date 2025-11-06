@@ -59,7 +59,7 @@
     private async Task EnviarSolicitud()
     {
         procesando = true;
-        var resp = await RecuperacionApi.SolicitarRecuperacionAsync(modelo);
+        var resp = await RecuperacionApi.SolicitarRecuperacionContraseniaAsync(modelo);
         procesando = false;
 
         if (resp.Exito)

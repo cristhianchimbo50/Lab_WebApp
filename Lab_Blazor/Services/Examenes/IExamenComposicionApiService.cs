@@ -4,9 +4,9 @@ namespace Lab_Blazor.Services.Examenes
 {
     public interface IExamenComposicionApiService
     {
-        Task<List<ExamenComposicionDto>> ObtenerComposicionesPorExamenPadreAsync(int IdExamenPadre);
-        Task<List<ExamenComposicionDto>> ObtenerComposicionesPorExamenHijoAsync(int IdExamenHijo);
-        Task<HttpResponseMessage> CrearComposicionAsync(ExamenComposicionDto Composicion);
-        Task<HttpResponseMessage> EliminarComposicionAsync(int IdExamenPadre, int IdExamenHijo);
+        Task<List<ExamenComposicionDto>> ListarComposicionesPorPadreAsync(int idExamenPadre);
+        Task<List<ExamenComposicionDto>> ListarComposicionesPorHijoAsync(int idExamenHijo);
+        Task<HttpResponseMessage> GuardarComposicionAsync(ExamenComposicionDto composicion);
+        Task<HttpResponseMessage> EliminarComposicionAsync(int idExamenPadre, int idExamenHijo);
     }
 }

@@ -6,10 +6,10 @@ namespace Lab_Blazor.Services.Pagos
 {
     public interface IPagosApiService
     {
-        Task<PagoDto?> RegistrarPagoAsync(PagoDto Dto);
-        Task<List<PagoDto>> ListarPagosPorOrdenAsync(int IdOrden);
-        Task<IEnumerable<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto Filtro);
-        Task<ResultadoPaginadoDto<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro, int pagina, int tamano);
-        Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto Pago);
+        Task<PagoDto?> GuardarPagoAsync(PagoDto pago);
+        Task<List<PagoDto>> ListarPagosAsync(int idOrden);
+        Task<IEnumerable<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro);
+        Task<ResultadoPaginadoDto<OrdenDto>> ListarCuentasPorCobrarPaginadoAsync(PagoFiltroDto filtro);
+        Task<PagoDto?> GuardarCobroCuentaPorCobrarAsync(PagoDto pago);
     }
 }

@@ -7,131 +7,131 @@ namespace Lab_Blazor.Services.Examenes
 {
     public class ExamenReactivoAsociacionesApiService : BaseApiService, IExamenReactivoAsociacionesApiService
     {
-        public ExamenReactivoAsociacionesApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
-            : base(Factory, Session, Js) { }
+        public ExamenReactivoAsociacionesApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
-        public async Task<List<AsociacionReactivoDto>> ObtenerTodasAsync()
+        public async Task<List<AsociacionReactivoDto>> ListarAsociacionesAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, "api/ExamenReactivoAsociaciones");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, "api/ExamenReactivoAsociaciones");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
-            return await Response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
         }
 
-        public async Task<List<AsociacionReactivoDto>> BuscarPorExamenAsync(string NombreExamen)
+        public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorExamenAsync(string nombreExamen)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/buscar-examen/{NombreExamen}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/buscar-examen/{nombreExamen}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
-            return await Response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
         }
 
-        public async Task<List<AsociacionReactivoDto>> BuscarPorReactivoAsync(string NombreReactivo)
+        public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorReactivoAsync(string nombreReactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/buscar-reactivo/{NombreReactivo}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/buscar-reactivo/{nombreReactivo}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
-            return await Response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
         }
 
-        public async Task<AsociacionReactivoDto?> ObtenerPorIdAsync(int IdAsociacion)
+        public async Task<AsociacionReactivoDto?> ObtenerDetalleAsociacionAsync(int idAsociacion)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/{IdAsociacion}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/{idAsociacion}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
-            return await Response.Content.ReadFromJsonAsync<AsociacionReactivoDto>();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<AsociacionReactivoDto>();
         }
 
-        public async Task<AsociacionReactivoDto?> CrearAsync(AsociacionReactivoDto AsociacionReactivo)
+        public async Task<AsociacionReactivoDto?> CrearAsociacionAsync(AsociacionReactivoDto asociacionReactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Post, "api/ExamenReactivoAsociaciones")
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/ExamenReactivoAsociaciones")
             {
-                Content = JsonContent.Create(AsociacionReactivo)
+                Content = JsonContent.Create(asociacionReactivo)
             };
-            AddTokenHeader(Request);
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode
-                ? await Response.Content.ReadFromJsonAsync<AsociacionReactivoDto>()
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<AsociacionReactivoDto>()
                 : null;
         }
 
-        public async Task<bool> EditarAsync(int IdAsociacion, AsociacionReactivoDto AsociacionReactivo)
+        public async Task<bool> EditarAsociacionAsync(int idAsociacion, AsociacionReactivoDto asociacionReactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Put, $"api/ExamenReactivoAsociaciones/{IdAsociacion}")
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/ExamenReactivoAsociaciones/{idAsociacion}")
             {
-                Content = JsonContent.Create(AsociacionReactivo)
+                Content = JsonContent.Create(asociacionReactivo)
             };
-            AddTokenHeader(Request);
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode;
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> EliminarAsync(int IdAsociacion)
+        public async Task<bool> EliminarAsociacionAsync(int idAsociacion)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Delete, $"api/ExamenReactivoAsociaciones/{IdAsociacion}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/ExamenReactivoAsociaciones/{idAsociacion}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode;
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
 
-        public async Task<List<AsociacionReactivoDto>> ObtenerPorExamenIdAsync(int IdExamen)
+        public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorExamenIdAsync(int idExamen)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/asociados/{IdExamen}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/ExamenReactivoAsociaciones/asociados/{idExamen}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
-            return await Response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<AsociacionReactivoDto>>() ?? new();
         }
 
-        public async Task<bool> GuardarPorExamenAsync(int IdExamen, List<AsociacionReactivoDto> Asociaciones)
+        public async Task<bool> GuardarAsociacionesPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Post, $"api/ExamenReactivoAsociaciones/asociados/{IdExamen}")
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/ExamenReactivoAsociaciones/asociados/{idExamen}")
             {
-                Content = JsonContent.Create(Asociaciones)
+                Content = JsonContent.Create(asociaciones)
             };
-            AddTokenHeader(Request);
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode;
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
     }
 }

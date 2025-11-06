@@ -229,12 +229,12 @@
         DatosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
         if (DatosOrden == null) return;
 
-        var todos = await ExamenesApi.GetExamenesAsync();
+        var todos = await ExamenesApi.ListarExamenesAsync();
         foreach (var idPadre in idsExamenes)
         {
             var padre = todos.FirstOrDefault(e => e.IdExamen == idPadre);
             if (padre == null) continue;
-            var hijos = await ExamenesApi.ObtenerHijosDeExamenAsync(idPadre);
+            var hijos = await ExamenesApi.ListarExamenesHijosAsync(idPadre);
             ExamenesAgrupados.Add((padre, hijos));
             ValoresIngresados.TryAdd(padre.IdExamen, string.Empty);
             foreach (var hijo in hijos)
@@ -296,7 +296,7 @@
             if (response.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("alert", "Resultados guardados correctamente.");
-                await OrdenesApi.VerificarNotificacionResultadosAsync(idOrden);
+                await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden);
                 Navigation.NavigateTo("/resultados");
             }
             else

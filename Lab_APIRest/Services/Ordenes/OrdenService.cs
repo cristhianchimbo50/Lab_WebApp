@@ -1,7 +1,7 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_APIRest.Services.PDF;
-using Lab_APIRest.Infrastructure.Services; // EmailService correcta
+using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Common;
 using Lab_Contracts.Ordenes;
 using Microsoft.EntityFrameworkCore;

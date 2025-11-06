@@ -241,7 +241,7 @@
 
         try
         {
-            asociaciones = await AsociacionesApi.ObtenerTodasAsync();
+            asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
             var valor = valorBusqueda?.Trim().ToLower() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
@@ -284,11 +284,11 @@
 
         if (!await JS.InvokeAsync<bool>("confirm", "¿Desea eliminar esta asociación?")) return;
 
-        var ok = await AsociacionesApi.EliminarAsync(idAsociacion);
+        var ok = await AsociacionesApi.EliminarAsociacionAsync(idAsociacion);
         if (ok)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación eliminada correctamente.", "success");
-            asociaciones = await AsociacionesApi.ObtenerTodasAsync();
+            asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
             asociacionesFiltradas = asociaciones.ToList();
         }
         else

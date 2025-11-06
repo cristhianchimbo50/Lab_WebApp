@@ -416,7 +416,6 @@
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            // Rango por defecto: últimos 15 días
             Filtro.FechaHasta = DateOnly.FromDateTime(DateTime.Today);
             Filtro.FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15));
             Filtro.PageNumber = 1;
@@ -448,7 +447,7 @@
 
         if (Rol == "paciente" && int.TryParse(IdPacienteClaim, out var idPaciente))
         {
-            var result = await OrdenesApi.ObtenerDetalleOrdenPacienteAsync(idPaciente, idOrden);
+            var result = await OrdenesApi.ObtenerDetalleOrdenPorPacienteAsync(idPaciente, idOrden);
             DetalleActual = result.Detalle;
 
             if (result.TieneSaldoPendiente)
@@ -476,14 +475,13 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (DetalleActual == null) return;
-        var pdfBytes = await OrdenesApi.ObtenerTicketOrdenPdfAsync(DetalleActual.IdOrden);
+        var pdfBytes = await OrdenesApi.GenerarOrdenTicketPdfAsync(DetalleActual.IdOrden);
         if (pdfBytes == null || pdfBytes.Length == 0)
         {
             await JS.InvokeVoidAsync("alert", "Error al generar el ticket.");
             return;
         }
-        var base64Pdf = Convert.ToBase64String(pdfBytes);
-        PdfUrl = $"data:application/pdf;base64,{base64Pdf}";
+        PdfUrl = $"data:application/pdf;base64,{Convert.ToBase64String(pdfBytes)}";
     }
 
     private async Task IrAIngresarResultados()
@@ -541,7 +539,7 @@
             return;
         }
 
-        var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(idsResultados);
+        var pdfBytes = await ResultadosApi.GenerarResultadosPdfAsync(idsResultados);
         if (pdfBytes == null || pdfBytes.Length == 0)
         {
             await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
@@ -639,7 +637,7 @@
                 Filtro.IdPaciente = null;
             }
 
-            Resultado = await OrdenesApi.BuscarOrdenesAsync(Filtro);
+            Resultado = await OrdenesApi.ListarOrdenesPaginadosAsync(Filtro);
         }
         catch
         {

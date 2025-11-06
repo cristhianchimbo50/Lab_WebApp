@@ -34,7 +34,6 @@ namespace Lab_APIRest.Controllers.Convenios
             return Ok(result);
         }
 
-        // Versión con querystring para compatibilidad (usa también ResultadoPaginadoDto)
         [HttpGet("buscar")]
         public async Task<ActionResult<ResultadoPaginadoDto<ConvenioDto>>> ListarConveniosPaginados([FromQuery] string? criterio, [FromQuery] string? valor, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {

@@ -362,7 +362,7 @@
         try
         {
             Buscando = true;
-            Resultado = await ConveniosApi.BuscarConveniosAsync(Filtro);
+            Resultado = await ConveniosApi.ListarConveniosPaginadosAsync(Filtro);
         }
         catch
         {
@@ -378,7 +378,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        ConvenioDetalle = await ConveniosApi.ObtenerDetalleAsync(IdConvenio);
+        ConvenioDetalle = await ConveniosApi.ObtenerDetalleConvenioAsync(IdConvenio);
         MostrarModal = ConvenioDetalle != null;
 
         await JS.InvokeVoidAsync("marcarModalAbierto");

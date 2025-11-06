@@ -315,7 +315,7 @@
                 case "activo": filtro.Activo = valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
             }
         }
-        usuarios = await UsuariosApi.ObtenerUsuariosAsync(filtro);
+        usuarios = await UsuariosApi.ListarUsuariosAsync(filtro);
     }
 
     void LimpiarFiltro()
@@ -370,12 +370,12 @@
                     CorreoUsuario = usuarioActual.CorreoUsuario,
                     Rol = usuarioActual.Rol
                 };
-                await UsuariosApi.CrearUsuarioAsync(crearDto);
+                await UsuariosApi.GuardarUsuarioAsync(crearDto);
                 mensaje = "Usuario creado correctamente y credenciales enviadas.";
             }
             else
             {
-                await UsuariosApi.EditarUsuarioAsync(usuarioActual);
+                await UsuariosApi.GuardarUsuarioAsync(usuarioActual);
                 mensaje = "Usuario actualizado correctamente.";
             }
 
@@ -411,7 +411,7 @@
 
         try
         {
-            await UsuariosApi.CambiarEstadoAsync(usuario.IdUsuario, !usuario.Activo);
+            await UsuariosApi.CambiarEstadoUsuarioAsync(usuario.IdUsuario, !usuario.Activo);
             mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
             tipoMensaje = "success";
             await Buscar();
@@ -430,7 +430,7 @@
         bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Deseas reenviar una nueva contraseña temporal?");
         if (!confirmar) return;
 
-        await UsuariosApi.ReenviarCredencialesTemporalesAsync(idUsuario);
+        await UsuariosApi.ReenviarCredencialesTemporalesUsuarioAsync(idUsuario);
         mensaje = "Se envió una nueva contraseña temporal al correo.";
         tipoMensaje = "info";
         await Buscar();
@@ -440,7 +440,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        detalleUsuario = await UsuariosApi.ObtenerUsuarioPorIdAsync(idUsuario);
+        detalleUsuario = await UsuariosApi.ObtenerDetalleUsuarioAsync(idUsuario);
         modalDetalleVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
     }

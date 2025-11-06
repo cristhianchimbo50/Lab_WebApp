@@ -245,7 +245,7 @@
         try
         {
             Buscando = true;
-            Resultado = await PacientesApiService.BuscarPacientesAsync(Filtro);
+            Resultado = await PacientesApiService.ListarPacientesPaginadosAsync(Filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
         }
         catch
@@ -323,7 +323,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (PacienteActual.IdPaciente == 0)
         {
-            var (Exito, Msg, _) = await PacientesApiService.CrearPacienteAsync(PacienteActual);
+            var (Exito, Msg, _) = await PacientesApiService.GuardarPacienteAsync(PacienteActual);
             await JS.InvokeVoidAsync("mostrarToastAsync", Msg, Exito ? "success" : "danger");
             if (Exito)
             {
@@ -332,7 +332,7 @@
         }
         else
         {
-            var ResultadoOp = await PacientesApiService.EditarPacienteAsync(PacienteActual.IdPaciente, PacienteActual);
+            var ResultadoOp = await PacientesApiService.GuardarPacienteAsync(PacienteActual.IdPaciente, PacienteActual);
             var Mensaje = ResultadoOp.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
             await JS.InvokeVoidAsync("mostrarToastAsync", Mensaje, ResultadoOp.IsSuccessStatusCode ? "success" : "danger");
             if (ResultadoOp.IsSuccessStatusCode) { ModalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientes(); }
@@ -356,10 +356,10 @@
     private async Task ConfirmarReactivacion(PacienteDto Paciente)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {Paciente.NombrePaciente}?") )
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {Paciente.NombrePaciente}?"))
         {
             Paciente.Anulado = false;
-            var ResultadoOp = await PacientesApiService.EditarPacienteAsync(Paciente.IdPaciente, Paciente);
+            var ResultadoOp = await PacientesApiService.GuardarPacienteAsync(Paciente.IdPaciente, Paciente);
             if (ResultadoOp.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente reactivado correctamente.", "success");
@@ -374,7 +374,7 @@
         if (PacienteActual.IdPaciente == 0) return;
         var Ok = await JS.InvokeAsync<bool>("confirm", $"¿Reenviar una nueva contraseña temporal a {PacienteActual.CorreoElectronicoPaciente}?");
         if (!Ok) return;
-        var (Exito, Msg) = await PacientesApiService.ReenviarTemporalAsync(PacienteActual.IdPaciente);
+        var (Exito, Msg) = await PacientesApiService.ReenviarCredencialesTemporalesAsync(PacienteActual.IdPaciente);
         await JS.InvokeVoidAsync("mostrarToastAsync", Msg, Exito ? "success" : "danger");
         if (Exito) await BuscarPacientes();
     }

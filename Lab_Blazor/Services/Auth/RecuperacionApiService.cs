@@ -8,20 +8,20 @@ namespace Lab_Blazor.Services.Auth
 {
     public class RecuperacionApiService : BaseApiService, IRecuperacionApiService
     {
-        public RecuperacionApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
-            : base(Factory, Session, Js) { }
+        public RecuperacionApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
-        public async Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto Dto)
+        public async Task<RespuestaMensajeDto> SolicitarRecuperacionContraseniaAsync(OlvideContraseniaDto dto)
         {
             try
             {
-                var Response = await _http.PostAsJsonAsync("api/recuperacion/solicitar", Dto);
-                if (Response.IsSuccessStatusCode)
-                    return await Response.Content.ReadFromJsonAsync<RespuestaMensajeDto>()
+                var response = await _http.PostAsJsonAsync("api/recuperacion/solicitar", dto);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<RespuestaMensajeDto>()
                            ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Respuesta vacía del servidor." };
 
-                var ErrorResponse = await Response.Content.ReadFromJsonAsync<RespuestaMensajeDto>();
-                return ErrorResponse ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Error desconocido del servidor." };
+                var errorResponse = await response.Content.ReadFromJsonAsync<RespuestaMensajeDto>();
+                return errorResponse ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Error desconocido del servidor." };
             }
             catch (Exception)
             {
@@ -29,17 +29,17 @@ namespace Lab_Blazor.Services.Auth
             }
         }
 
-        public async Task<RespuestaMensajeDto> RestablecerContraseniaAsync(RestablecerContraseniaDto Dto)
+        public async Task<RespuestaMensajeDto> RestablecerContraseniaAsync(RestablecerContraseniaDto dto)
         {
             try
             {
-                var Response = await _http.PostAsJsonAsync("api/recuperacion/restablecer", Dto);
-                if (Response.IsSuccessStatusCode)
-                    return await Response.Content.ReadFromJsonAsync<RespuestaMensajeDto>()
+                var response = await _http.PostAsJsonAsync("api/recuperacion/restablecer", dto);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<RespuestaMensajeDto>()
                            ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Respuesta vacía del servidor." };
 
-                var ErrorResponse = await Response.Content.ReadFromJsonAsync<RespuestaMensajeDto>();
-                return ErrorResponse ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Error desconocido del servidor." };
+                var errorResponse = await response.Content.ReadFromJsonAsync<RespuestaMensajeDto>();
+                return errorResponse ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Error desconocido del servidor." };
             }
             catch (Exception)
             {

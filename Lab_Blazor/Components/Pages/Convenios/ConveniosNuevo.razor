@@ -318,7 +318,7 @@
             cargandoOrdenes = true;
             StateHasChanged();
 
-            var result = await ConveniosApi.ObtenerOrdenesDisponiblesAsync(idMedicoSeleccionado.Value);
+            var result = await ConveniosApi.ListarOrdenesDisponiblesPorMedicoAsync(idMedicoSeleccionado.Value);
 
             ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
             {

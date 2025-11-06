@@ -343,7 +343,7 @@
         try
         {
             cargado = false;
-            var lista = await ReactivosApi.ObtenerReactivosAsync();
+            var lista = await ReactivosApi.ListarReactivosAsync();
 
             if (string.IsNullOrWhiteSpace(criterioBusqueda) && string.IsNullOrWhiteSpace(valorBusqueda))
             {
@@ -437,7 +437,7 @@
             return;
         }
 
-        var response = await ReactivosApi.RegistrarEgresosAsync(seleccionados);
+        var response = await ReactivosApi.RegistrarEgresosReactivosAsync(seleccionados);
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Egresos registrados correctamente.", "success");

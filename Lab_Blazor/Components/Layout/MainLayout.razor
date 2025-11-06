@@ -3,7 +3,7 @@
 @using Lab_Blazor.Services.Auth
 @inject NavigationManager Navigation
 @inject IAuthApiService AuthApi
-@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject CustomAuthenticationStateProvider AuthProvider
 
 <div class="app-shell">
     <Sidebar />
@@ -42,7 +42,9 @@
                 var sigueActiva = await AuthApi.VerificarSesionAsync();
                 if (!sigueActiva)
                 {
-                    await AuthStateProvider.SignOutAsync();
+                    if (AuthProvider is CustomAuthenticationStateProvider customAuth)
+                        await customAuth.CerrarSesionAsync();
+                    
                     Navigation.NavigateTo("/login", forceLoad: true);
                 }
             }

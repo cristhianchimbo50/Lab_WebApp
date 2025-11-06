@@ -6,18 +6,17 @@ namespace Lab_Blazor.Services.Pacientes
 {
     public interface IPacientesApiService
     {
-        Task<List<PacienteDto>> ObtenerPacientesAsync();
-        Task<PacienteDto?> ObtenerPacientePorIdAsync(int Id);
-        Task<List<PacienteDto>> BuscarPacientesAsync(string Campo, string Valor);
-        Task<ResultadoPaginadoDto<PacienteDto>> BuscarPacientesAsync(PacienteFiltroDto filtro);
+        Task<List<PacienteDto>> ListarPacientesAsync();
+        Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente);
+        Task<List<PacienteDto>> ListarPacientesAsync(string criterio, string valor);
+        Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro);
 
-        Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> CrearPacienteAsync(PacienteDto Paciente);
+        Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto paciente);
 
-        Task<HttpResponseMessage> EditarPacienteAsync(int Id, PacienteDto Paciente);
-        Task<HttpResponseMessage> AnularPacienteAsync(int Id);
-        Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string Cedula);
+        Task<HttpResponseMessage> GuardarPacienteAsync(int idPaciente, PacienteDto paciente);
+        Task<HttpResponseMessage> AnularPacienteAsync(int idPaciente);
+        Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string cedula);
 
-        Task<(bool Exito, string Mensaje)> ReenviarTemporalAsync(int IdPaciente);
-
+        Task<(bool Exito, string Mensaje)> ReenviarCredencialesTemporalesAsync(int idPaciente);
     }
 }

@@ -142,7 +142,7 @@
         if (Resultado)
         {
             if (ProveedorAutenticacion is CustomAuthenticationStateProvider AutenticacionPersonalizada)
-                await AutenticacionPersonalizada.SignOutAsync();
+                await AutenticacionPersonalizada.CerrarSesionAsync();
             await JsRuntime.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
             Navegacion.NavigateTo("/login", true);
         }

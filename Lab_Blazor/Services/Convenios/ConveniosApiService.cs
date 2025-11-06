@@ -8,42 +8,42 @@ namespace Lab_Blazor.Services.Convenios
 {
     public class ConveniosApiService : BaseApiService, IConveniosApiService
     {
-        public ConveniosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
-            : base(Factory, Session, Js) { }
+        public ConveniosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
-        public async Task<List<ConvenioDto>> ObtenerConveniosAsync()
+        public async Task<List<ConvenioDto>> ListarConveniosAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, "api/convenios");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, "api/convenios");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
 
-            return await Response.Content.ReadFromJsonAsync<List<ConvenioDto>>() ?? new();
+            return await response.Content.ReadFromJsonAsync<List<ConvenioDto>>() ?? new();
         }
 
-        public async Task<ResultadoPaginadoDto<ConvenioDto>> BuscarConveniosAsync(ConvenioFiltroDto filtro)
+        public async Task<ResultadoPaginadoDto<ConvenioDto>> ListarConveniosPaginadosAsync(ConvenioFiltroDto filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/convenios/buscar")
+            var solicitud = new HttpRequestMessage(HttpMethod.Post, "api/convenios/buscar")
             {
                 Content = JsonContent.Create(filtro)
             };
-            AddTokenHeader(Solicitud);
+            AddTokenHeader(solicitud);
 
-            var Respuesta = await _http.SendAsync(Solicitud);
-            Respuesta.EnsureSuccessStatusCode();
+            var respuesta = await _http.SendAsync(solicitud);
+            respuesta.EnsureSuccessStatusCode();
 
-            return await Respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ConvenioDto>>()
+            return await respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ConvenioDto>>()
                    ?? new ResultadoPaginadoDto<ConvenioDto> { Items = new List<ConvenioDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
         }
 
-        public async Task<ResultadoPaginadoDto<ConvenioDto>> BuscarConveniosAsync(string? criterio, string? valor, DateOnly? desde, DateOnly? hasta, int page, int pageSize)
+        public async Task<ResultadoPaginadoDto<ConvenioDto>> ListarConveniosPaginadosAsync(string? criterio, string? valor, DateOnly? desde, DateOnly? hasta, int page, int pageSize)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
@@ -57,69 +57,69 @@ namespace Lab_Blazor.Services.Convenios
             query["pageSize"] = pageSize.ToString();
             var url = $"api/convenios/buscar?{query}";
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
 
-            return await Response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ConvenioDto>>()
+            return await response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ConvenioDto>>()
                 ?? new ResultadoPaginadoDto<ConvenioDto> { Items = new List<ConvenioDto>(), PageNumber = page, PageSize = pageSize };
         }
 
-        public async Task<ConvenioDetalleDto?> ObtenerDetalleAsync(int Id)
+        public async Task<ConvenioDetalleDto?> ObtenerDetalleConvenioAsync(int idConvenio)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/convenios/{Id}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/convenios/{idConvenio}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
 
-            return await Response.Content.ReadFromJsonAsync<ConvenioDetalleDto>();
+            return await response.Content.ReadFromJsonAsync<ConvenioDetalleDto>();
         }
 
-        public async Task<List<OrdenDisponibleDto>> ObtenerOrdenesDisponiblesAsync(int IdMedico)
+        public async Task<List<OrdenDisponibleDto>> ListarOrdenesDisponiblesPorMedicoAsync(int idMedico)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/convenios/ordenes-disponibles/{IdMedico}");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/convenios/ordenes-disponibles/{idMedico}");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            Response.EnsureSuccessStatusCode();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
 
-            return await Response.Content.ReadFromJsonAsync<List<OrdenDisponibleDto>>() ?? new();
+            return await response.Content.ReadFromJsonAsync<List<OrdenDisponibleDto>>() ?? new();
         }
 
-        public async Task<bool> RegistrarConvenioAsync(ConvenioRegistroDto Dto)
+        public async Task<bool> RegistrarConvenioAsync(ConvenioRegistroDto registroConvenio)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Post, "api/convenios")
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/convenios")
             {
-                Content = JsonContent.Create(Dto)
+                Content = JsonContent.Create(registroConvenio)
             };
-            AddTokenHeader(Request);
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode;
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> AnularConvenioAsync(int Id)
+        public async Task<bool> AnularConvenioAsync(int idConvenio)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var Request = new HttpRequestMessage(HttpMethod.Put, $"api/convenios/{Id}/anular");
-            AddTokenHeader(Request);
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/convenios/{idConvenio}/anular");
+            AddTokenHeader(request);
 
-            var Response = await _http.SendAsync(Request);
-            return Response.IsSuccessStatusCode;
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
     }
 }

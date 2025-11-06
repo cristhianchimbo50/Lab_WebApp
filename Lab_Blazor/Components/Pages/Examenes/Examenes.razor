@@ -3,7 +3,6 @@
 
 <PageTitle>Gestión de Exámenes</PageTitle>
 
-
 @using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
@@ -14,7 +13,6 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
 @inject IExamenComposicionApiService ExamenComposicionApiService
-
 
 <AuthorizeView>
     <Authorized Context="authState">
@@ -387,6 +385,7 @@
                 </div>
             }
         }
+    }
     </Authorized>
 </AuthorizeView>
 
@@ -432,7 +431,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var examenes = await ExamenesApiService.GetExamenesAsync();
+        var examenes = await ExamenesApiService.ListarExamenesAsync();
 
         if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
             ListaExamenes = examenes;
@@ -484,7 +483,7 @@
         }
 
         ExamenActual = examen;
-        HijosSeleccionados = await ExamenesApiService.ObtenerHijosDeExamenAsync(examen.IdExamen) ?? new();
+        HijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
         ModalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -497,7 +496,7 @@
 
         if (ExamenActual.IdExamen == 0)
         {
-            result = await ExamenesApiService.CrearExamenAsync(ExamenActual);
+            result = await ExamenesApiService.GuardarExamenAsync(ExamenActual);
             if (result.IsSuccessStatusCode)
             {
                 var nuevo = await result.Content.ReadFromJsonAsync<ExamenDto>();
@@ -506,14 +505,14 @@
         }
         else
         {
-            result = await ExamenesApiService.EditarExamenAsync(ExamenActual.IdExamen, ExamenActual);
+            result = await ExamenesApiService.GuardarExamenAsync(ExamenActual.IdExamen, ExamenActual);
         }
 
         if (result.IsSuccessStatusCode)
         {
             if (HijosSeleccionados.Any())
             {
-                var hijosExistentes = await ExamenesApiService.ObtenerHijosDeExamenAsync(ExamenActual.IdExamen);
+                var hijosExistentes = await ExamenesApiService.ListarExamenesHijosAsync(ExamenActual.IdExamen);
                 foreach (var hijo in hijosExistentes)
                 {
                     await ExamenComposicionApiService.EliminarComposicionAsync(ExamenActual.IdExamen, hijo.IdExamen);
@@ -521,7 +520,7 @@
 
                 foreach (var hijo in HijosSeleccionados)
                 {
-                    await ExamenComposicionApiService.CrearComposicionAsync(new ExamenComposicionDto
+                    await ExamenComposicionApiService.GuardarComposicionAsync(new ExamenComposicionDto
                     {
                         IdExamenPadre = ExamenActual.IdExamen,
                         IdExamenHijo = hijo.IdExamen
@@ -561,7 +560,7 @@
 
     private async Task BuscarHijos()
     {
-        var todos = await ExamenesApiService.GetExamenesAsync();
+        var todos = await ExamenesApiService.ListarExamenesAsync();
         var val = valorBusquedaHijo.ToLower();
         ResultadosBusquedaHijos = filtroBusquedaHijo switch
         {
@@ -578,7 +577,7 @@
         if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el examen {examen.NombreExamen}?"))
         {
             examen.Anulado = false;
-            var result = await ExamenesApiService.EditarExamenAsync(examen.IdExamen, examen);
+            var result = await ExamenesApiService.GuardarExamenAsync(examen.IdExamen, examen);
             if (result.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
@@ -635,7 +634,7 @@
 
     private async Task CargarListas()
     {
-        var examenes = await ExamenesApiService.GetExamenesAsync();
+        var examenes = await ExamenesApiService.ListarExamenesAsync();
 
         EstudiosDisponibles = examenes
             .Select(e => e.Estudio?.ToUpper())
@@ -661,7 +660,7 @@
 
     private async Task ValidarEstudio(ChangeEventArgs e)
     {
-        var val = e.Value?.ToString()?.Trim().ToUpper();
+        var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
         if (EstudiosDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
@@ -670,7 +669,7 @@
 
     private async Task ValidarTipoMuestra(ChangeEventArgs e)
     {
-        var val = e.Value?.ToString()?.Trim().ToUpper();
+        var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
         if (TiposMuestraDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
@@ -679,7 +678,7 @@
 
     private async Task ValidarTipoExamen(ChangeEventArgs e)
     {
-        var val = e.Value?.ToString()?.Trim().ToUpper();
+        var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
         if (TiposExamenDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))

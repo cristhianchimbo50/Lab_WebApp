@@ -5,12 +5,12 @@ namespace Lab_Blazor.Services.Resultados
 {
     public interface IResultadosApiService
     {
-        Task<List<ResultadoListadoDto>> ObtenerResultadosAsync(ResultadoFiltroDto Filtro);
-        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int IdResultado);
-        Task<byte[]> ObtenerResultadosPdfAsync(List<int> IdsResultados);
-        Task<bool> AnularResultadoAsync(int IdResultado);
-        Task<List<ResultadoListadoDto>> ObtenerResultadosPacienteAsync();
-        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoPacienteAsync(int IdResultado);
-        Task<ResultadoPaginadoDto<ResultadoListadoDto>> BuscarResultadosPaginadosAsync(ResultadoFiltroDto Filtro);
+        Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro);
+        Task<ResultadoPaginadoDto<ResultadoListadoDto>> ListarResultadosPaginadosAsync(ResultadoFiltroDto filtro);
+        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado);
+        Task<byte[]> GenerarResultadosPdfAsync(List<int> idsResultados);
+        Task<bool> AnularResultadoAsync(int idResultado);
+        Task<List<ResultadoListadoDto>> ListarResultadosPacienteAsync();
+        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoPacienteAsync(int idResultado);
     }
 }
