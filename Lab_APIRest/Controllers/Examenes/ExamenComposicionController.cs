@@ -10,52 +10,52 @@ namespace Lab_APIRest.Controllers.Examenes
     [Authorize(Roles = "administrador,laboratorista")]
     public class ExamenComposicionController : ControllerBase
     {
-        private readonly IExamenComposicionService ComposicionService;
-        private readonly ILogger<ExamenComposicionController> Logger;
+        private readonly IExamenComposicionService _composicionService;
+        private readonly ILogger<ExamenComposicionController> _logger;
 
         public ExamenComposicionController(IExamenComposicionService composicionService, ILogger<ExamenComposicionController> logger)
         {
-            ComposicionService = composicionService;
-            Logger = logger;
+            _composicionService = composicionService;
+            _logger = logger;
         }
 
         [HttpGet("padre/{id:int}")]
-        public async Task<ActionResult<List<ExamenComposicionDto>>> ObtenerPorPadre(int IdExamenPadre)
+        public async Task<ActionResult<List<ExamenComposicionDto>>> ListarComposicionesPorPadre(int idExamenPadre)
         {
-            var ListaComposiciones = await ComposicionService.ObtenerPorPadre(IdExamenPadre);
-            return Ok(ListaComposiciones);
+            var lista = await _composicionService.ListarComposicionesPorPadreAsync(idExamenPadre);
+            return Ok(lista);
         }
 
         [HttpGet("hijo/{id:int}")]
-        public async Task<ActionResult<List<ExamenComposicionDto>>> ObtenerPorHijo(int IdExamenHijo)
+        public async Task<ActionResult<List<ExamenComposicionDto>>> ListarComposicionesPorHijo(int idExamenHijo)
         {
-            var ListaComposiciones = await ComposicionService.ObtenerPorHijo(IdExamenHijo);
-            return Ok(ListaComposiciones);
+            var lista = await _composicionService.ListarComposicionesPorHijoAsync(idExamenHijo);
+            return Ok(lista);
         }
 
         [Authorize(Roles = "administrador")]
         [HttpPost]
-        public async Task<IActionResult> Crear([FromBody] ExamenComposicionDto ComposicionDto)
+        public async Task<IActionResult> GuardarComposicion([FromBody] ExamenComposicionDto composicionDto)
         {
             try
             {
-                var Creado = await ComposicionService.Crear(ComposicionDto);
-                if (!Creado) return Conflict("Ya existe esta composición.");
+                var creado = await _composicionService.GuardarComposicionAsync(composicionDto);
+                if (!creado) return Conflict("Ya existe esta composición.");
                 return Ok();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error al crear la composición de examen.");
+                _logger.LogError(ex, "Error al crear la composición de examen.");
                 return StatusCode(500, "Error interno al crear la composición.");
             }
         }
 
         [Authorize(Roles = "administrador")]
         [HttpDelete]
-        public async Task<IActionResult> Eliminar([FromQuery] int IdExamenPadre, [FromQuery] int IdExamenHijo)
+        public async Task<IActionResult> EliminarComposicion([FromQuery] int idExamenPadre, [FromQuery] int idExamenHijo)
         {
-            var Eliminado = await ComposicionService.Eliminar(IdExamenPadre, IdExamenHijo);
-            if (!Eliminado) return NotFound();
+            var eliminado = await _composicionService.EliminarComposicionAsync(idExamenPadre, idExamenHijo);
+            if (!eliminado) return NotFound();
             return Ok();
         }
     }

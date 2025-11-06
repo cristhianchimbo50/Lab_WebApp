@@ -3,6 +3,7 @@
 <PageTitle>Gestión de Órdenes</PageTitle>
 
 @using Lab_Contracts.Ordenes
+@using Lab_Contracts.Common
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Blazor.Services.Resultados
 @using Microsoft.AspNetCore.Components.Authorization
@@ -395,7 +396,7 @@
 </AuthorizeView>
 
 @code {
-    private PagedResultDto<OrdenDto>? Resultado;
+    private ResultadoPaginadoDto<OrdenDto>? Resultado;
     private OrdenFiltroDto Filtro = new();
     private OrdenDetalleDto? DetalleActual;
     private bool MostrarDetalleOrden = false;

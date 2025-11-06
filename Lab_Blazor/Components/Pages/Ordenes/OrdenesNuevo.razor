@@ -617,7 +617,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         PacientesEncontrados = string.IsNullOrWhiteSpace(ValorBusquedaPaciente)
-            ? await PacientesApi.GetPacientesAsync()
+            ? await PacientesApi.ObtenerPacientesAsync()
             : await PacientesApi.BuscarPacientesAsync(FiltroBusquedaPaciente, ValorBusquedaPaciente);
     }
 

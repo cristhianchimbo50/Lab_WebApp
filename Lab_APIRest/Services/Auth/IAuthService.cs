@@ -4,9 +4,8 @@ namespace Lab_APIRest.Services.Auth
 {
     public interface IAuthService
     {
-        Task<LoginResponseDto?> IniciarSesionAsync(LoginRequestDto Solicitud, CancellationToken Ct);
-        Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto Cambio, CancellationToken Ct);
-        //Task<bool> ReenviarContraseniaTemporalAsync(string Correo, CancellationToken Ct);
+        Task<LoginResponseDto?> IniciarSesionAsync(LoginRequestDto solicitud, CancellationToken ct);
+        Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto cambio, CancellationToken ct);
 
     }
 }

@@ -333,7 +333,7 @@
         try
         {
             cargado = false;
-            var lista = await ReactivosApi.GetReactivosAsync();
+            var lista = await ReactivosApi.ObtenerReactivosAsync();
 
             if (string.IsNullOrWhiteSpace(criterioBusqueda) && string.IsNullOrWhiteSpace(valorBusqueda))
             {

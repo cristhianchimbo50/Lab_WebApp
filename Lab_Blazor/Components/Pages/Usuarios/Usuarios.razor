@@ -315,7 +315,7 @@
                 case "activo": filtro.Activo = valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
             }
         }
-        usuarios = await UsuariosApi.GetUsuariosAsync(filtro);
+        usuarios = await UsuariosApi.ObtenerUsuariosAsync(filtro);
     }
 
     void LimpiarFiltro()
@@ -440,7 +440,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        detalleUsuario = await UsuariosApi.GetUsuarioPorIdAsync(idUsuario);
+        detalleUsuario = await UsuariosApi.ObtenerUsuarioPorIdAsync(idUsuario);
         modalDetalleVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
     }

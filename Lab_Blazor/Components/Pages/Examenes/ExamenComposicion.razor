@@ -194,7 +194,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (IdExamenPadre.HasValue)
-            Composiciones = await ExamenComposicionApiService.GetComposicionesPorExamenPadreAsync(IdExamenPadre.Value);
+            Composiciones = await ExamenComposicionApiService.ObtenerComposicionesPorExamenPadreAsync(IdExamenPadre.Value);
     }
 
     private async Task CargarExamenesDisponibles()
@@ -218,14 +218,14 @@
             return;
         }
 
-        var dto = new ExamenComposicionDto
+        var Dto = new ExamenComposicionDto
         {
             IdExamenPadre = IdExamenPadre!.Value,
             IdExamenHijo = IdExamenHijoSeleccionado.Value
         };
 
-        var response = await ExamenComposicionApiService.CrearComposicionAsync(dto);
-        if (response.IsSuccessStatusCode)
+        var Response = await ExamenComposicionApiService.CrearComposicionAsync(Dto);
+        if (Response.IsSuccessStatusCode)
         {
             await CargarComposiciones();
             await CargarExamenesDisponibles();
@@ -233,20 +233,20 @@
         }
         else
         {
-            var msg = await response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al agregar: {msg}");
+            var Msg = await Response.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al agregar: {Msg}");
         }
     }
 
-    private async Task EliminarComposicion(ExamenComposicionDto composicion)
+    private async Task EliminarComposicion(ExamenComposicionDto Composicion)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var conf = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
-        if (!conf) return;
+        var Confirmado = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {Composicion.NombreExamenHijo}?");
+        if (!Confirmado) return;
 
-        var response = await ExamenComposicionApiService.EliminarComposicionAsync(composicion.IdExamenPadre, composicion.IdExamenHijo);
-        if (response.IsSuccessStatusCode)
+        var Response = await ExamenComposicionApiService.EliminarComposicionAsync(Composicion.IdExamenPadre, Composicion.IdExamenHijo);
+        if (Response.IsSuccessStatusCode)
         {
             await CargarComposiciones();
             await CargarExamenesDisponibles();

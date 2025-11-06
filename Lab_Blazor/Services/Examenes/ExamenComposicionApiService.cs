@@ -7,58 +7,58 @@ namespace Lab_Blazor.Services.Examenes
 {
     public class ExamenComposicionApiService : BaseApiService, IExamenComposicionApiService
     {
-        public ExamenComposicionApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public ExamenComposicionApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
+            : base(Factory, Session, Js) { }
 
-        public async Task<List<ExamenComposicionDto>> GetComposicionesPorExamenPadreAsync(int idExamenPadre)
+        public async Task<List<ExamenComposicionDto>> ObtenerComposicionesPorExamenPadreAsync(int IdExamenPadre)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/examencomposicion/padre/{idExamenPadre}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/examencomposicion/padre/{IdExamenPadre}");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<List<ExamenComposicionDto>>() ?? new();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
+            return await Response.Content.ReadFromJsonAsync<List<ExamenComposicionDto>>() ?? new();
         }
 
-        public async Task<List<ExamenComposicionDto>> GetComposicionesPorExamenHijoAsync(int idExamenHijo)
+        public async Task<List<ExamenComposicionDto>> ObtenerComposicionesPorExamenHijoAsync(int IdExamenHijo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/examencomposicion/hijo/{idExamenHijo}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/examencomposicion/hijo/{IdExamenHijo}");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<List<ExamenComposicionDto>>() ?? new();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
+            return await Response.Content.ReadFromJsonAsync<List<ExamenComposicionDto>>() ?? new();
         }
 
-        public async Task<HttpResponseMessage> CrearComposicionAsync(ExamenComposicionDto dto)
+        public async Task<HttpResponseMessage> CrearComposicionAsync(ExamenComposicionDto Composicion)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/examencomposicion")
+            var Request = new HttpRequestMessage(HttpMethod.Post, "api/examencomposicion")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Composicion)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Request);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Request);
         }
 
-        public async Task<HttpResponseMessage> EliminarComposicionAsync(int idExamenPadre, int idExamenHijo)
+        public async Task<HttpResponseMessage> EliminarComposicionAsync(int IdExamenPadre, int IdExamenHijo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/examencomposicion?idExamenPadre={idExamenPadre}&idExamenHijo={idExamenHijo}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Delete, $"api/examencomposicion?idExamenPadre={IdExamenPadre}&idExamenHijo={IdExamenHijo}");
+            AddTokenHeader(Request);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Request);
         }
     }
 }

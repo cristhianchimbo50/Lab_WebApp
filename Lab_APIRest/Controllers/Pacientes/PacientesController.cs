@@ -2,6 +2,8 @@ using Lab_Contracts.Pacientes;
 using Lab_APIRest.Services.Pacientes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Lab_Contracts.Common;
+using System.Linq;
 
 namespace Lab_APIRest.Controllers
 {
@@ -10,86 +12,93 @@ namespace Lab_APIRest.Controllers
     [Authorize(Roles = "administrador,recepcionista")]
     public class PacientesController : ControllerBase
     {
-        private readonly IPacienteService ServicioPaciente;
+        private readonly IPacienteService _pacienteService;
 
-        public PacientesController(IPacienteService ServicioPaciente)
+        public PacientesController(IPacienteService pacienteService)
         {
-            this.ServicioPaciente = ServicioPaciente;
+            _pacienteService = pacienteService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> ObtenerPacientes()
+        public async Task<IActionResult> ListarPacientes()
         {
-            var ListaPacientes = await ServicioPaciente.ObtenerPacientesAsync();
-            return Ok(ListaPacientes);
+            var lista = await _pacienteService.ListarPacientesAsync();
+            return Ok(lista);
         }
 
-        [HttpGet("{IdPaciente:int}")]
-        public async Task<IActionResult> ObtenerPaciente(int IdPaciente)
+        [HttpPost("buscar")]
+        public async Task<ActionResult<ResultadoPaginadoDto<PacienteDto>>> ListarPacientesPaginados([FromBody] PacienteFiltroDto filtro)
         {
-            var PacienteEncontrado = await ServicioPaciente.ObtenerPacientePorIdAsync(IdPaciente);
-            if (PacienteEncontrado == null)
+            var result = await _pacienteService.ListarPacientesPaginadosAsync(filtro);
+            return Ok(result);
+        }
+
+        [HttpGet("{idPaciente:int}")]
+        public async Task<IActionResult> ObtenerDetallePaciente(int idPaciente)
+        {
+            var paciente = await _pacienteService.ObtenerDetallePacienteAsync(idPaciente);
+            if (paciente == null)
                 return NotFound(new { Mensaje = "No se encontró el paciente solicitado." });
 
-            return Ok(PacienteEncontrado);
+            return Ok(paciente);
         }
 
         [HttpGet("buscar")]
-        public async Task<IActionResult> BuscarPacientes([FromQuery] string CampoBusqueda, [FromQuery] string ValorBusqueda)
+        public async Task<IActionResult> ListarPacientes([FromQuery] string criterio, [FromQuery] string valor)
         {
-            var ResultadoBusqueda = await ServicioPaciente.BuscarPacientesAsync(CampoBusqueda, ValorBusqueda);
-            if (ResultadoBusqueda == null)
+            var resultado = await _pacienteService.ListarPacientesAsync(criterio, valor);
+            if (resultado == null)
                 return BadRequest("Campo de búsqueda no soportado. Use: cedula, nombre o correo.");
-            return Ok(ResultadoBusqueda);
+            return Ok(resultado);
         }
 
         [HttpPost]
-        public async Task<IActionResult> RegistrarPaciente([FromBody] PacienteDto DatosPaciente)
+        public async Task<IActionResult> GuardarPaciente([FromBody] PacienteDto dto)
         {
-            var ResultadoRegistro = await ServicioPaciente.RegistrarPacienteAsync(DatosPaciente);
-            if (!ResultadoRegistro.Exito)
-                return BadRequest(new { Mensaje = ResultadoRegistro.Mensaje });
+            var resultado = await _pacienteService.GuardarPacienteAsync(dto);
+            if (!resultado.Exito)
+                return BadRequest(new { Mensaje = resultado.Mensaje });
 
             return CreatedAtAction(
-                nameof(ObtenerPaciente),
-                new { IdPaciente = ResultadoRegistro.Paciente!.IdPaciente },
+                nameof(ObtenerDetallePaciente),
+                new { idPaciente = resultado.Paciente!.IdPaciente },
                 new
                 {
                     Mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
-                    ResultadoRegistro.Paciente!.IdPaciente,
-                    ResultadoRegistro.Paciente!.NombrePaciente,
-                    ResultadoRegistro.Paciente!.CorreoElectronicoPaciente,
-                    ResultadoRegistro.Paciente!.ContraseniaTemporal
+                    resultado.Paciente!.IdPaciente,
+                    resultado.Paciente!.NombrePaciente,
+                    resultado.Paciente!.CorreoElectronicoPaciente,
+                    resultado.Paciente!.ContraseniaTemporal
                 }
             );
         }
 
-        [HttpPut("{IdPaciente:int}")]
-        public async Task<IActionResult> EditarPaciente(int IdPaciente, [FromBody] PacienteDto DatosPaciente)
+        [HttpPut("{idPaciente:int}")]
+        public async Task<IActionResult> GuardarPaciente(int idPaciente, [FromBody] PacienteDto dto)
         {
-            var OkEdicion = await ServicioPaciente.EditarPacienteAsync(IdPaciente, DatosPaciente);
-            if (!OkEdicion)
+            var ok = await _pacienteService.GuardarPacienteAsync(idPaciente, dto);
+            if (!ok)
                 return NotFound("No se encontró el paciente a editar.");
             return NoContent();
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("anular/{IdPaciente:int}")]
-        public async Task<IActionResult> AnularPaciente(int IdPaciente)
+        [HttpPut("anular/{idPaciente:int}")]
+        public async Task<IActionResult> AnularPaciente(int idPaciente)
         {
-            var OkAnulado = await ServicioPaciente.AnularPacienteAsync(IdPaciente);
-            if (!OkAnulado)
+            var ok = await _pacienteService.AnularPacienteAsync(idPaciente);
+            if (!ok)
                 return NotFound("Paciente no encontrado o ya estaba anulado.");
 
             return Ok(new { Mensaje = "Paciente anulado correctamente." });
         }
 
-        [HttpPost("{IdPaciente:int}/reenviar-temporal")]
-        public async Task<IActionResult> ReenviarTemporal(int IdPaciente)
+        [HttpPost("{idPaciente:int}/reenviar-temporal")]
+        public async Task<IActionResult> ReenviarCredencialesTemporalesPaciente(int idPaciente)
         {
-            var (Exito, Mensaje, NuevaTemporal) = await ServicioPaciente.ReenviarCredencialesTemporalesAsync(IdPaciente);
+            var (Exito, Mensaje, NuevaTemporal) = await _pacienteService.ReenviarCredencialesTemporalesPacienteAsync(idPaciente);
             if (!Exito) return BadRequest(new { Mensaje });
-            return Ok(new { Mensaje, NuevaTemporal = NuevaTemporal });
+            return Ok(new { Mensaje, NuevaTemporal });
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Lab_APIRest.Services.Perfil
             _logger = logger;
         }
 
-        public async Task<PerfilResponseDto?> ObtenerPerfilAsync(int idUsuario, CancellationToken ct)
+        public async Task<PerfilResponseDto?> ObtenerDetallePerfilAsync(int idUsuario, CancellationToken ct)
         {
             try
             {

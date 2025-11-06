@@ -2,120 +2,138 @@ using Lab_Contracts.Resultados;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
+using Lab_Contracts.Common;
 
 namespace Lab_Blazor.Services.Resultados
 {
     public class ResultadosApiService : BaseApiService, IResultadosApiService
     {
-        public ResultadosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public ResultadosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Sesion, IJSRuntime Js)
+            : base(Factory, Sesion, Js) { }
 
-        public async Task<List<ResultadoListadoDto>> GetResultadosAsync(ResultadoFiltroDto filtro)
+        public async Task<List<ResultadoListadoDto>> ObtenerResultadosAsync(ResultadoFiltroDto Filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var queryParams = new List<string>();
+            var ParametrosConsulta = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
-                queryParams.Add($"numeroResultado={Uri.EscapeDataString(filtro.NumeroResultado)}");
-            if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
-                queryParams.Add($"numeroOrden={Uri.EscapeDataString(filtro.NumeroOrden)}");
-            if (!string.IsNullOrWhiteSpace(filtro.Cedula))
-                queryParams.Add($"cedula={Uri.EscapeDataString(filtro.Cedula)}");
-            if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                queryParams.Add($"nombre={Uri.EscapeDataString(filtro.Nombre)}");
-            if (filtro.FechaDesde.HasValue)
-                queryParams.Add($"fechaDesde={filtro.FechaDesde.Value:yyyy-MM-dd}");
-            if (filtro.FechaHasta.HasValue)
-                queryParams.Add($"fechaHasta={filtro.FechaHasta.Value:yyyy-MM-dd}");
-            if (filtro.Anulado.HasValue)
-                queryParams.Add($"anulado={filtro.Anulado.Value.ToString().ToLower()}");
+            if (!string.IsNullOrWhiteSpace(Filtro.NumeroResultado))
+                ParametrosConsulta.Add($"numeroResultado={Uri.EscapeDataString(Filtro.NumeroResultado)}");
+            if (!string.IsNullOrWhiteSpace(Filtro.NumeroOrden))
+                ParametrosConsulta.Add($"numeroOrden={Uri.EscapeDataString(Filtro.NumeroOrden)}");
+            if (!string.IsNullOrWhiteSpace(Filtro.Cedula))
+                ParametrosConsulta.Add($"cedula={Uri.EscapeDataString(Filtro.Cedula)}");
+            if (!string.IsNullOrWhiteSpace(Filtro.Nombre))
+                ParametrosConsulta.Add($"nombre={Uri.EscapeDataString(Filtro.Nombre)}");
+            if (Filtro.FechaDesde.HasValue)
+                ParametrosConsulta.Add($"fechaDesde={Filtro.FechaDesde.Value:yyyy-MM-dd}");
+            if (Filtro.FechaHasta.HasValue)
+                ParametrosConsulta.Add($"fechaHasta={Filtro.FechaHasta.Value:yyyy-MM-dd}");
+            if (Filtro.Anulado.HasValue)
+                ParametrosConsulta.Add($"anulado={Filtro.Anulado.Value.ToString().ToLower()}");
 
-            var url = "api/resultados";
-            if (queryParams.Any())
-                url += "?" + string.Join("&", queryParams);
+            var Url = "api/resultados";
+            if (ParametrosConsulta.Any())
+                Url += "?" + string.Join("&", ParametrosConsulta);
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, Url);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<ResultadoListadoDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<ResultadoListadoDto>>() ?? new();
         }
 
-        public async Task<ResultadoDetalleDto?> GetDetalleResultadoAsync(int idResultado)
+        public async Task<ResultadoPaginadoDto<ResultadoListadoDto>> BuscarResultadosPaginadosAsync(ResultadoFiltroDto Filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/{idResultado}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/resultados/buscar")
+            {
+                Content = JsonContent.Create(Filtro)
+            };
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<ResultadoDetalleDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ResultadoListadoDto>>()
+                ?? new ResultadoPaginadoDto<ResultadoListadoDto> { Items = new List<ResultadoListadoDto>(), PageNumber = Filtro.PageNumber, PageSize = Filtro.PageSize };
         }
 
-        public async Task<byte[]> ObtenerResultadosPdfAsync(List<int> ids)
+        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int IdResultado)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            if (ids == null || !ids.Any())
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/{IdResultado}");
+            AddTokenHeader(Solicitud);
+
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoDetalleDto>();
+        }
+
+        public async Task<byte[]> ObtenerResultadosPdfAsync(List<int> IdsResultados)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            if (IdsResultados == null || !IdsResultados.Any())
                 return Array.Empty<byte>();
 
-            var queryString = string.Join("&", ids.Select(id => $"ids={id}"));
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/pdf-multiple?{queryString}");
-            AddTokenHeader(request);
+            var CadenaConsulta = string.Join("&", IdsResultados.Select(Id => $"ids={Id}"));
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/pdf-multiple?{CadenaConsulta}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadAsByteArrayAsync()
+            var Respuesta = await _http.SendAsync(Solicitud);
+            return Respuesta.IsSuccessStatusCode
+                ? await Respuesta.Content.ReadAsByteArrayAsync()
                 : Array.Empty<byte>();
         }
 
-        public async Task<bool> AnularResultadoAsync(int idResultado)
+        public async Task<bool> AnularResultadoAsync(int IdResultado)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/resultados/anular/{idResultado}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/resultados/anular/{IdResultado}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            return response.IsSuccessStatusCode;
+            var Respuesta = await _http.SendAsync(Solicitud);
+            return Respuesta.IsSuccessStatusCode;
         }
 
-        public async Task<List<ResultadoListadoDto>> GetResultadosPacienteAsync()
+        public async Task<List<ResultadoListadoDto>> ObtenerResultadosPacienteAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/resultados/mis-resultados");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, "api/resultados/mis-resultados");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<ResultadoListadoDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<ResultadoListadoDto>>() ?? new();
         }
 
-        public async Task<ResultadoDetalleDto?> GetDetalleResultadoPacienteAsync(int idResultado)
+        public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoPacienteAsync(int IdResultado)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/mi-detalle/{idResultado}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/resultados/mi-detalle/{IdResultado}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<ResultadoDetalleDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoDetalleDto>();
         }
-
     }
 }

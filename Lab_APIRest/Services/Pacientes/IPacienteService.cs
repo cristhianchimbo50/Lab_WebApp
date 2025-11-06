@@ -1,15 +1,17 @@
 using Lab_Contracts.Pacientes;
+using Lab_Contracts.Common;
 
 namespace Lab_APIRest.Services.Pacientes
 {
     public interface IPacienteService
     {
-        Task<List<PacienteDto>> ObtenerPacientesAsync();
-        Task<PacienteDto?> ObtenerPacientePorIdAsync(int IdPaciente);
-        Task<List<PacienteDto>?> BuscarPacientesAsync(string Campo, string Valor);
-        Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> RegistrarPacienteAsync(PacienteDto dto);
-        Task<bool> EditarPacienteAsync(int IdPaciente, PacienteDto dto);
-        Task<bool> AnularPacienteAsync(int IdPaciente);
-        Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesAsync(int IdPaciente);
+        Task<List<PacienteDto>> ListarPacientesAsync();
+        Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente);
+        Task<List<PacienteDto>?> ListarPacientesAsync(string criterio, string valor);
+        Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro);
+        Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto dto);
+        Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto);
+        Task<bool> AnularPacienteAsync(int idPaciente);
+        Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesPacienteAsync(int idPaciente);
     }
 }

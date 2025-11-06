@@ -2,98 +2,115 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
+using Lab_Contracts.Common;
 
 namespace Lab_Blazor.Services.Reactivos
 {
     public class ReactivosApiService : BaseApiService, IReactivosApiService
     {
-        public ReactivosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public ReactivosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
+            : base(Factory, Session, Js) { }
 
-        public async Task<List<ReactivoDto>> GetReactivosAsync()
+        public async Task<List<ReactivoDto>> ObtenerReactivosAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/reactivos");
-            AddTokenHeader(request);
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<List<ReactivoDto>>() ?? new();
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, "api/reactivos");
+            AddTokenHeader(Solicitud);
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+            return await Respuesta.Content.ReadFromJsonAsync<List<ReactivoDto>>() ?? new();
         }
 
-        public async Task<ReactivoDto?> GetReactivoPorIdAsync(int id)
+        public async Task<ReactivoDto?> ObtenerReactivoPorIdAsync(int IdReactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/reactivos/{id}");
-            AddTokenHeader(request);
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<ReactivoDto>();
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/reactivos/{IdReactivo}");
+            AddTokenHeader(Solicitud);
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+            return await Respuesta.Content.ReadFromJsonAsync<ReactivoDto>();
         }
 
-        public async Task<HttpResponseMessage> CrearReactivoAsync(ReactivoDto dto)
+        public async Task<HttpResponseMessage> CrearReactivoAsync(ReactivoDto Reactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/reactivos")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/reactivos")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Reactivo)
             };
-            AddTokenHeader(request);
-            return await _http.SendAsync(request);
+            AddTokenHeader(Solicitud);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<HttpResponseMessage> EditarReactivoAsync(int id, ReactivoDto dto)
+        public async Task<HttpResponseMessage> EditarReactivoAsync(int IdReactivo, ReactivoDto Reactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/reactivos/{id}")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/reactivos/{IdReactivo}")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Reactivo)
             };
-            AddTokenHeader(request);
-            return await _http.SendAsync(request);
+            AddTokenHeader(Solicitud);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<HttpResponseMessage> AnularReactivoAsync(int id)
+        public async Task<HttpResponseMessage> AnularReactivoAsync(int IdReactivo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/reactivos/anular/{id}");
-            AddTokenHeader(request);
-            return await _http.SendAsync(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/reactivos/anular/{IdReactivo}");
+            AddTokenHeader(Solicitud);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<HttpResponseMessage> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
+        public async Task<HttpResponseMessage> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> Ingresos)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/reactivos/ingresos")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/reactivos/ingresos")
             {
-                Content = JsonContent.Create(ingresos)
+                Content = JsonContent.Create(Ingresos)
             };
-            AddTokenHeader(request);
-            return await _http.SendAsync(request);
+            AddTokenHeader(Solicitud);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<HttpResponseMessage> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
+        public async Task<HttpResponseMessage> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> Egresos)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/reactivos/egresos")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/reactivos/egresos")
             {
-                Content = JsonContent.Create(egresos)
+                Content = JsonContent.Create(Egresos)
             };
-            AddTokenHeader(request);
-            return await _http.SendAsync(request);
+            AddTokenHeader(Solicitud);
+            return await _http.SendAsync(Solicitud);
+        }
+
+        public async Task<ResultadoPaginadoDto<ReactivoDto>> BuscarReactivosAsync(ReactivoFiltroDto filtro)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/reactivos/buscar")
+            {
+                Content = JsonContent.Create(filtro)
+            };
+            AddTokenHeader(Solicitud);
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ReactivoDto>>()
+                ?? new ResultadoPaginadoDto<ReactivoDto> { Items = new List<ReactivoDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
         }
     }
 }

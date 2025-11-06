@@ -1,8 +1,8 @@
 using System;
 
-namespace Lab_Contracts.Ordenes
+namespace Lab_Contracts.Convenios
 {
-    public class OrdenFiltroDto
+    public class ConvenioFiltroDto
     {
         public string? CriterioBusqueda { get; set; }
         public string? ValorBusqueda { get; set; }
@@ -10,7 +10,6 @@ namespace Lab_Contracts.Ordenes
         public DateOnly? FechaHasta { get; set; }
         public bool IncluirAnuladas { get; set; } = true;
         public bool IncluirVigentes { get; set; } = true;
-        public int? IdPaciente { get; set; }
 
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;

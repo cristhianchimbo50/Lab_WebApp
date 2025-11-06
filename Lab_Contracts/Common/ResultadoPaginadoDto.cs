@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 
-namespace Lab_Contracts.Ordenes
+namespace Lab_Contracts.Common
 {
-    public class PagedResultDto<T>
+    public class ResultadoPaginadoDto<T>
     {
         public int TotalCount { get; set; }
         public int PageNumber { get; set; }

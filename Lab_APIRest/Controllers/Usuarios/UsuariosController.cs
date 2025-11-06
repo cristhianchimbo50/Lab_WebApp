@@ -1,7 +1,6 @@
 ﻿using Lab_Contracts.Usuarios;
 using Lab_APIRest.Services.Usuarios;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace Lab_APIRest.Controllers.Usuarios
 {
@@ -9,67 +8,66 @@ namespace Lab_APIRest.Controllers.Usuarios
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
     {
-        private readonly IUsuariosService UsuariosService;
+        private readonly IUsuariosService _usuariosService;
 
-        public UsuariosController(IUsuariosService UsuariosService)
+        public UsuariosController(IUsuariosService usuariosService)
         {
-            this.UsuariosService = UsuariosService;
+            _usuariosService = usuariosService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<UsuarioListadoDto>>> ListarUsuarios([FromQuery] UsuarioFiltroDto Filtro, CancellationToken Ct)
+        public async Task<ActionResult<List<UsuarioListadoDto>>> ListarUsuarios([FromQuery] UsuarioFiltroDto filtro, CancellationToken ct)
         {
-            var Resultados = await UsuariosService.ListarUsuariosAsync(Filtro, Ct);
-            return Ok(Resultados);
+            var resultados = await _usuariosService.ListarUsuariosAsync(filtro, ct);
+            return Ok(resultados);
         }
 
-        [HttpGet("{IdUsuario}")]
-        public async Task<ActionResult<UsuarioListadoDto>> ObtenerUsuarioPorId(int IdUsuario, CancellationToken Ct)
+        [HttpGet("{idUsuario}")]
+        public async Task<ActionResult<UsuarioListadoDto>> ObtenerDetalleUsuario(int idUsuario, CancellationToken ct)
         {
-            var Resultado = await UsuariosService.ObtenerUsuarioPorIdAsync(IdUsuario, Ct);
-            if (Resultado == null) return NotFound();
-            return Ok(Resultado);
+            var resultado = await _usuariosService.ObtenerDetalleUsuarioAsync(idUsuario, ct);
+            if (resultado == null) return NotFound();
+            return Ok(resultado);
         }
 
         [HttpPost]
-        public async Task<ActionResult<int>> CrearUsuario([FromBody] UsuarioCrearDto Usuario, CancellationToken Ct)
+        public async Task<ActionResult<int>> GuardarUsuario([FromBody] UsuarioCrearDto usuario, CancellationToken ct)
         {
-            var IdGenerado = await UsuariosService.CrearUsuarioAsync(Usuario, Ct);
-            return Ok(IdGenerado);
+            var idGenerado = await _usuariosService.GuardarUsuarioAsync(usuario, ct);
+            return Ok(idGenerado);
         }
 
-        [HttpPut("{IdUsuario}")]
-        public async Task<ActionResult> EditarUsuario(int IdUsuario, [FromBody] UsuarioEditarDto Usuario, CancellationToken Ct)
+        [HttpPut("{idUsuario}")]
+        public async Task<ActionResult> GuardarUsuario(int idUsuario, [FromBody] UsuarioEditarDto usuario, CancellationToken ct)
         {
-            if (IdUsuario != Usuario.IdUsuario) return BadRequest();
-            var OkEditar = await UsuariosService.EditarUsuarioAsync(Usuario, Ct);
-            if (!OkEditar) return NotFound();
+            if (idUsuario != usuario.IdUsuario) return BadRequest();
+            var ok = await _usuariosService.GuardarUsuarioAsync(usuario, ct);
+            if (!ok) return NotFound();
             return Ok();
         }
 
-        [HttpPut("{IdUsuario}/estado")]
-        public async Task<IActionResult> CambiarEstado(int IdUsuario, [FromBody] bool Activo, CancellationToken Ct)
+        [HttpPut("{idUsuario}/estado")]
+        public async Task<IActionResult> CambiarEstadoUsuario(int idUsuario, [FromBody] bool activo, CancellationToken ct)
         {
-            var CorreoActual = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
-
+            var correoActual = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
             try
             {
-                var Exito = await UsuariosService.CambiarEstadoAsync(IdUsuario, Activo, CorreoActual, Ct);
-                if (!Exito) return NotFound();
+                var exito = await _usuariosService.CambiarEstadoUsuarioAsync(idUsuario, activo, correoActual, ct);
+                if (!exito) return NotFound();
                 return Ok();
             }
-            catch (InvalidOperationException Ex)
+            catch (InvalidOperationException ex)
             {
-                return BadRequest(new { Mensaje = Ex.Message });
+                return BadRequest(new { Mensaje = ex.Message });
             }
         }
 
-        [HttpPut("{IdUsuario}/reenviar")]
-        public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporales(int IdUsuario, CancellationToken Ct)
+        [HttpPut("{idUsuario}/reenviar")]
+        public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporalesUsuario(int idUsuario, CancellationToken ct)
         {
-            var Resultado = await UsuariosService.ReenviarCredencialesTemporalesAsync(IdUsuario, Ct);
-            if (Resultado == null) return NotFound();
-            return Ok(Resultado);
+            var resultado = await _usuariosService.ReenviarCredencialesTemporalesUsuarioAsync(idUsuario, ct);
+            if (resultado == null) return NotFound();
+            return Ok(resultado);
         }
     }
 }

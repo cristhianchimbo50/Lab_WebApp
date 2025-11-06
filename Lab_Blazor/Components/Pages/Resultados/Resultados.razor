@@ -3,6 +3,7 @@
 <PageTitle>Gestión de Resultados</PageTitle>
 
 @using Lab_Contracts.Resultados
+@using Lab_Contracts.Common
 @using Lab_Blazor.Services.Resultados
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -56,7 +57,7 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                            <InputSelect class="form-select" @bind-Value="CriterioBusqueda">
                                 <option value="">-- Seleccione --</option>
                                 <option value="numeroResultado">Número de Resultado</option>
                                 <option value="numeroOrden">Número de Orden</option>
@@ -66,17 +67,11 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusqueda"
-                                       placeholder="Ingrese valor a buscar"
-                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultados(); })" />
+                            <InputText class="form-control" @bind-Value="ValorBusqueda" placeholder="Ingrese valor a buscar" @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultados(); })" />
                         </div>
                         <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button type="button" class="btn btn-primary" @onclick="BuscarResultados">
-                                <i class="bi bi-search me-1"></i>Buscar
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusqueda">
-                                <i class="bi bi-eraser me-1"></i>Limpiar
-                            </button>
+                            <button type="button" class="btn btn-primary" @onclick="BuscarResultados" disabled="@Buscando"><i class="bi bi-search me-1"></i>Buscar</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusqueda" disabled="@Buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                         </div>
                     </div>
                 </div>
@@ -85,30 +80,30 @@
                     <div class="card-body row g-3">
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Desde</label>
-                            <InputDate @bind-Value="fechaDesde" class="form-control" />
+                            <InputDate @bind-Value="Filtro.FechaDesde" class="form-control" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Hasta</label>
-                            <InputDate @bind-Value="fechaHasta" class="form-control" />
+                            <InputDate @bind-Value="Filtro.FechaHasta" class="form-control" />
                         </div>
                         <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="filtroAnulado" class="form-check-input me-2" />
+                            <InputCheckbox @bind-Value="IncluirAnulados" class="form-check-input me-2" />
                             <label class="form-check-label">Anulado</label>
                         </div>
                         <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="filtroNoAnulado" class="form-check-input me-2" />
+                            <InputCheckbox @bind-Value="IncluirVigentes" class="form-check-input me-2" />
                             <label class="form-check-label">No Anulado</label>
                         </div>
                     </div>
                 </div>
 
-                @if (resultados == null)
+                @if (Resultado == null || Resultado.Items == null)
                 {
                     <div class="alert alert-info text-center shadow-sm">
                         <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los resultados.
                     </div>
                 }
-                else if (!resultados.Any())
+                else if (!Resultado.Items.Any())
                 {
                     <div class="alert alert-warning text-center shadow-sm">
                         <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron resultados.
@@ -118,31 +113,22 @@
                 {
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="text-muted small">
-                            Mostrando @((CurrentPage - 1) * PageSize + 1)
-                            - @(Math.Min(CurrentPage * PageSize, resultados.Count))
-                            de @resultados.Count resultados
+                            Mostrando página @Resultado.PageNumber de @TotalPaginas (Total: @Resultado.TotalCount)
                         </div>
 
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 small">Registros por página:</label>
-                            <select class="form-select form-select-sm w-auto" @bind="PageSize" @bind:after="(() => CurrentPage = 1)">
+                            <select class="form-select form-select-sm w-auto" @bind="Filtro.PageSize" @bind:after="(() => { Filtro.PageNumber = 1; BuscarResultados(); })">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
                                 <option value="15">15</option>
                                 <option value="20">20</option>
+                                <option value="50">50</option>
                             </select>
 
                             <div class="d-flex align-items-center ms-2">
-                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                        disabled="@(CurrentPage == 1)"
-                                        @onclick="(() => CambiarPagina(-1))">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary"
-                                        disabled="@(CurrentPage >= TotalPages)"
-                                        @onclick="(() => CambiarPagina(1))">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(Resultado.PageNumber == 1)" @onclick="(() => CambiarPagina(-1))"><i class="bi bi-chevron-left"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@(Resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPagina(1))"><i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
@@ -152,17 +138,17 @@
                             <table class="table align-middle tabla-pacientes">
                                 <thead>
                                     <tr>
-                                        <th style="width:12%;">N° Resultado</th>
-                                        <th style="width:12%;">N° Orden</th>
-                                        <th style="width:12%;">Cédula</th>
-                                        <th style="width:18%;">Paciente</th>
-                                        <th style="width:10%;">Fecha</th>
+                                        <th style="width:12%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.NumeroResultado))">N° Resultado @OrdenIcono(nameof(ResultadoListadoDto.NumeroResultado))</th>
+                                        <th style="width:12%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.NumeroOrden))">N° Orden @OrdenIcono(nameof(ResultadoListadoDto.NumeroOrden))</th>
+                                        <th style="width:12%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.CedulaPaciente))">Cédula @OrdenIcono(nameof(ResultadoListadoDto.CedulaPaciente))</th>
+                                        <th style="width:18%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.NombrePaciente))">Paciente @OrdenIcono(nameof(ResultadoListadoDto.NombrePaciente))</th>
+                                        <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.FechaResultado))">Fecha @OrdenIcono(nameof(ResultadoListadoDto.FechaResultado))</th>
                                         <th style="width:10%;">Estado</th>
                                         <th style="width:10%;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var res in PaginatedResultados)
+                                    @foreach (var res in Resultado.Items)
                                     {
                                         <tr>
                                             <td data-label="N° Resultado">@res.NumeroResultado</td>
@@ -170,16 +156,9 @@
                                             <td data-label="Cédula">@res.CedulaPaciente</td>
                                             <td data-label="Paciente">@res.NombrePaciente</td>
                                             <td data-label="Fecha">@res.FechaResultado.ToString("dd/MM/yyyy")</td>
-                                            <td data-label="Estado">
-                                                <span class="badge bg-@(res.Anulado ? "danger" : "success")">
-                                                    @(res.Anulado ? "Anulado" : "Vigente")
-                                                </span>
-                                            </td>
+                                            <td data-label="Estado"><span class="badge bg-@(res.Anulado ? "danger" : "success")">@(res.Anulado ? "Anulado" : "Vigente")</span></td>
                                             <td data-label="Acciones">
-                                                <button class="btn btn-primary btn-sm shadow-sm me-1"
-                                                        @onclick="() => VerDetalleResultado(res.IdResultado)">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
+                                                <button class="btn btn-primary btn-sm shadow-sm me-1" @onclick="() => VerDetalleResultado(res.IdResultado)"><i class="bi bi-eye"></i></button>
                                             </td>
                                         </tr>
                                     }
@@ -198,86 +177,42 @@
                             @if (!string.IsNullOrEmpty(pdfUrl))
                             {
                                 <div class="modal-header bg-dark text-white">
-                                    <h5 class="modal-title">
-                                        <i class="fas fa-file-pdf me-2"></i>Visualización de Resultado
-                                    </h5>
+                                    <h5 class="modal-title"><i class="fas fa-file-pdf me-2"></i>Visualización de Resultado</h5>
                                     <button class="btn-close btn-close-white" @onclick="CerrarPdf"></button>
                                 </div>
-                                <div class="modal-body p-0">
-                                    <iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe>
-                                </div>
+                                <div class="modal-body p-0"><iframe src="@pdfUrl" style="width:100%;height:80vh;border:none;"></iframe></div>
                             }
                             else
                             {
                                 <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title">
-                                        <i class="fas fa-info-circle me-2"></i>Detalle de Resultado
-                                        <span class="badge bg-light text-dark">@DetalleActual.NumeroResultado</span>
-                                    </h5>
+                                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalle de Resultado <span class="badge bg-light text-dark">@DetalleActual.NumeroResultado</span></h5>
                                     <button class="btn-close" @onclick="CerrarDetalle"></button>
                                 </div>
                                 <div class="modal-body">
                                     @if (DetalleActual.Anulado)
-                                    {
-                                        <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div>
-                                    }
+                                    { <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div> }
                                     <div class="row g-2 mb-3">
-                                        <div class="col-md-3 col-6 mb-2">
-                                            <label><strong>Fecha de Resultado</strong></label>
-                                            <input class="form-control" value="@DetalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled />
-                                        </div>
-                                        <div class="col-md-3 col-6 mb-2">
-                                            <label><strong>Cédula</strong></label>
-                                            <input class="form-control" value="@DetalleActual.CedulaPaciente" disabled />
-                                        </div>
-                                        <div class="col-md-6 col-12 mb-2">
-                                            <label><strong>Nombre del Paciente</strong></label>
-                                            <input class="form-control" value="@DetalleActual.NombrePaciente" disabled />
-                                        </div>
+                                        <div class="col-md-3 col-6 mb-2"><label><strong>Fecha de Resultado</strong></label><input class="form-control" value="@DetalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled /></div>
+                                        <div class="col-md-3 col-6 mb-2"><label><strong>Cédula</strong></label><input class="form-control" value="@DetalleActual.CedulaPaciente" disabled /></div>
+                                        <div class="col-md-6 col-12 mb-2"><label><strong>Nombre del Paciente</strong></label><input class="form-control" value="@DetalleActual.NombrePaciente" disabled /></div>
                                     </div>
-
                                     <h5 class="mt-4 mb-3"><i class="fas fa-vial me-2"></i>Exámenes</h5>
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered align-middle text-center">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Nombre del Examen</th>
-                                                    <th>Valor</th>
-                                                    <th>Unidad</th>
-                                                    <th>Referencia</th>
-                                                </tr>
-                                            </thead>
+                                            <thead class="table-light"><tr><th>Nombre del Examen</th><th>Valor</th><th>Unidad</th><th>Referencia</th></tr></thead>
                                             <tbody>
                                                 @foreach (var d in DetalleActual.Detalles)
-                                                {
-                                                    <tr>
-                                                        <td>@d.NombreExamen</td>
-                                                        <td>@d.Valor</td>
-                                                        <td>@d.Unidad</td>
-                                                        <td>@d.ValorReferencia</td>
-                                                    </tr>
-                                                }
+                                                { <tr><td>@d.NombreExamen</td><td>@d.Valor</td><td>@d.Unidad</td><td>@d.ValorReferencia</td></tr> }
                                             </tbody>
                                         </table>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label><strong>Observaciones</strong></label>
-                                        <textarea class="form-control" value="@DetalleActual.Observaciones" disabled style="min-height:70px;"></textarea>
-                                    </div>
-
+                                    <div class="mb-3"><label><strong>Observaciones</strong></label><textarea class="form-control" value="@DetalleActual.Observaciones" disabled style="min-height:70px;"></textarea></div>
                                     @if (!DetalleActual.Anulado)
                                     {
                                         <div class="d-flex flex-wrap gap-2 justify-content-start mt-3">
-                                            <button class="btn btn-secondary" @onclick="ImprimirResultado">
-                                                <i class="fas fa-print me-1"></i> Imprimir
-                                            </button>
+                                            <button class="btn btn-secondary" @onclick="ImprimirResultado"><i class="fas fa-print me-1"></i> Imprimir</button>
                                             @if (puedeAnular)
-                                            {
-                                                <button class="btn btn-danger" @onclick="AnularResultado">
-                                                    <i class="fas fa-ban me-1"></i> Anular
-                                                </button>
-                                            }
+                                            { <button class="btn btn-danger" @onclick="AnularResultado"><i class="fas fa-ban me-1"></i> Anular</button> }
                                         </div>
                                     }
                                 </div>
@@ -295,12 +230,8 @@
                 <div class="card-body p-4">
                     <i class="bi bi-person-x text-danger fs-1 mb-3"></i>
                     <h5 class="fw-bold mb-2">Debe iniciar sesión</h5>
-                    <p class="text-muted mb-3">
-                        Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.
-                    </p>
-                    <NavLink href="/login" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> Ir al Login
-                    </NavLink>
+                    <p class="text-muted mb-3">Para acceder a esta sección, por favor inicie sesión con una cuenta autorizada.</p>
+                    <NavLink href="/login" class="btn btn-primary"><i class="bi bi-box-arrow-in-right"></i> Ir al Login</NavLink>
                 </div>
             </div>
         </div>
@@ -308,29 +239,25 @@
 </AuthorizeView>
 
 @code {
-    private List<ResultadoListadoDto> resultados = new();
+    private ResultadoPaginadoDto<ResultadoListadoDto>? Resultado;
     private ResultadoDetalleDto? DetalleActual;
     private bool mostrarDetalle = false;
     private bool isRendered = false;
-    private string criterioBusqueda = "";
-    private string valorBusqueda = "";
-    private DateTime? fechaDesde;
-    private DateTime? fechaHasta;
 
-    private bool filtroAnulado = true;
-    private bool filtroNoAnulado = true;
-    private string? pdfUrl;
-
-    private int _pageSize = 10;
-    private int PageSize
+    private ResultadoFiltroDto Filtro = new()
     {
-        get => _pageSize;
-        set { if (_pageSize != value) { _pageSize = value; CurrentPage = 1; } }
-    }
-    private int CurrentPage = 1;
-    private int TotalPages => resultados == null || resultados.Count == 0 ? 1 : (int)Math.Ceiling(resultados.Count / (double)PageSize);
-    private IEnumerable<ResultadoListadoDto> PaginatedResultados => resultados?.Skip((CurrentPage - 1) * PageSize).Take(PageSize) ?? Enumerable.Empty<ResultadoListadoDto>();
+        PageNumber = 1,
+        PageSize = 10,
+        SortBy = nameof(ResultadoListadoDto.FechaResultado),
+        SortAsc = false
+    };
 
+    private string CriterioBusqueda = string.Empty;
+    private string ValorBusqueda = string.Empty;
+    private bool IncluirAnulados = true;
+    private bool IncluirVigentes = true;
+    private string? pdfUrl;
+    private bool Buscando = false;
 
     private bool _sesionVerificada = false;
 
@@ -339,209 +266,138 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            resultados = null;
+            if (!await SesionService.VerificarOSalirAsync()) return;
+            Resultado = null;
             isRendered = true;
             StateHasChanged();
         }
     }
 
+    private int TotalPaginas => Resultado == null || Resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
 
     private async Task BuscarResultados()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
+        if (Buscando) return;
         try
         {
-            if (string.IsNullOrWhiteSpace(criterioBusqueda) &&
-                string.IsNullOrWhiteSpace(valorBusqueda) &&
-                !fechaDesde.HasValue && !fechaHasta.HasValue &&
-                !filtroAnulado && !filtroNoAnulado)
+            Buscando = true;
+
+            Filtro.NumeroResultado = null;
+            Filtro.NumeroOrden = null;
+            Filtro.Cedula = null;
+            Filtro.Nombre = null;
+            Filtro.Anulado = null;
+
+            if (!string.IsNullOrWhiteSpace(CriterioBusqueda) && !string.IsNullOrWhiteSpace(ValorBusqueda))
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Presione Buscar para cargar los resultados.", "info");
-                resultados = null;
-                return;
-            }
-
-            var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-
-            ResultadoFiltroDto filtro = new();
-
-            if (!string.IsNullOrWhiteSpace(criterioBusqueda) && !string.IsNullOrWhiteSpace(valorBusqueda))
-            {
-                switch (criterioBusqueda)
+                switch (CriterioBusqueda)
                 {
-                    case "numeroResultado":
-                        filtro.NumeroResultado = valorBusqueda.Trim();
-                        break;
-                    case "numeroOrden":
-                        filtro.NumeroOrden = valorBusqueda.Trim();
-                        break;
-                    case "cedula":
-                        filtro.Cedula = valorBusqueda.Trim();
-                        break;
-                    case "nombre":
-                        filtro.Nombre = valorBusqueda.Trim();
-                        break;
+                    case "numeroResultado": Filtro.NumeroResultado = ValorBusqueda.Trim(); break;
+                    case "numeroOrden": Filtro.NumeroOrden = ValorBusqueda.Trim(); break;
+                    case "cedula": Filtro.Cedula = ValorBusqueda.Trim(); break;
+                    case "nombre": Filtro.Nombre = ValorBusqueda.Trim(); break;
                 }
             }
 
-            if (fechaDesde.HasValue) filtro.FechaDesde = fechaDesde.Value;
-            if (fechaHasta.HasValue) filtro.FechaHasta = fechaHasta.Value;
+            if (IncluirAnulados && !IncluirVigentes) Filtro.Anulado = true;
+            else if (!IncluirAnulados && IncluirVigentes) Filtro.Anulado = false;
+            else Filtro.Anulado = null;
 
-            if (filtroAnulado && !filtroNoAnulado)
-                filtro.Anulado = true;
-            else if (!filtroAnulado && filtroNoAnulado)
-                filtro.Anulado = false;
-            else
-                filtro.Anulado = null;
-
-            if (rol == "paciente")
-            {
-                var lista = await ResultadosApi.GetResultadosPacienteAsync();
-                resultados = lista
-                    .Where(r =>
-                        (filtro.Anulado == null || r.Anulado == filtro.Anulado) &&
-                        (string.IsNullOrWhiteSpace(filtro.NumeroOrden) || (r.NumeroOrden?.Contains(filtro.NumeroOrden, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-                        (string.IsNullOrWhiteSpace(filtro.NumeroResultado) || (r.NumeroResultado?.Contains(filtro.NumeroResultado, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-                        (string.IsNullOrWhiteSpace(filtro.Cedula) || (r.CedulaPaciente?.Contains(filtro.Cedula, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-                        (string.IsNullOrWhiteSpace(filtro.Nombre) || (r.NombrePaciente?.Contains(filtro.Nombre, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-                        (!fechaDesde.HasValue || r.FechaResultado >= fechaDesde.Value) &&
-                        (!fechaHasta.HasValue || r.FechaResultado <= fechaHasta.Value)
-                    ).OrderByDescending(r => r.IdResultado)
-                    .ToList();
-            }
-            else
-            {
-                resultados = await ResultadosApi.GetResultadosAsync(filtro);
-                resultados = resultados.OrderByDescending(r => r.IdResultado).ToList();
-            }
-
+            Resultado = await ResultadosApi.BuscarResultadosPaginadosAsync(Filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados cargados correctamente.", "success");
         }
         catch
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar los resultados.", "danger");
         }
+        finally { Buscando = false; }
     }
 
     private async Task LimpiarBusqueda()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        criterioBusqueda = "";
-        valorBusqueda = "";
-        fechaDesde = null;
-        fechaHasta = null;
-        filtroAnulado = true;
-        filtroNoAnulado = true;
-        resultados = null;
+        CriterioBusqueda = "";
+        ValorBusqueda = "";
+        Filtro.FechaDesde = null;
+        Filtro.FechaHasta = null;
+        IncluirAnulados = true;
+        IncluirVigentes = true;
+        Filtro.PageNumber = 1;
+        Resultado = null;
         await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
 
-    private void CambiarPagina(int cambio)
+    private async Task CambiarPagina(int delta)
     {
-        CurrentPage = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
+        if (Resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, Resultado.PageNumber + delta));
+        if (nueva == Resultado.PageNumber) return;
+        Filtro.PageNumber = nueva;
+        await BuscarResultados();
+    }
+
+    private MarkupString OrdenIcono(string columna)
+    {
+        if (Filtro.SortBy != columna) return (MarkupString)string.Empty;
+        var icon = Filtro.SortAsc ? "&uarr;" : "&darr;";
+        return (MarkupString)$"<span class=\"ms-1\">{icon}</span>";
+    }
+
+    private void OrdenarPor(string columna)
+    {
+        if (Filtro.SortBy == columna)
+            Filtro.SortAsc = !Filtro.SortAsc;
+        else
+        {
+            Filtro.SortBy = columna;
+            Filtro.SortAsc = true;
+        }
+        Filtro.PageNumber = 1;
+        _ = BuscarResultados();
     }
 
     private async Task VerDetalleResultado(int idResultado)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         try
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-
-            if (rol == "paciente")
-                DetalleActual = await ResultadosApi.GetDetalleResultadoPacienteAsync(idResultado);
-            else
-                DetalleActual = await ResultadosApi.GetDetalleResultadoAsync(idResultado);
-
+            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            DetalleActual = rol == "paciente" ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado) : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
             mostrarDetalle = true;
         }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el detalle.", "danger");
-        }
+        catch { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el detalle.", "danger"); }
     }
 
-    private void CerrarDetalle()
-    {
-        mostrarDetalle = false;
-        pdfUrl = null;
-    }
+    private void CerrarDetalle() { mostrarDetalle = false; pdfUrl = null; }
 
     private async Task ImprimirResultado()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (DetalleActual == null)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning");
-            return;
-        }
-
-        if (DetalleActual.Anulado)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning");
-            return;
-        }
-
+        if (DetalleActual == null) { await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning"); return; }
+        if (DetalleActual.Anulado) { await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning"); return; }
         var pdfBytes = await ResultadosApi.ObtenerResultadosPdfAsync(new List<int> { DetalleActual.IdResultado });
-        if (pdfBytes == null || pdfBytes.Length == 0)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al generar el PDF del resultado.", "danger");
-            return;
-        }
-
-        var base64Pdf = Convert.ToBase64String(pdfBytes);
-        pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
+        if (pdfBytes == null || pdfBytes.Length == 0) { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al generar el PDF del resultado.", "danger"); return; }
+        var base64Pdf = Convert.ToBase64String(pdfBytes); pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
     }
 
-    private void CerrarPdf()
-    {
-        pdfUrl = null;
-    }
+    private void CerrarPdf() { pdfUrl = null; }
 
     private async Task AnularResultado()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (DetalleActual == null || DetalleActual.Anulado)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado ya está anulado o no es válido.", "info");
-            return;
-        }
-
+        if (DetalleActual == null || DetalleActual.Anulado) { await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado ya está anulado o no es válido.", "info"); return; }
         bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular este resultado?");
         if (!confirmar) return;
-
         try
         {
             var ok = await ResultadosApi.AnularResultadoAsync(DetalleActual.IdResultado);
-            if (ok)
-            {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado anulado correctamente.", "success");
-                DetalleActual.Anulado = true;
-                mostrarDetalle = false;
-                await BuscarResultados();
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el resultado.", "danger");
-            }
+            if (ok) { await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado anulado correctamente.", "success"); DetalleActual.Anulado = true; mostrarDetalle = false; await BuscarResultados(); }
+            else { await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el resultado.", "danger"); }
         }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular el resultado.", "danger");
-        }
+        catch { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular el resultado.", "danger"); }
     }
 
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");

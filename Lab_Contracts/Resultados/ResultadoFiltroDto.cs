@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Lab_Contracts.Resultados
 {
@@ -15,6 +11,13 @@ namespace Lab_Contracts.Resultados
         public DateTime? FechaDesde { get; set; }
         public DateTime? FechaHasta { get; set; }
         public bool? Anulado { get; set; }
+
+        public int? IdPaciente { get; set; }
+
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public string? SortBy { get; set; } = nameof(ResultadoListadoDto.FechaResultado);
+        public bool SortAsc { get; set; } = false;
     }
 }
 

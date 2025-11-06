@@ -1,5 +1,6 @@
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Pagos;
+using Lab_Contracts.Common;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -8,72 +9,92 @@ namespace Lab_Blazor.Services.Pagos
 {
     public class PagosApiService : BaseApiService, IPagosApiService
     {
-        public PagosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public PagosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
+            : base(Factory, Session, Js) { }
 
-        public async Task<PagoDto?> RegistrarPagoAsync(PagoDto dto)
+        public async Task<PagoDto?> RegistrarPagoAsync(PagoDto Dto)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/pagos")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pagos")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Dto)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<PagoDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<PagoDto>();
         }
 
-        public async Task<List<PagoDto>> ListarPagosPorOrdenAsync(int idOrden)
+        public async Task<List<PagoDto>> ListarPagosPorOrdenAsync(int IdOrden)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pagos/orden/{idOrden}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/pagos/orden/{IdOrden}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<PagoDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<PagoDto>>() ?? new();
         }
 
-        public async Task<IEnumerable<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro)
+        public async Task<IEnumerable<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto Filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/pagos/cuentasporcobrar/listar")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pagos/cuentasporcobrar/listar")
+            {
+                Content = JsonContent.Create(Filtro)
+            };
+            AddTokenHeader(Solicitud);
+
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+
+            return await Respuesta.Content.ReadFromJsonAsync<IEnumerable<OrdenDto>>() ?? new List<OrdenDto>();
+        }
+
+        public async Task<ResultadoPaginadoDto<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro, int pagina, int tamano)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            filtro.PageNumber = pagina;
+            filtro.PageSize = tamano;
+
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pagos/cuentasporcobrar/listar-paginado")
             {
                 Content = JsonContent.Create(filtro)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<IEnumerable<OrdenDto>>() ?? [];
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<OrdenDto>>() ?? new ResultadoPaginadoDto<OrdenDto>();
         }
 
-        public async Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto pago)
+        public async Task<PagoDto?> RegistrarCobroCuentaPorCobrarAsync(PagoDto Pago)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/pagos/cuentasporcobrar/registrar")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pagos/cuentasporcobrar/registrar")
             {
-                Content = JsonContent.Create(pago)
+                Content = JsonContent.Create(Pago)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<PagoDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<PagoDto>();
         }
     }
 }

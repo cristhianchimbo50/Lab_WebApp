@@ -447,7 +447,7 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (!todosLosReactivos.Any())
-            todosLosReactivos = await ReactivosApi.GetReactivosAsync();
+            todosLosReactivos = await ReactivosApi.ObtenerReactivosAsync();
 
         var val = valorBusquedaReactivo.Trim().ToLower();
 

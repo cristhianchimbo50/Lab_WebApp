@@ -3,22 +3,22 @@
 @using Lab_Contracts.Auth
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
-@inject IAuthApiService AuthApi
-@inject AuthenticationStateProvider AuthProvider
-@inject NavigationManager Navigation
-@inject IJSRuntime JS
+@inject IAuthApiService AuthService
+@inject AuthenticationStateProvider ProveedorAutenticacion
+@inject NavigationManager Navegacion
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Seguridad de la Cuenta</PageTitle>
 
 <AuthorizeView>
-    <Authorized Context="authState">
+    <Authorized Context="EstadoAutenticacion">
         @{
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+            var Usuario = EstadoAutenticacion.User;
+            var Rol = Usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool PuedeVer = Rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
         }
 
-        @if (!puedeVer)
+        @if (!PuedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -56,9 +56,9 @@
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Contraseña Actual</label>
                                         <div class="input-group">
-                                            <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@passwordInputTypeActual" placeholder="Ingrese su contraseña actual" />
-                                            <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordActual">
-                                                <i class="@passwordIconActual"></i>
+                                            <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@TipoEntradaContraseniaActual" placeholder="Ingrese su contraseña actual" />
+                                            <button type="button" class="btn btn-outline-secondary" @onclick="AlternarContraseniaActual">
+                                                <i class="@IconoContraseniaActual"></i>
                                             </button>
                                         </div>
                                         <ValidationMessage For="@(() => Cambio.ContraseniaActual)" />
@@ -66,17 +66,17 @@
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Nueva Contraseña</label>
                                         <div class="input-group">
-                                            <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@passwordInputTypeNueva" placeholder="Ingrese la nueva contraseña" />
-                                            <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordNueva">
-                                                <i class="@passwordIconNueva"></i>
+                                            <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@TipoEntradaContraseniaNueva" placeholder="Ingrese la nueva contraseña" />
+                                            <button type="button" class="btn btn-outline-secondary" @onclick="AlternarContraseniaNueva">
+                                                <i class="@IconoContraseniaNueva"></i>
                                             </button>
                                         </div>
                                         <ValidationMessage For="@(() => Cambio.NuevaContrasenia)" />
                                     </div>
-                                    @if (!string.IsNullOrEmpty(mensaje))
+                                    @if (!string.IsNullOrEmpty(Mensaje))
                                     {
-                                        <div class="alert alert-@(exito ? "success" : "danger") mt-2" role="alert">
-                                            <i class="bi @(exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@mensaje
+                                        <div class="alert alert-@(Exito ? "success" : "danger") mt-2" role="alert">
+                                            <i class="bi @(Exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@Mensaje
                                         </div>
                                     }
                                     <button type="submit" class="btn btn-primary w-100 mt-3">
@@ -111,70 +111,70 @@
 
 @code {
     private CambiarContraseniaDto Cambio = new();
-    private string mensaje = "";
-    private bool exito;
-    private string passwordInputTypeActual = "password";
-    private string passwordIconActual = "bi bi-eye-slash";
-    private string passwordInputTypeNueva = "password";
-    private string passwordIconNueva = "bi bi-eye-slash";
+    private string Mensaje = string.Empty;
+    private bool Exito;
+    private string TipoEntradaContraseniaActual = "password";
+    private string IconoContraseniaActual = "bi bi-eye-slash";
+    private string TipoEntradaContraseniaNueva = "password";
+    private string IconoContraseniaNueva = "bi bi-eye-slash";
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (user.Identity?.IsAuthenticated ?? false)
+        var EstadoAutenticacion = await ProveedorAutenticacion.GetAuthenticationStateAsync();
+        var Usuario = EstadoAutenticacion.User;
+        if (Usuario.Identity?.IsAuthenticated ?? false)
         {
-            Cambio.CorreoUsuario = user.FindFirst("email")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name ?? "";
+            Cambio.CorreoUsuario = Usuario.FindFirst("email")?.Value ?? Usuario.FindFirst(ClaimTypes.Email)?.Value ?? Usuario.Identity?.Name ?? string.Empty;
         }
         else
         {
-            Navigation.NavigateTo("/login", true);
+            Navegacion.NavigateTo("/login", true);
         }
     }
 
     private async Task GuardarNuevaContrasenia()
     {
-        mensaje = "";
-        exito = false;
-        var (resultado, msg) = await AuthApi.CambiarContraseniaAsync(Cambio);
-        mensaje = msg;
-        exito = resultado;
-        if (resultado)
+        Mensaje = string.Empty;
+        Exito = false;
+        var (Resultado, MensajeRespuesta) = await AuthService.CambiarContraseniaAsync(Cambio);
+        Mensaje = MensajeRespuesta;
+        Exito = Resultado;
+        if (Resultado)
         {
-            if (AuthProvider is CustomAuthenticationStateProvider customAuth)
-                await customAuth.SignOutAsync();
-            await JS.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
-            Navigation.NavigateTo("/login", true);
+            if (ProveedorAutenticacion is CustomAuthenticationStateProvider AutenticacionPersonalizada)
+                await AutenticacionPersonalizada.SignOutAsync();
+            await JsRuntime.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
+            Navegacion.NavigateTo("/login", true);
         }
     }
 
-    private void TogglePasswordActual()
+    private void AlternarContraseniaActual()
     {
-        if (passwordInputTypeActual == "password")
+        if (TipoEntradaContraseniaActual == "password")
         {
-            passwordInputTypeActual = "text";
-            passwordIconActual = "bi bi-eye";
+            TipoEntradaContraseniaActual = "text";
+            IconoContraseniaActual = "bi bi-eye";
         }
         else
         {
-            passwordInputTypeActual = "password";
-            passwordIconActual = "bi bi-eye-slash";
+            TipoEntradaContraseniaActual = "password";
+            IconoContraseniaActual = "bi bi-eye-slash";
         }
     }
 
-    private void TogglePasswordNueva()
+    private void AlternarContraseniaNueva()
     {
-        if (passwordInputTypeNueva == "password")
+        if (TipoEntradaContraseniaNueva == "password")
         {
-            passwordInputTypeNueva = "text";
-            passwordIconNueva = "bi bi-eye";
+            TipoEntradaContraseniaNueva = "text";
+            IconoContraseniaNueva = "bi bi-eye";
         }
         else
         {
-            passwordInputTypeNueva = "password";
-            passwordIconNueva = "bi bi-eye-slash";
+            TipoEntradaContraseniaNueva = "password";
+            IconoContraseniaNueva = "bi bi-eye-slash";
         }
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtras() => await JsRuntime.InvokeVoidAsync("history.back");
 }

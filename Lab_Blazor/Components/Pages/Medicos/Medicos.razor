@@ -3,6 +3,7 @@
 <PageTitle>Gestión de Médicos</PageTitle>
 
 @using Lab_Contracts.Medicos
+@using Lab_Contracts.Common
 @using Lab_Blazor.Services.Medicos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -14,28 +15,10 @@
 
 <AuthorizeView>
     <Authorized Context="authState">
-        @{
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista";
-            bool puedeModificar = rol is "administrador";
-        }
+        @{ var user = authState.User; var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? ""; bool puedeVer = rol is "administrador" or "recepcionista"; bool puedeModificar = rol is "administrador"; }
 
         @if (!puedeVer)
-        {
-            <div class="d-flex justify-content-center align-items-center vh-100">
-                <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
-                    <div class="card-body p-4">
-                        <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
-                        <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
-                        <p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
-                            <i class="bi bi-arrow-left"></i> Regresar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        }
+        {<div class="d-flex justify-content-center align-items-center vh-100"><div class="card shadow-lg text-center border-0" style="max-width: 450px;"><div class="card-body p-4"><i class="bi bi-shield-lock text-primary fs-1 mb-3"></i><h5 class="fw-bold mb-2">Acceso no autorizado</h5><p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p><button class="btn btn-outline-primary" @onclick="VolverAtras"><i class="bi bi-arrow-left"></i> Regresar</button></div></div></div> }
         else
         {
             <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
@@ -49,118 +32,110 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="criterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="Filtro.CriterioBusqueda" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="especialidad">Especialidad</option>
                             <option value="correo">Correo</option>
+                            <option value="telefono">Teléfono</option>
                         </InputSelect>
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="valorBusqueda" placeholder="Ingrese valor a buscar"
+                        <InputText class="form-control" @bind-Value="Filtro.ValorBusqueda" placeholder="Ingrese valor"
                                    @onkeypress="@(e => { if (e.Key == "Enter") BuscarMedicos(); })" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarMedicos"><i class="bi bi-search me-1"></i>Buscar</button>
-                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                        <button class="btn btn-primary" @onclick="BuscarMedicos" disabled="@Buscando">
+                            @if (Buscando) {<span class="spinner-border spinner-border-sm me-1"></span>}<i class="bi bi-search me-1"></i>Buscar
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda" disabled="@Buscando">
+                            <i class="bi bi-eraser me-1"></i>Limpiar
+                        </button>
                     </div>
                 </div>
             </div>
 
-            @if (ListaMedicos == null)
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body row g-3">
+                    <div class="col-md-3 d-flex align-items-center mt-2">
+                        <InputCheckbox @bind-Value="Filtro.IncluirAnulados" class="form-check-input me-2" />
+                        <label class="form-check-label">Anulado</label>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center mt-2">
+                        <InputCheckbox @bind-Value="Filtro.IncluirVigentes" class="form-check-input me-2" />
+                        <label class="form-check-label">No Anulado</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                <div class="text-muted small">
+                    @if (Resultado != null) {<span>Mostrando página @Resultado.PageNumber de @TotalPaginas (Total: @Resultado.TotalCount)</span>}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small">Registros por página:</label>
+                    <select class="form-select form-select-sm w-auto" @bind="Filtro.PageSize" @bind:after="(() => { Filtro.PageNumber = 1; BuscarMedicos(); })">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <div class="d-flex align-items-center ms-2">
+                        <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(Resultado == null || Resultado.PageNumber == 1)" @onclick="(() => CambiarPagina(-1))"><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(Resultado == null || Resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPagina(1))"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            @if (Resultado == null || Resultado.Items == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
-                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
+                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar médicos.
                 </div>
             }
-            else if (ListaMedicos.Count == 0)
+            else if (!Resultado.Items.Any())
             {
                 <div class="alert alert-warning text-center shadow-sm">
-                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron médicos registrados.
+                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron médicos.
                 </div>
             }
             else
             {
-                @if (ListaMedicos?.Count > 0)
-                {
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div class="text-muted small">
-                            Mostrando @((paginaActual - 1) * tamPagina + 1)
-                            - @(Math.Min(paginaActual * tamPagina, ListaMedicos.Count))
-                            de @ListaMedicos.Count médicos
-                        </div>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="form-label mb-0 small">Registros por página:</label>
-                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                            </select>
-
-                            <div class="d-flex align-items-center ms-2">
-                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                        disabled="@(paginaActual == 1)"
-                                        @onclick="PrevPagina">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-
-                                <button class="btn btn-sm btn-outline-secondary"
-                                        disabled="@(paginaActual >= TotalPaginas)"
-                                        @onclick="NextPagina">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
-
                 <div class="tabla-fija shadow-sm rounded border">
                     <div class="tabla-body">
                         <table class="table align-middle mb-0 tabla-medicos">
                             <thead>
                                 <tr>
-                                    <th style="width: 20%;">Nombre</th>
-                                    <th style="width: 20%;">Especialidad</th>
-                                    <th style="width: 20%;">Correo</th>
-                                    <th style="width: 15%;">Teléfono</th>
+                                    <th style="width: 22%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(MedicoDto.NombreMedico))">Nombre @OrdenIcono(nameof(MedicoDto.NombreMedico))</th>
+                                    <th style="width: 18%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(MedicoDto.Especialidad))">Especialidad @OrdenIcono(nameof(MedicoDto.Especialidad))</th>
+                                    <th style="width: 20%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(MedicoDto.Correo))">Correo @OrdenIcono(nameof(MedicoDto.Correo))</th>
+                                    <th style="width: 15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(MedicoDto.Telefono))">Teléfono @OrdenIcono(nameof(MedicoDto.Telefono))</th>
                                     <th style="width: 10%;">Estado</th>
                                     <th style="width: 15%;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var medico in MedicosPaginados)
+                                @foreach (var medico in Resultado.Items)
                                 {
                                     <tr>
                                         <td data-label="Nombre" class="text-truncate">@medico.NombreMedico</td>
                                         <td data-label="Especialidad" class="text-truncate">@medico.Especialidad</td>
                                         <td data-label="Correo" class="text-truncate">@medico.Correo</td>
                                         <td data-label="Teléfono" class="text-truncate">@medico.Telefono</td>
-                                        <td data-label="Estado">
-                                            <span class="badge bg-@(medico.Anulado ? "danger" : "success")">
-                                                @(medico.Anulado ? "Deshabilitado" : "Activo")
-                                            </span>
-                                        </td>
+                                        <td data-label="Estado"><span class="badge bg-@(medico.Anulado ? "danger" : "success")">@(medico.Anulado ? "Deshabilitado" : "Activo")</span></td>
                                         <td data-label="Acciones">
                                             @if (puedeModificar)
                                             {
-                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarMedico(medico)">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarMedico(medico)"><i class="bi bi-pencil-square"></i></button>
                                                 @if (medico.Anulado)
                                                 {
-                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(medico)">
-                                                        <i class="bi bi-check-circle-fill"></i>
-                                                    </button>
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(medico)"><i class="bi bi-check-circle-fill"></i></button>
                                                 }
                                                 else
                                                 {
-                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(medico.IdMedico)">
-                                                        <i class="bi bi-x-circle-fill"></i>
-                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(medico.IdMedico)"><i class="bi bi-x-circle-fill"></i></button>
                                                 }
                                             }
                                             else
@@ -181,42 +156,22 @@
                     <div class="modal-content shadow-lg border-0">
                         <EditForm Model="@MedicoActual" OnValidSubmit="ValidarYGuardar">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="bi bi-person-circle me-2"></i>@(MedicoActual.IdMedico == 0 ? "Nuevo Médico" : "Editar Médico")
-                                </h5>
+                                <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>@(MedicoActual.IdMedico == 0 ? "Nuevo Médico" : "Editar Médico")</h5>
                                 <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
                             </div>
                             <div class="modal-body">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nombre</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="MedicoActual.NombreMedico"
-                                                   @oninput="(e => MedicoActual.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Especialidad</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="MedicoActual.Especialidad"
-                                                   @oninput="(e => MedicoActual.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Correo Electrónico</label>
-                                        <InputText class="form-control" @bind-Value="MedicoActual.Correo" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Teléfono</label>
-                                        <InputText class="form-control" @bind-Value="MedicoActual.Telefono" />
-                                    </div>
+                                    <div class="col-md-6"><label class="form-label">Nombre</label><InputText class="form-control text-uppercase" @bind-Value="MedicoActual.NombreMedico" @oninput="(e => MedicoActual.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Especialidad</label><InputText class="form-control text-uppercase" @bind-Value="MedicoActual.Especialidad" @oninput="(e => MedicoActual.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="MedicoActual.Correo" /></div>
+                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="MedicoActual.Telefono" /></div>
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="submit" class="btn btn-primary px-3">
-                                    <i class="bi bi-save me-1"></i>Guardar
-                                </button>
-                                <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
-                                    <i class="bi bi-x-lg me-1"></i>Cancelar
-                                </button>
+                                <button type="submit" class="btn btn-primary px-3"><i class="bi bi-save me-1"></i>Guardar</button>
+                                <button type="button" class="btn btn-secondary" @onclick="CerrarModal"><i class="bi bi-x-lg me-1"></i>Cancelar</button>
                             </div>
                         </EditForm>
                     </div>
@@ -227,17 +182,11 @@
 </AuthorizeView>
 
 @code {
-    private List<MedicoDto>? ListaMedicos;
+    private ResultadoPaginadoDto<MedicoDto>? Resultado;
+    private MedicoFiltroDto Filtro = new();
     private MedicoDto MedicoActual = new();
     private bool modalVisible;
-    private string criterioBusqueda = "";
-    private string valorBusqueda = "";
-    private string mensaje = "";
-    private string tipoMensaje = "info";
-    private int paginaActual = 1;
-    private int tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((ListaMedicos?.Count ?? 1) / (double)tamPagina);
-    private IEnumerable<MedicoDto> MedicosPaginados => ListaMedicos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<MedicoDto>();
+    private bool Buscando = false;
 
     private bool _sesionVerificada = false;
 
@@ -246,130 +195,113 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
+            if (!await SesionService.VerificarOSalirAsync()) return;
+            Filtro.PageNumber = 1; Filtro.PageSize = 10; Filtro.SortBy = nameof(MedicoDto.NombreMedico); Filtro.SortAsc = true; Filtro.IncluirAnulados = true; Filtro.IncluirVigentes = true;
             StateHasChanged();
+            await BuscarMedicos();
         }
     }
+
+    private int TotalPaginas => Resultado == null || Resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
 
     private async Task BuscarMedicos()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+        if (Buscando) return;
+        try
+        {
+            Buscando = true;
+            Resultado = await MedicosApiService.BuscarMedicosAsync(Filtro);
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar médicos.", "danger");
+        }
+        finally { Buscando = false; }
+    }
 
-        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
-            ListaMedicos = await MedicosApiService.GetMedicosAsync();
-        else
-            ListaMedicos = await MedicosApiService.BuscarMedicosAsync(criterioBusqueda, valorBusqueda);
+    private async Task LimpiarBusqueda()
+    {
+        Filtro = new MedicoFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(MedicoDto.NombreMedico), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+        Resultado = null;
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
+    }
 
-        paginaActual = 1;
+    private async Task CambiarPagina(int delta)
+    {
+        if (Resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, Resultado.PageNumber + delta));
+        if (nueva == Resultado.PageNumber) return;
+        Filtro.PageNumber = nueva;
+        await BuscarMedicos();
+    }
+
+    private MarkupString OrdenIcono(string columna)
+    {
+        if (Filtro.SortBy != columna) return (MarkupString)string.Empty;
+        var icon = Filtro.SortAsc ? "&uarr;" : "&darr;";
+        return (MarkupString)$"<span class=\"ms-1\">{icon}</span>";
+    }
+
+    private void OrdenarPor(string columna)
+    {
+        if (Filtro.SortBy == columna) Filtro.SortAsc = !Filtro.SortAsc; else { Filtro.SortBy = columna; Filtro.SortAsc = true; }
+        Filtro.PageNumber = 1;
+        _ = BuscarMedicos();
     }
 
     private async Task MostrarModalNuevo()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        MedicoActual = new MedicoDto();
-        modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
+        MedicoActual = new MedicoDto(); modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task CerrarModal()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        modalVisible = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-        mensaje = string.Empty;
+        modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task EditarMedico(MedicoDto medico)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        if (rol != "administrador")
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger");
-            return;
-        }
-
-        MedicoActual = medico;
-        modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
+        var authState = await AuthProvider.GetAuthenticationStateAsync(); var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? ""; if (rol != "administrador") { await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger"); return; }
+        MedicoActual = medico; modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
     private async Task ValidarYGuardar()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        HttpResponseMessage result = MedicoActual.IdMedico == 0
-            ? await MedicosApiService.CrearMedicoAsync(MedicoActual)
-            : await MedicosApiService.EditarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
-
+        HttpResponseMessage result = MedicoActual.IdMedico == 0 ? await MedicosApiService.CrearMedicoAsync(MedicoActual) : await MedicosApiService.EditarMedicoAsync(MedicoActual.IdMedico, MedicoActual);
         if (result.IsSuccessStatusCode)
         {
-            mensaje = "Médico guardado correctamente.";
-            tipoMensaje = "success";
-            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-            modalVisible = false;
-            await JS.InvokeVoidAsync("marcarModalCerrado");
-            await BuscarMedicos();
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Médico guardado correctamente.", "success"); modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarMedicos();
         }
-        else
-        {
-            mensaje = "Error al guardar médico.";
-            tipoMensaje = "danger";
-            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-        }
+        else { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar médico.", "danger"); }
     }
 
     private async Task ConfirmarAnulacion(int id)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este médico?"))
         {
             var result = await MedicosApiService.AnularMedicoAsync(id);
             if (result.IsSuccessStatusCode)
-            {
-                mensaje = "Médico deshabilitado correctamente.";
-                tipoMensaje = "success";
-                await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-                await BuscarMedicos();
-            }
+            { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico deshabilitado correctamente.", "success"); await BuscarMedicos(); }
         }
     }
 
     private async Task ConfirmarReactivacion(MedicoDto medico)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?"))
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?") )
         {
-            medico.Anulado = false;
-            var result = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
+            medico.Anulado = false; var result = await MedicosApiService.EditarMedicoAsync(medico.IdMedico, medico);
             if (result.IsSuccessStatusCode)
-            {
-                mensaje = "Médico reactivado correctamente.";
-                tipoMensaje = "success";
-                await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-                await BuscarMedicos();
-            }
+            { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico reactivado correctamente.", "success"); await BuscarMedicos(); }
         }
     }
 
-    private async Task LimpiarBusqueda()
-    {
-        criterioBusqueda = "";
-        valorBusqueda = "";
-        ListaMedicos = null;
-    }
-
-    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
-    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
-    private void CambiarTamPagina() => paginaActual = 1;
     private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
 }

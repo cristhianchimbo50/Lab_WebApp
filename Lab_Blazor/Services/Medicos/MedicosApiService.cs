@@ -1,4 +1,5 @@
-﻿using Lab_Contracts.Medicos;
+﻿using Lab_Contracts.Common;
+using Lab_Contracts.Medicos;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -7,88 +8,106 @@ namespace Lab_Blazor.Services.Medicos
 {
     public class MedicosApiService : BaseApiService, IMedicosApiService
     {
-        public MedicosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public MedicosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
+            : base(Factory, Session, Js) { }
 
-        public async Task<List<MedicoDto>> GetMedicosAsync()
+        public async Task<List<MedicoDto>> ObtenerMedicosAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/medicos");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, "api/medicos");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
+            return await Response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
         }
 
-        public async Task<MedicoDto?> GetMedicoPorIdAsync(int id)
+        public async Task<MedicoDto?> ObtenerMedicoPorIdAsync(int Id)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/medicos/{id}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/medicos/{Id}");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<MedicoDto>();
+            return await Response.Content.ReadFromJsonAsync<MedicoDto>();
         }
 
-        public async Task<List<MedicoDto>> BuscarMedicosAsync(string campo, string valor)
+        public async Task<List<MedicoDto>> BuscarMedicosAsync(string Campo, string Valor)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/medicos/buscar?campo={campo}&valor={valor}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, $"api/medicos/buscar?campo={Campo}&valor={Valor}");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
+            return await Response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
         }
 
-        public async Task<HttpResponseMessage> CrearMedicoAsync(MedicoDto dto)
+        public async Task<ResultadoPaginadoDto<MedicoDto>> BuscarMedicosAsync(MedicoFiltroDto filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/medicos")
+            var Request = new HttpRequestMessage(HttpMethod.Post, "api/medicos/buscar")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(filtro)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Request);
 
-            return await _http.SendAsync(request);
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
+
+            return await Response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<MedicoDto>>()
+                ?? new ResultadoPaginadoDto<MedicoDto> { Items = new List<MedicoDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
         }
 
-        public async Task<HttpResponseMessage> EditarMedicoAsync(int id, MedicoDto medico)
+        public async Task<HttpResponseMessage> CrearMedicoAsync(MedicoDto Dto)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/medicos/{id}")
+            var Request = new HttpRequestMessage(HttpMethod.Post, "api/medicos")
             {
-                Content = JsonContent.Create(medico)
+                Content = JsonContent.Create(Dto)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Request);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Request);
         }
 
-        public async Task<HttpResponseMessage> AnularMedicoAsync(int id)
+        public async Task<HttpResponseMessage> EditarMedicoAsync(int Id, MedicoDto Medico)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/medicos/anular/{id}");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Put, $"api/medicos/{Id}")
+            {
+                Content = JsonContent.Create(Medico)
+            };
+            AddTokenHeader(Request);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Request);
+        }
+
+        public async Task<HttpResponseMessage> AnularMedicoAsync(int Id)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var Request = new HttpRequestMessage(HttpMethod.Put, $"api/medicos/anular/{Id}");
+            AddTokenHeader(Request);
+
+            return await _http.SendAsync(Request);
         }
 
         public async Task<List<MedicoDto>> ListarMedicosAsync()
@@ -96,13 +115,13 @@ namespace Lab_Blazor.Services.Medicos
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/medicos");
-            AddTokenHeader(request);
+            var Request = new HttpRequestMessage(HttpMethod.Get, "api/medicos");
+            AddTokenHeader(Request);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Response = await _http.SendAsync(Request);
+            Response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
+            return await Response.Content.ReadFromJsonAsync<List<MedicoDto>>() ?? new();
         }
     }
 }

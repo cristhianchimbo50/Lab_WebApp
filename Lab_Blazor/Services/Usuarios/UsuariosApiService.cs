@@ -7,103 +7,104 @@ namespace Lab_Blazor.Services.Usuarios
 {
     public class UsuariosApiService : BaseApiService, IUsuariosApiService
     {
-        public UsuariosApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
-        public async Task<List<UsuarioListadoDto>> GetUsuariosAsync(UsuarioFiltroDto filtro)
+        public UsuariosApiService(IHttpClientFactory Factory, ProtectedSessionStorage Sesion, IJSRuntime Js)
+            : base(Factory, Sesion, Js) { }
+
+        public async Task<List<UsuarioListadoDto>> ObtenerUsuariosAsync(UsuarioFiltroDto Filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var query = new List<string>();
-            if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                query.Add($"nombre={Uri.EscapeDataString(filtro.Nombre)}");
-            if (!string.IsNullOrWhiteSpace(filtro.Correo))
-                query.Add($"correo={Uri.EscapeDataString(filtro.Correo)}");
-            if (!string.IsNullOrWhiteSpace(filtro.Rol))
-                query.Add($"rol={Uri.EscapeDataString(filtro.Rol)}");
-            if (filtro.Activo.HasValue)
-                query.Add($"activo={filtro.Activo.Value.ToString().ToLower()}");
+            var Parametros = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Filtro.Nombre))
+                Parametros.Add($"nombre={Uri.EscapeDataString(Filtro.Nombre)}");
+            if (!string.IsNullOrWhiteSpace(Filtro.Correo))
+                Parametros.Add($"correo={Uri.EscapeDataString(Filtro.Correo)}");
+            if (!string.IsNullOrWhiteSpace(Filtro.Rol))
+                Parametros.Add($"rol={Uri.EscapeDataString(Filtro.Rol)}");
+            if (Filtro.Activo.HasValue)
+                Parametros.Add($"activo={Filtro.Activo.Value.ToString().ToLower()}");
 
-            var url = "api/usuarios";
-            if (query.Count > 0)
-                url += "?" + string.Join("&", query);
+            var Url = "api/usuarios";
+            if (Parametros.Count > 0)
+                Url += "?" + string.Join("&", Parametros);
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, Url);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<UsuarioListadoDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<UsuarioListadoDto>>() ?? new();
         }
 
-        public async Task<UsuarioListadoDto?> GetUsuarioPorIdAsync(int idUsuario)
+        public async Task<UsuarioListadoDto?> ObtenerUsuarioPorIdAsync(int IdUsuario)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/usuarios/{idUsuario}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/usuarios/{IdUsuario}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<UsuarioListadoDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<UsuarioListadoDto>();
         }
 
-        public async Task<int> CrearUsuarioAsync(UsuarioCrearDto dto)
+        public async Task<int> CrearUsuarioAsync(UsuarioCrearDto Usuario)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/usuarios")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/usuarios")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Usuario)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<int>();
+            return await Respuesta.Content.ReadFromJsonAsync<int>();
         }
 
-        public async Task<bool> EditarUsuarioAsync(UsuarioEditarDto dto)
+        public async Task<bool> EditarUsuarioAsync(UsuarioEditarDto Usuario)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{dto.IdUsuario}")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{Usuario.IdUsuario}")
             {
-                Content = JsonContent.Create(dto)
+                Content = JsonContent.Create(Usuario)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            return response.IsSuccessStatusCode;
+            var Respuesta = await _http.SendAsync(Solicitud);
+            return Respuesta.IsSuccessStatusCode;
         }
 
-        public async Task<bool> CambiarEstadoAsync(int idUsuario, bool activo)
+        public async Task<bool> CambiarEstadoAsync(int IdUsuario, bool Activo)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{idUsuario}/estado")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{IdUsuario}/estado")
             {
-                Content = JsonContent.Create(activo)
+                Content = JsonContent.Create(Activo)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            if (response.IsSuccessStatusCode)
+            var Respuesta = await _http.SendAsync(Solicitud);
+            if (Respuesta.IsSuccessStatusCode)
                 return true;
 
-            var contenido = await response.Content.ReadAsStringAsync();
+            var Contenido = await Respuesta.Content.ReadAsStringAsync();
             try
             {
-                var error = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(contenido);
-                if (error != null && error.ContainsKey("Mensaje"))
-                    throw new Exception(error["Mensaje"]);
+                var Error = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(Contenido);
+                if (Error != null && Error.ContainsKey("Mensaje"))
+                    throw new Exception(Error["Mensaje"]);
             }
             catch { }
 
@@ -111,18 +112,18 @@ namespace Lab_Blazor.Services.Usuarios
         }
 
 
-        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int idUsuario)
+        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int IdUsuario)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{idUsuario}/reenviar");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{IdUsuario}/reenviar");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<UsuarioReenviarDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<UsuarioReenviarDto>();
         }
     }
 }

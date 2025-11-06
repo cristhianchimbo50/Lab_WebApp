@@ -1,186 +1,189 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using Lab_Contracts.Common;
 using Lab_Contracts.Convenios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Convenios
 {
-    /// <summary>
-    /// Servicio encargado de la lógica de negocio relacionada con los convenios médicos.
-    /// </summary>
     public class ConvenioService : IConvenioService
     {
-        private readonly LabDbContext Contexto;
-        private readonly ILogger<ConvenioService> Logger;
+        private readonly LabDbContext _context;
+        private readonly ILogger<ConvenioService> _logger;
 
-        /// <summary>
-        /// Constructor del servicio de convenios.
-        /// </summary>
-        /// <param name="Contexto">Contexto de base de datos.</param>
-        /// <param name="Logger">Logger para registrar eventos y errores.</param>
-        public ConvenioService(LabDbContext Contexto, ILogger<ConvenioService> Logger)
+        public ConvenioService(LabDbContext context, ILogger<ConvenioService> logger)
         {
-            this.Contexto = Contexto;
-            this.Logger = Logger;
+            _context = context;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// Obtiene todos los convenios registrados.
-        /// </summary>
-        public async Task<IEnumerable<ConvenioDto>> ObtenerConveniosAsync()
+        public async Task<IEnumerable<ConvenioDto>> ListarConveniosAsync()
         {
-            return await Contexto.convenios
-                .Include(Convenio => Convenio.id_medicoNavigation)
-                .Select(Convenio => new ConvenioDto
+            return await _context.convenios
+                .Include(c => c.id_medicoNavigation)
+                .Select(c => new ConvenioDto
                 {
-                    IdConvenio = Convenio.id_convenio,
-                    IdMedico = Convenio.id_medico,
-                    NombreMedico = Convenio.id_medicoNavigation!.nombre_medico,
-                    FechaConvenio = Convenio.fecha_convenio,
-                    PorcentajeComision = Convenio.porcentaje_comision,
-                    MontoTotal = Convenio.monto_total,
-                    Anulado = Convenio.anulado
+                    IdConvenio = c.id_convenio,
+                    IdMedico = c.id_medico,
+                    NombreMedico = c.id_medicoNavigation!.nombre_medico,
+                    FechaConvenio = c.fecha_convenio,
+                    PorcentajeComision = c.porcentaje_comision,
+                    MontoTotal = c.monto_total,
+                    Anulado = c.anulado
                 })
-                .OrderByDescending(Convenio => Convenio.FechaConvenio)
+                .OrderByDescending(c => c.FechaConvenio)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Obtiene el detalle completo de un convenio, incluyendo órdenes asociadas.
-        /// </summary>
-        public async Task<ConvenioDetalleDto?> ObtenerDetalleConvenioAsync(int IdConvenio)
+        public async Task<ResultadoPaginadoDto<ConvenioDto>> ListarConveniosPaginadosAsync(ConvenioFiltroDto filtro)
         {
-            var ConvenioEntidad = await Contexto.convenios
-                .Include(Convenio => Convenio.id_medicoNavigation)
-                .Include(Convenio => Convenio.detalle_convenios)
-                    .ThenInclude(Detalle => Detalle.id_ordenNavigation)
-                        .ThenInclude(Orden => Orden.id_pacienteNavigation)
-                .FirstOrDefaultAsync(Convenio => Convenio.id_convenio == IdConvenio);
+            var query = _context.convenios.Include(c => c.id_medicoNavigation).AsNoTracking().AsQueryable();
+            if (filtro.FechaDesde.HasValue) query = query.Where(c => c.fecha_convenio >= filtro.FechaDesde.Value);
+            if (filtro.FechaHasta.HasValue) query = query.Where(c => c.fecha_convenio <= filtro.FechaHasta.Value);
+            if (!(filtro.IncluirAnuladas && filtro.IncluirVigentes))
+            {
+                if (filtro.IncluirAnuladas && !filtro.IncluirVigentes) query = query.Where(c => c.anulado == true);
+                else if (!filtro.IncluirAnuladas && filtro.IncluirVigentes) query = query.Where(c => c.anulado == false || c.anulado == null);
+            }
+            if (!string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
+            {
+                var val = filtro.ValorBusqueda.ToLower();
+                switch (filtro.CriterioBusqueda)
+                {
+                    case "numero": query = query.Where(c => EF.Functions.Like(c.id_convenio.ToString(), $"%{val}%")); break;
+                    case "medico": query = query.Where(c => c.id_medicoNavigation != null && c.id_medicoNavigation.nombre_medico.ToLower().Contains(val)); break;
+                }
+            }
+            var total = await query.CountAsync();
+            bool asc = filtro.SortAsc;
+            query = filtro.SortBy switch
+            {
+                nameof(ConvenioDto.IdConvenio) => asc ? query.OrderBy(c => c.id_convenio) : query.OrderByDescending(c => c.id_convenio),
+                nameof(ConvenioDto.NombreMedico) => asc ? query.OrderBy(c => c.id_medicoNavigation!.nombre_medico) : query.OrderByDescending(c => c.id_medicoNavigation!.nombre_medico),
+                nameof(ConvenioDto.FechaConvenio) => asc ? query.OrderBy(c => c.fecha_convenio) : query.OrderByDescending(c => c.fecha_convenio),
+                nameof(ConvenioDto.MontoTotal) => asc ? query.OrderBy(c => c.monto_total) : query.OrderByDescending(c => c.monto_total),
+                _ => query.OrderByDescending(c => c.fecha_convenio)
+            };
+            var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
+            var pageSize = filtro.PageSize <= 0 ? 10 : Math.Min(filtro.PageSize, 200);
+            var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize)
+                .Select(c => new ConvenioDto
+                {
+                    IdConvenio = c.id_convenio,
+                    IdMedico = c.id_medico,
+                    NombreMedico = c.id_medicoNavigation!.nombre_medico,
+                    FechaConvenio = c.fecha_convenio,
+                    PorcentajeComision = c.porcentaje_comision,
+                    MontoTotal = c.monto_total,
+                    Anulado = c.anulado
+                })
+                .ToListAsync();
+            return new ResultadoPaginadoDto<ConvenioDto> { TotalCount = total, PageNumber = pageNumber, PageSize = pageSize, Items = items };
+        }
 
-            if (ConvenioEntidad == null)
-                return null;
+        public Task<ResultadoPaginadoDto<ConvenioDto>> ListarConveniosPaginadosAsync(string? criterio, string? valor, DateOnly? desde, DateOnly? hasta, int page, int pageSize)
+        {
+            var filtro = new ConvenioFiltroDto { CriterioBusqueda = criterio, ValorBusqueda = valor, FechaDesde = desde, FechaHasta = hasta, PageNumber = page, PageSize = pageSize };
+            return ListarConveniosPaginadosAsync(filtro);
+        }
 
+        public async Task<ConvenioDetalleDto?> ObtenerDetalleConvenioAsync(int idConvenio)
+        {
+            var entidad = await _context.convenios
+                .Include(c => c.id_medicoNavigation)
+                .Include(c => c.detalle_convenios).ThenInclude(d => d.id_ordenNavigation).ThenInclude(o => o.id_pacienteNavigation)
+                .FirstOrDefaultAsync(c => c.id_convenio == idConvenio);
+            if (entidad == null) return null;
             return new ConvenioDetalleDto
             {
-                IdConvenio = ConvenioEntidad.id_convenio,
-                IdMedico = ConvenioEntidad.id_medico,
-                NombreMedico = ConvenioEntidad.id_medicoNavigation?.nombre_medico,
-                FechaConvenio = ConvenioEntidad.fecha_convenio,
-                PorcentajeComision = ConvenioEntidad.porcentaje_comision,
-                MontoTotal = ConvenioEntidad.monto_total,
-                Anulado = ConvenioEntidad.anulado,
-                Ordenes = ConvenioEntidad.detalle_convenios.Select(Detalle => new DetalleConvenioDto
+                IdConvenio = entidad.id_convenio,
+                IdMedico = entidad.id_medico,
+                NombreMedico = entidad.id_medicoNavigation?.nombre_medico,
+                FechaConvenio = entidad.fecha_convenio,
+                PorcentajeComision = entidad.porcentaje_comision,
+                MontoTotal = entidad.monto_total,
+                Anulado = entidad.anulado,
+                Ordenes = entidad.detalle_convenios.Select(d => new DetalleConvenioDto
                 {
-                    IdDetalleConvenio = Detalle.id_detalle_convenio,
-                    IdOrden = Detalle.id_orden,
-                    NumeroOrden = Detalle.id_ordenNavigation.numero_orden,
-                    Paciente = Detalle.id_ordenNavigation.id_pacienteNavigation!.nombre_paciente,
-                    FechaOrden = Detalle.id_ordenNavigation.fecha_orden,
-                    Subtotal = Detalle.subtotal
+                    IdDetalleConvenio = d.id_detalle_convenio,
+                    IdOrden = d.id_orden,
+                    NumeroOrden = d.id_ordenNavigation.numero_orden,
+                    Paciente = d.id_ordenNavigation.id_pacienteNavigation!.nombre_paciente,
+                    FechaOrden = d.id_ordenNavigation.fecha_orden,
+                    Subtotal = d.subtotal
                 }).ToList()
             };
         }
 
-        /// <summary>
-        /// Obtiene las órdenes disponibles de un médico que aún no han sido liquidadas en convenios.
-        /// </summary>
-        public async Task<IEnumerable<OrdenDisponibleDto>> ObtenerOrdenesDisponiblesAsync(int IdMedico)
+        public async Task<IEnumerable<OrdenDisponibleDto>> ListarOrdenesDisponiblesAsync(int idMedico)
         {
-            return await Contexto.ordens
-                .Include(Orden => Orden.id_pacienteNavigation)
-                .Where(Orden => Orden.id_medico == IdMedico 
-                    && (Orden.liquidado_convenio == false || Orden.liquidado_convenio == null)
-                    && (Orden.anulado == false || Orden.anulado == null))
-                .Select(Orden => new OrdenDisponibleDto
+            return await _context.ordens
+                .Include(o => o.id_pacienteNavigation)
+                .Where(o => o.id_medico == idMedico && (o.liquidado_convenio == false || o.liquidado_convenio == null) && (o.anulado == false || o.anulado == null))
+                .Select(o => new OrdenDisponibleDto
                 {
-                    IdOrden = Orden.id_orden,
-                    NumeroOrden = Orden.numero_orden,
-                    Paciente = Orden.id_pacienteNavigation!.nombre_paciente,
-                    FechaOrden = Orden.fecha_orden,
-                    Total = Orden.total
+                    IdOrden = o.id_orden,
+                    NumeroOrden = o.numero_orden,
+                    Paciente = o.id_pacienteNavigation!.nombre_paciente,
+                    FechaOrden = o.fecha_orden,
+                    Total = o.total
                 })
-                .OrderByDescending(Orden => Orden.FechaOrden)
+                .OrderByDescending(o => o.FechaOrden)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Registra un nuevo convenio y marca las órdenes asociadas como liquidadas.
-        /// </summary>
-        public async Task<bool> RegistrarConvenioAsync(ConvenioRegistroDto ConvenioRegistro)
+        public async Task<bool> GuardarConvenioAsync(ConvenioRegistroDto convenioRegistro)
         {
-            await using var Transaccion = await Contexto.Database.BeginTransactionAsync();
-
+            await using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
-                var ConvenioEntidad = new convenio
+                var entidad = new convenio
                 {
-                    id_medico = ConvenioRegistro.IdMedico,
-                    fecha_convenio = ConvenioRegistro.FechaConvenio,
-                    porcentaje_comision = ConvenioRegistro.PorcentajeComision,
-                    monto_total = ConvenioRegistro.MontoTotal,
+                    id_medico = convenioRegistro.IdMedico,
+                    fecha_convenio = convenioRegistro.FechaConvenio,
+                    porcentaje_comision = convenioRegistro.PorcentajeComision,
+                    monto_total = convenioRegistro.MontoTotal,
                     anulado = false
                 };
-
-                Contexto.convenios.Add(ConvenioEntidad);
-                await Contexto.SaveChangesAsync();
-
-                foreach (var OrdenRegistro in ConvenioRegistro.Ordenes)
+                _context.convenios.Add(entidad);
+                await _context.SaveChangesAsync();
+                foreach (var od in convenioRegistro.Ordenes)
                 {
-                    Contexto.detalle_convenios.Add(new detalle_convenio
-                    {
-                        id_convenio = ConvenioEntidad.id_convenio,
-                        id_orden = OrdenRegistro.IdOrden,
-                        subtotal = OrdenRegistro.Subtotal
-                    });
-
-                    var OrdenEntidad = await Contexto.ordens.FindAsync(OrdenRegistro.IdOrden);
-                    if (OrdenEntidad != null)
-                        OrdenEntidad.liquidado_convenio = true;
+                    _context.detalle_convenios.Add(new detalle_convenio { id_convenio = entidad.id_convenio, id_orden = od.IdOrden, subtotal = od.Subtotal });
+                    var orden = await _context.ordens.FindAsync(od.IdOrden);
+                    if (orden != null) orden.liquidado_convenio = true;
                 }
-
-                await Contexto.SaveChangesAsync();
-                await Transaccion.CommitAsync();
-
+                await _context.SaveChangesAsync();
+                await transaccion.CommitAsync();
                 return true;
             }
-            catch (Exception Ex)
+            catch (Exception ex)
             {
-                Logger.LogError(Ex, "Error al registrar el convenio.");
-                await Transaccion.RollbackAsync();
+                _logger.LogError(ex, "Error al registrar el convenio.");
+                await transaccion.RollbackAsync();
                 return false;
             }
         }
 
-        /// <summary>
-        /// Anula un convenio y revierte el estado de las órdenes asociadas.
-        /// </summary>
-        public async Task<bool> AnularConvenioAsync(int IdConvenio)
+        public async Task<bool> AnularConvenioAsync(int idConvenio)
         {
             try
             {
-                var ConvenioEntidad = await Contexto.convenios
-                    .Include(Convenio => Convenio.detalle_convenios)
-                    .FirstOrDefaultAsync(Convenio => Convenio.id_convenio == IdConvenio);
-
-                if (ConvenioEntidad == null)
-                    return false;
-
-                ConvenioEntidad.anulado = true;
-
-                foreach (var Detalle in ConvenioEntidad.detalle_convenios)
+                var entidad = await _context.convenios.Include(c => c.detalle_convenios).FirstOrDefaultAsync(c => c.id_convenio == idConvenio);
+                if (entidad == null) return false;
+                entidad.anulado = true;
+                foreach (var det in entidad.detalle_convenios)
                 {
-                    var OrdenEntidad = await Contexto.ordens.FindAsync(Detalle.id_orden);
-                    if (OrdenEntidad != null)
-                        OrdenEntidad.liquidado_convenio = false;
+                    var orden = await _context.ordens.FindAsync(det.id_orden);
+                    if (orden != null) orden.liquidado_convenio = false;
                 }
-
-                await Contexto.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 return true;
             }
-            catch (Exception Ex)
+            catch (Exception ex)
             {
-                Logger.LogError(Ex, $"Error al anular el convenio con ID {IdConvenio}.");
+                _logger.LogError(ex, $"Error al anular el convenio con ID {idConvenio}.");
                 return false;
             }
         }

@@ -5,13 +5,13 @@ namespace Lab_Blazor.Services.Examenes
     public interface IExamenReactivoAsociacionesApiService
     {
         Task<List<AsociacionReactivoDto>> ObtenerTodasAsync();
-        Task<List<AsociacionReactivoDto>> BuscarPorExamenAsync(string nombre);
-        Task<List<AsociacionReactivoDto>> BuscarPorReactivoAsync(string nombre);
-        Task<AsociacionReactivoDto?> ObtenerPorIdAsync(int id);
-        Task<AsociacionReactivoDto?> CrearAsync(AsociacionReactivoDto dto);
-        Task<bool> EditarAsync(int id, AsociacionReactivoDto dto);
-        Task<bool> EliminarAsync(int id);
-        Task<List<AsociacionReactivoDto>> ObtenerPorExamenIdAsync(int idExamen);
-        Task<bool> GuardarPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones);
+        Task<List<AsociacionReactivoDto>> BuscarPorExamenAsync(string NombreExamen);
+        Task<List<AsociacionReactivoDto>> BuscarPorReactivoAsync(string NombreReactivo);
+        Task<AsociacionReactivoDto?> ObtenerPorIdAsync(int IdAsociacion);
+        Task<AsociacionReactivoDto?> CrearAsync(AsociacionReactivoDto AsociacionReactivo);
+        Task<bool> EditarAsync(int IdAsociacion, AsociacionReactivoDto AsociacionReactivo);
+        Task<bool> EliminarAsync(int IdAsociacion);
+        Task<List<AsociacionReactivoDto>> ObtenerPorExamenIdAsync(int IdExamen);
+        Task<bool> GuardarPorExamenAsync(int IdExamen, List<AsociacionReactivoDto> Asociaciones);
     }
 }

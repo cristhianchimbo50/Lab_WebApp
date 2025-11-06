@@ -1,5 +1,6 @@
 ﻿using Lab_APIRest.Services.Convenios;
 using Lab_Contracts.Convenios;
+using Lab_Contracts.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,70 +11,82 @@ namespace Lab_APIRest.Controllers.Convenios
     [Authorize(Roles = "administrador,recepcionista")]
     public class ConveniosController : ControllerBase
     {
-        private readonly IConvenioService ConvenioService;
-        private readonly ILogger<ConveniosController> Logger;
+        private readonly IConvenioService _convenioService;
+        private readonly ILogger<ConveniosController> _logger;
 
-        public ConveniosController(IConvenioService ConvenioService, ILogger<ConveniosController> Logger)
+        public ConveniosController(IConvenioService convenioService, ILogger<ConveniosController> logger)
         {
-            this.ConvenioService = ConvenioService;
-            this.Logger = Logger;
+            _convenioService = convenioService;
+            _logger = logger;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ConvenioDto>>> ObtenerConvenios()
+        public async Task<ActionResult<IEnumerable<ConvenioDto>>> ListarConvenios()
         {
-            var Convenios = await ConvenioService.ObtenerConveniosAsync();
-            return Ok(Convenios);
+            var lista = await _convenioService.ListarConveniosAsync();
+            return Ok(lista);
         }
 
-        [HttpGet("{IdConvenio:int}")]
-        public async Task<ActionResult<ConvenioDetalleDto>> ObtenerDetalle(int IdConvenio)
+        [HttpPost("buscar")]
+        public async Task<ActionResult<ResultadoPaginadoDto<ConvenioDto>>> ListarConveniosPaginados([FromBody] ConvenioFiltroDto filtro)
         {
-            var Detalle = await ConvenioService.ObtenerDetalleConvenioAsync(IdConvenio);
-            if (Detalle == null)
-                return NotFound("No se encontró el convenio solicitado.");
-            return Ok(Detalle);
+            var result = await _convenioService.ListarConveniosPaginadosAsync(filtro);
+            return Ok(result);
         }
 
-        [HttpGet("ordenes-disponibles/{IdMedico:int}")]
-        public async Task<ActionResult<IEnumerable<OrdenDisponibleDto>>> ObtenerOrdenesDisponibles(int IdMedico)
+        // Versión con querystring para compatibilidad (usa también ResultadoPaginadoDto)
+        [HttpGet("buscar")]
+        public async Task<ActionResult<ResultadoPaginadoDto<ConvenioDto>>> ListarConveniosPaginados([FromQuery] string? criterio, [FromQuery] string? valor, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var Ordenes = await ConvenioService.ObtenerOrdenesDisponiblesAsync(IdMedico);
-            return Ok(Ordenes);
+            var result = await _convenioService.ListarConveniosPaginadosAsync(criterio, valor, desde, hasta, page, pageSize);
+            return Ok(result);
+        }
+
+        [HttpGet("{idConvenio:int}")]
+        public async Task<ActionResult<ConvenioDetalleDto>> ObtenerDetalleConvenio(int idConvenio)
+        {
+            var detalle = await _convenioService.ObtenerDetalleConvenioAsync(idConvenio);
+            if (detalle == null) return NotFound("No se encontró el convenio solicitado.");
+            return Ok(detalle);
+        }
+
+        [HttpGet("ordenes-disponibles/{idMedico:int}")]
+        public async Task<ActionResult<IEnumerable<OrdenDisponibleDto>>> ListarOrdenesDisponibles(int idMedico)
+        {
+            var ordenes = await _convenioService.ListarOrdenesDisponiblesAsync(idMedico);
+            return Ok(ordenes);
         }
 
         [Authorize(Roles = "administrador")]
         [HttpPost]
-        public async Task<ActionResult> RegistrarConvenio([FromBody] ConvenioRegistroDto ConvenioRegistro)
+        public async Task<ActionResult> GuardarConvenio([FromBody] ConvenioRegistroDto convenioRegistro)
         {
             try
             {
-                var Exito = await ConvenioService.RegistrarConvenioAsync(ConvenioRegistro);
-                if (!Exito)
-                    return BadRequest("No se pudo registrar el convenio.");
+                var ok = await _convenioService.GuardarConvenioAsync(convenioRegistro);
+                if (!ok) return BadRequest("No se pudo registrar el convenio.");
                 return Ok();
             }
-            catch (Exception Ex)
+            catch (Exception ex)
             {
-                Logger.LogError(Ex, "Error al registrar un nuevo convenio.");
+                _logger.LogError(ex, "Error al registrar un nuevo convenio.");
                 return StatusCode(500, "Ocurrió un error interno al registrar el convenio.");
             }
         }
 
         [Authorize(Roles = "administrador")]
-        [HttpPut("{IdConvenio:int}/anular")]
-        public async Task<ActionResult> AnularConvenio(int IdConvenio)
+        [HttpPut("{idConvenio:int}/anular")]
+        public async Task<ActionResult> AnularConvenio(int idConvenio)
         {
             try
             {
-                var Exito = await ConvenioService.AnularConvenioAsync(IdConvenio);
-                if (!Exito)
-                    return NotFound("No se encontró el convenio a anular.");
+                var ok = await _convenioService.AnularConvenioAsync(idConvenio);
+                if (!ok) return NotFound("No se encontró el convenio a anular.");
                 return Ok();
             }
-            catch (Exception Ex)
+            catch (Exception ex)
             {
-                Logger.LogError(Ex, $"Error al anular el convenio con ID {IdConvenio}.");
+                _logger.LogError(ex, $"Error al anular el convenio con ID {idConvenio}.");
                 return StatusCode(500, "Ocurrió un error interno al anular el convenio.");
             }
         }

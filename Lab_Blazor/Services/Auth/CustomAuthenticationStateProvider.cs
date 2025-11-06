@@ -9,61 +9,69 @@ namespace Lab_Blazor.Services.Auth
 {
     public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
-        private readonly IJSRuntime _js;
-        private readonly IAuthApiService _authApi;
+        private readonly IJSRuntime JsRuntime;
+        private readonly IAuthApiService AuthService;
 
-        public CustomAuthenticationStateProvider(IJSRuntime js, IAuthApiService authApi)
+        public CustomAuthenticationStateProvider(IJSRuntime JsRuntime, IAuthApiService AuthService)
         {
-            _js = js;
-            _authApi = authApi;
+            this.JsRuntime = JsRuntime;
+            this.AuthService = AuthService;
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            string? token = null;
+            string? TokenJwt = null;
             try
             {
-                token = await _js.InvokeAsync<string>("localStorage.getItem", "jwt");
+                TokenJwt = await JsRuntime.InvokeAsync<string>("localStorage.getItem", "jwt");
             }
             catch
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
 
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(TokenJwt))
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
             try
             {
-                var handler = new JwtSecurityTokenHandler();
-                var jwt = handler.ReadJwtToken(token);
+                var ManejadorJwt = new JwtSecurityTokenHandler();
+                var TokenDecodificado = ManejadorJwt.ReadJwtToken(TokenJwt);
 
-                if (jwt.ValidTo < DateTime.UtcNow)
+                if (TokenDecodificado.ValidTo < DateTime.UtcNow)
                 {
                     await SignOutAsync();
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
                 }
 
-                var serverOk = await _authApi.VerificarSesionAsync();
-                if (!serverOk)
+                var ReclamacionesNormalizadas = new List<Claim>();
+                foreach (var Reclamacion in TokenDecodificado.Claims)
                 {
-                    await SignOutAsync();
-                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-                }
-
-                var normalizedClaims = new List<Claim>();
-                foreach (var c in jwt.Claims)
-                {
-                    if (c.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
-                        c.Type.Equals("roles", StringComparison.OrdinalIgnoreCase) ||
-                        c.Type.Equals("rol", StringComparison.OrdinalIgnoreCase))
-                        normalizedClaims.Add(new Claim(ClaimTypes.Role, c.Value));
+                    if (Reclamacion.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
+                        Reclamacion.Type.Equals("roles", StringComparison.OrdinalIgnoreCase) ||
+                        Reclamacion.Type.Equals("rol", StringComparison.OrdinalIgnoreCase))
+                        ReclamacionesNormalizadas.Add(new Claim(ClaimTypes.Role, Reclamacion.Value));
                     else
-                        normalizedClaims.Add(c);
+                        ReclamacionesNormalizadas.Add(Reclamacion);
                 }
+                var Identidad = new ClaimsIdentity(ReclamacionesNormalizadas, "jwt");
+                var UsuarioPrincipal = new ClaimsPrincipal(Identidad);
 
-                var identity = new ClaimsIdentity(normalizedClaims, "jwt");
-                return new AuthenticationState(new ClaimsPrincipal(identity));
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var EsSesionValidaEnServidor = await AuthService.VerificarSesionAsync();
+                        if (!EsSesionValidaEnServidor)
+                            await SignOutAsync();
+                    }
+                    catch
+                    {
+
+                    }
+                });
+
+                return new AuthenticationState(UsuarioPrincipal);
             }
             catch
             {
@@ -72,21 +80,21 @@ namespace Lab_Blazor.Services.Auth
             }
         }
 
-        public async Task SignInAsync(LoginResponseDto session)
+        public async Task SignInAsync(LoginResponseDto Sesion)
         {
-            if (string.IsNullOrEmpty(session.AccessToken))
+            if (string.IsNullOrEmpty(Sesion.AccessToken))
                 return;
 
-            await _js.InvokeVoidAsync("localStorage.setItem", "jwt", session.AccessToken);
-            await _js.InvokeVoidAsync("localStorage.setItem", "usuario", JsonSerializer.Serialize(session));
+            await JsRuntime.InvokeVoidAsync("localStorage.setItem", "jwt", Sesion.AccessToken);
+            await JsRuntime.InvokeVoidAsync("localStorage.setItem", "usuario", JsonSerializer.Serialize(Sesion));
 
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
 
         public async Task SignOutAsync()
         {
-            await _js.InvokeVoidAsync("localStorage.removeItem", "jwt");
-            await _js.InvokeVoidAsync("localStorage.removeItem", "usuario");
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "jwt");
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "usuario");
 
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }

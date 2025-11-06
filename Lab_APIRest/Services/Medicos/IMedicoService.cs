@@ -1,18 +1,19 @@
 using Lab_Contracts.Medicos;
+using Lab_Contracts.Common;
 
 namespace Lab_APIRest.Services.Medicos
 {
     public interface IMedicoService
     {
-        Task<List<MedicoDto>> ObtenerMedicosAsync();
-        Task<MedicoDto?> ObtenerMedicoPorIdAsync(int IdMedico);
-        Task<MedicoDto?> ObtenerMedicoPorCorreoAsync(string Correo);
-        Task<List<MedicoDto>> ObtenerMedicosPorNombreAsync(string Nombre);
-        Task<List<MedicoDto>> ObtenerMedicosPorEspecialidadAsync(string Especialidad);
-        Task<List<MedicoDto>> ObtenerMedicosPorCorreoAsync(string Correo);
-        Task<MedicoDto> RegistrarMedicoAsync(MedicoDto DatosMedico);
-        Task<bool> EditarMedicoAsync(int IdMedico, MedicoDto DatosMedico);
-        Task<bool> AnularMedicoAsync(int IdMedico);
         Task<List<MedicoDto>> ListarMedicosAsync();
+        Task<MedicoDto?> ObtenerDetalleMedicoAsync(int idMedico);
+        Task<MedicoDto?> ObtenerMedicoPorCorreoAsync(string correo);
+        Task<List<MedicoDto>> ListarMedicosPorNombreAsync(string nombre);
+        Task<List<MedicoDto>> ListarMedicosPorEspecialidadAsync(string especialidad);
+        Task<List<MedicoDto>> ListarMedicosPorCorreoAsync(string correo);
+        Task<MedicoDto> GuardarMedicoAsync(MedicoDto medicoDto);
+        Task<bool> GuardarMedicoAsync(int idMedico, MedicoDto medicoDto);
+        Task<bool> AnularMedicoAsync(int idMedico);
+        Task<ResultadoPaginadoDto<MedicoDto>> ListarMedicosPaginadosAsync(MedicoFiltroDto filtro);
     }
 }

@@ -17,5 +17,10 @@ namespace Lab_Contracts.Reactivos
 
         public bool IncluirIngresos { get; set; } = true;
         public bool IncluirEgresos { get; set; } = true;
+
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public string? SortBy { get; set; } = nameof(MovimientoReactivoDto.FechaMovimiento);
+        public bool SortAsc { get; set; } = false;
     }
 }

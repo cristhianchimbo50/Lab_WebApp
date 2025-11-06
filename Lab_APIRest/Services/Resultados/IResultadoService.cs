@@ -1,14 +1,16 @@
-﻿using Lab_Contracts.Resultados;
+﻿using Lab_Contracts.Common;
+using Lab_Contracts.Resultados;
 
 namespace Lab_APIRest.Services.Resultados
 {
     public interface IResultadoService
     {
-        Task<bool> GuardarResultadosAsync(ResultadoGuardarDto Resultado);
-        Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto Filtro);
-        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int IdResultado);
-        Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int IdResultado);
-        Task<byte[]?> GenerarResultadosPdfAsync(List<int> Ids);
-        Task<bool> AnularResultadoAsync(int IdResultado);
+        Task<bool> GuardarResultadosAsync(ResultadoGuardarDto resultado);
+        Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro);
+        Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado);
+        Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int idResultado);
+        Task<byte[]?> GenerarResultadosPdfAsync(List<int> ids);
+        Task<bool> AnularResultadoAsync(int idResultado);
+        Task<ResultadoPaginadoDto<ResultadoListadoDto>> ListarResultadosPaginadosAsync(ResultadoFiltroDto filtro);
     }
-}   
+}

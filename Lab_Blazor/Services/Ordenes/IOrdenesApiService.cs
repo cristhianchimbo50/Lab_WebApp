@@ -1,33 +1,33 @@
 using Lab_Contracts.Examenes;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
+using Lab_Contracts.Common;
 
 namespace Lab_Blazor.Services.Ordenes
 {
     public interface IOrdenesApiService
     {
-        Task<List<OrdenDto>> GetOrdenesAsync();
-        Task<OrdenDto?> GetOrdenPorIdAsync(int id);
-        Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto orden);
-        Task<HttpResponseMessage> CrearOrdenHttpResponseAsync(OrdenCompletaDto orden);
+        Task<List<OrdenDto>> ObtenerOrdenesAsync();
+        Task<OrdenDto?> ObtenerOrdenPorIdAsync(int Id);
+        Task<OrdenRespuestaDto?> CrearOrdenAsync(OrdenCompletaDto Orden);
+        Task<HttpResponseMessage> CrearOrdenHttpResponseAsync(OrdenCompletaDto Orden);
 
-        Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden);
-        Task<HttpResponseMessage> AnularOrdenAsync(int idOrden);
-        Task<byte[]> ObtenerTicketOrdenPdfAsync(int idOrden);
+        Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int IdOrden);
+        Task<HttpResponseMessage> AnularOrdenAsync(int IdOrden);
+        Task<byte[]> ObtenerTicketOrdenPdfAsync(int IdOrden);
 
-        Task<List<ExamenDto>> ObtenerExamenesPorOrdenAsync(int idOrden);
-        Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);
+        Task<List<ExamenDto>> ObtenerExamenesPorOrdenAsync(int IdOrden);
+        Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto Dto);
 
-        Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden);
+        Task<HttpResponseMessage> AnularOrdenCompletaAsync(int IdOrden);
 
-        Task<List<OrdenDto>> GetOrdenesPacienteAsync(int idPaciente);
+        Task<List<OrdenDto>> ObtenerOrdenesPacienteAsync(int IdPaciente);
 
-        Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPacienteAsync(int idPaciente, int idOrden);
+        Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPacienteAsync(int IdPaciente, int IdOrden);
 
-        Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int idOrden);
+        Task<HttpResponseMessage> VerificarNotificacionResultadosAsync(int IdOrden);
 
-        // Nuevo: búsqueda filtrada paginada
-        Task<PagedResultDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto filtro);
+        Task<ResultadoPaginadoDto<OrdenDto>> BuscarOrdenesAsync(OrdenFiltroDto Filtro);
 
     }
 

@@ -18,5 +18,10 @@ namespace Lab_Contracts.Pagos
         public bool? IncluirAnulados { get; set; }
 
         public string? EstadoPago { get; set; }
+
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public string? SortBy { get; set; }
+        public bool SortAsc { get; set; } = false;
     }
 }

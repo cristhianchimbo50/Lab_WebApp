@@ -20,17 +20,15 @@ namespace Lab_APIRest.Controllers.Ajustes
         }
 
         [HttpGet]
-        public async Task<IActionResult> ObtenerPerfil(CancellationToken ct)
+        public async Task<IActionResult> ObtenerDetallePerfil(CancellationToken ct)
         {
             try
             {
                 var idUsuarioClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
                 if (string.IsNullOrEmpty(idUsuarioClaim) || !int.TryParse(idUsuarioClaim, out var idUsuario))
                     return Unauthorized(new { Mensaje = "No se pudo identificar al usuario autenticado." });
 
-                var perfil = await _perfilService.ObtenerPerfilAsync(idUsuario, ct);
-
+                var perfil = await _perfilService.ObtenerDetallePerfilAsync(idUsuario, ct);
                 if (perfil == null)
                     return NotFound(new { Mensaje = "No se encontró información del perfil del usuario." });
 

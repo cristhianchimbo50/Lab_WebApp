@@ -2,166 +2,226 @@
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Microsoft.EntityFrameworkCore;
+using Lab_Contracts.Common;
 
 namespace Lab_APIRest.Services.Reactivos
 {
     public class ReactivoService : IReactivoService
     {
-        private readonly LabDbContext Contexto;
+        private readonly LabDbContext _context;
 
-        public ReactivoService(LabDbContext contexto)
+        public ReactivoService(LabDbContext context)
         {
-            this.Contexto = contexto;
+            _context = context;
         }
 
-        public async Task<List<ReactivoDto>> ObtenerReactivosAsync()
+        public async Task<List<ReactivoDto>> ListarReactivosAsync()
         {
-            return await Contexto.reactivos
-                .Where(ReactivoEntidad => !(ReactivoEntidad.anulado ?? false))
-                .Select(ReactivoEntidad => new ReactivoDto
+            return await _context.reactivos
+                .Where(r => !(r.anulado ?? false))
+                .Select(r => new ReactivoDto
                 {
-                    IdReactivo = ReactivoEntidad.id_reactivo,
-                    NombreReactivo = ReactivoEntidad.nombre_reactivo,
-                    Fabricante = ReactivoEntidad.fabricante,
-                    Unidad = ReactivoEntidad.unidad,
-                    Anulado = ReactivoEntidad.anulado ?? false,
-                    CantidadDisponible = (decimal)ReactivoEntidad.cantidad_disponible
+                    IdReactivo = r.id_reactivo,
+                    NombreReactivo = r.nombre_reactivo,
+                    Fabricante = r.fabricante,
+                    Unidad = r.unidad,
+                    Anulado = r.anulado ?? false,
+                    CantidadDisponible = (decimal)r.cantidad_disponible
                 })
                 .ToListAsync();
         }
 
-
-        public async Task<ReactivoDto?> ObtenerReactivoPorIdAsync(int IdReactivo)
+        public async Task<ReactivoDto?> ObtenerDetalleReactivoAsync(int idReactivo)
         {
-            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
-            if (ReactivoEntidad == null) return null;
+            var entidad = await _context.reactivos.FindAsync(idReactivo);
+            if (entidad == null) return null;
             return new ReactivoDto
             {
-                IdReactivo = ReactivoEntidad.id_reactivo,
-                NombreReactivo = ReactivoEntidad.nombre_reactivo,
-                Fabricante = ReactivoEntidad.fabricante,
-                Unidad = ReactivoEntidad.unidad,
-                Anulado = ReactivoEntidad.anulado ?? false,
-                CantidadDisponible = (decimal)ReactivoEntidad.cantidad_disponible
+                IdReactivo = entidad.id_reactivo,
+                NombreReactivo = entidad.nombre_reactivo,
+                Fabricante = entidad.fabricante,
+                Unidad = entidad.unidad,
+                Anulado = entidad.anulado ?? false,
+                CantidadDisponible = (decimal)entidad.cantidad_disponible
             };
         }
 
-        public async Task<ReactivoDto> CrearReactivoAsync(ReactivoDto Reactivo)
+        public async Task<ReactivoDto> GuardarReactivoAsync(ReactivoDto reactivo)
         {
-            var ReactivoEntidad = new reactivo
+            var entidad = new reactivo
             {
-                nombre_reactivo = Reactivo.NombreReactivo,
-                fabricante = Reactivo.Fabricante,
-                unidad = Reactivo.Unidad,
+                nombre_reactivo = reactivo.NombreReactivo,
+                fabricante = reactivo.Fabricante,
+                unidad = reactivo.Unidad,
                 anulado = false,
-                cantidad_disponible = Reactivo.CantidadDisponible
+                cantidad_disponible = reactivo.CantidadDisponible
             };
-            Contexto.reactivos.Add(ReactivoEntidad);
-            await Contexto.SaveChangesAsync();
-            Reactivo.IdReactivo = ReactivoEntidad.id_reactivo;
-            return Reactivo;
+            _context.reactivos.Add(entidad);
+            await _context.SaveChangesAsync();
+            reactivo.IdReactivo = entidad.id_reactivo;
+            return reactivo;
         }
 
-        public async Task<bool> EditarReactivoAsync(int IdReactivo, ReactivoDto Reactivo)
+        public async Task<bool> GuardarReactivoAsync(int idReactivo, ReactivoDto reactivo)
         {
-            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
-            if (ReactivoEntidad == null) return false;
+            var entidad = await _context.reactivos.FindAsync(idReactivo);
+            if (entidad == null) return false;
 
-            ReactivoEntidad.nombre_reactivo = Reactivo.NombreReactivo;
-            ReactivoEntidad.fabricante = Reactivo.Fabricante;
-            ReactivoEntidad.unidad = Reactivo.Unidad;
-            ReactivoEntidad.cantidad_disponible = Reactivo.CantidadDisponible;
-            ReactivoEntidad.anulado = Reactivo.Anulado;
+            entidad.nombre_reactivo = reactivo.NombreReactivo;
+            entidad.fabricante = reactivo.Fabricante;
+            entidad.unidad = reactivo.Unidad;
+            entidad.cantidad_disponible = reactivo.CantidadDisponible;
+            entidad.anulado = reactivo.Anulado;
 
-            await Contexto.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> AnularReactivoAsync(int IdReactivo)
+        public async Task<bool> AnularReactivoAsync(int idReactivo)
         {
-            var ReactivoEntidad = await Contexto.reactivos.FindAsync(IdReactivo);
-            if (ReactivoEntidad == null) return false;
+            var entidad = await _context.reactivos.FindAsync(idReactivo);
+            if (entidad == null) return false;
 
-            ReactivoEntidad.anulado = true;
-            await Contexto.SaveChangesAsync();
+            entidad.anulado = true;
+            await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> Ingresos)
+        public async Task<bool> RegistrarIngresosReactivosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
         {
-            using var Transaccion = await Contexto.Database.BeginTransactionAsync();
+            using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
-                foreach (var Ingreso in Ingresos)
+                foreach (var ingreso in ingresos)
                 {
-                    var ReactivoEntidad = await Contexto.reactivos
-                        .FirstOrDefaultAsync(r => r.id_reactivo == Ingreso.IdReactivo);
+                    var entidad = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == ingreso.IdReactivo);
+                    if (entidad == null) continue;
 
-                    if (ReactivoEntidad == null)
-                        continue;
-
-                    var MovimientoEntidad = new Infrastructure.EF.Models.movimiento_reactivo
+                    var movimiento = new movimiento_reactivo
                     {
-                        id_reactivo = Ingreso.IdReactivo,
+                        id_reactivo = ingreso.IdReactivo,
                         tipo_movimiento = "INGRESO",
-                        cantidad = Ingreso.Cantidad,
-                        fecha_movimiento = Ingreso.FechaMovimiento,
-                        observacion = Ingreso.Observacion
+                        cantidad = ingreso.Cantidad,
+                        fecha_movimiento = ingreso.FechaMovimiento,
+                        observacion = ingreso.Observacion
                     };
-                    await Contexto.movimiento_reactivos.AddAsync(MovimientoEntidad);
+                    await _context.movimiento_reactivos.AddAsync(movimiento);
 
-                    ReactivoEntidad.cantidad_disponible += Ingreso.Cantidad;
-                    Contexto.reactivos.Update(ReactivoEntidad);
+                    entidad.cantidad_disponible += ingreso.Cantidad;
+                    _context.reactivos.Update(entidad);
                 }
 
-                await Contexto.SaveChangesAsync();
-                await Transaccion.CommitAsync();
+                await _context.SaveChangesAsync();
+                await transaccion.CommitAsync();
                 return true;
             }
             catch
             {
-                await Transaccion.RollbackAsync();
+                await transaccion.RollbackAsync();
                 return false;
             }
         }
 
-
-        public async Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> Egresos)
+        public async Task<bool> RegistrarEgresosReactivosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
         {
-            using var Transaccion = await Contexto.Database.BeginTransactionAsync();
+            using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
-                foreach (var Egreso in Egresos)
+                foreach (var egreso in egresos)
                 {
-                    var ReactivoEntidad = await Contexto.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == Egreso.IdReactivo);
-                    if (ReactivoEntidad == null) continue;
+                    var entidad = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == egreso.IdReactivo);
+                    if (entidad == null) continue;
 
-                    if (ReactivoEntidad.cantidad_disponible < Egreso.Cantidad)
-                        throw new InvalidOperationException($"Stock insuficiente para {ReactivoEntidad.nombre_reactivo}");
+                    if (entidad.cantidad_disponible < egreso.Cantidad)
+                        throw new InvalidOperationException($"Stock insuficiente para {entidad.nombre_reactivo}");
 
-                    var MovimientoEntidad = new movimiento_reactivo
+                    var movimiento = new movimiento_reactivo
                     {
-                        id_reactivo = Egreso.IdReactivo,
+                        id_reactivo = egreso.IdReactivo,
                         tipo_movimiento = "EGRESO",
-                        cantidad = Egreso.Cantidad,
-                        fecha_movimiento = Egreso.FechaMovimiento,
-                        observacion = Egreso.Observacion,
-                        id_detalle_resultado = Egreso.IdDetalleResultado
+                        cantidad = egreso.Cantidad,
+                        fecha_movimiento = egreso.FechaMovimiento,
+                        observacion = egreso.Observacion,
+                        id_detalle_resultado = egreso.IdDetalleResultado
                     };
-                    await Contexto.movimiento_reactivos.AddAsync(MovimientoEntidad);
-                    ReactivoEntidad.cantidad_disponible -= Egreso.Cantidad;
-                    Contexto.reactivos.Update(ReactivoEntidad);
+                    await _context.movimiento_reactivos.AddAsync(movimiento);
+                    entidad.cantidad_disponible -= egreso.Cantidad;
+                    _context.reactivos.Update(entidad);
                 }
 
-                await Contexto.SaveChangesAsync();
-                await Transaccion.CommitAsync();
+                await _context.SaveChangesAsync();
+                await transaccion.CommitAsync();
                 return true;
             }
             catch
             {
-                await Transaccion.RollbackAsync();
+                await transaccion.RollbackAsync();
                 return false;
             }
+        }
+
+        public async Task<ResultadoPaginadoDto<ReactivoDto>> ListarReactivosPaginadosAsync(ReactivoFiltroDto filtro)
+        {
+            var query = _context.reactivos.AsNoTracking().AsQueryable();
+
+            if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
+            {
+                if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
+                    query = query.Where(r => r.anulado == true);
+                else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
+                    query = query.Where(r => r.anulado == false || r.anulado == null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
+            {
+                var val = filtro.ValorBusqueda.ToLower();
+                switch (filtro.CriterioBusqueda)
+                {
+                    case "nombre":
+                        query = query.Where(r => (r.nombre_reactivo ?? "").ToLower().Contains(val));
+                        break;
+                    case "fabricante":
+                        query = query.Where(r => (r.fabricante ?? "").ToLower().Contains(val));
+                        break;
+                }
+            }
+
+            var total = await query.CountAsync();
+
+            bool asc = filtro.SortAsc;
+            query = filtro.SortBy switch
+            {
+                nameof(ReactivoDto.NombreReactivo) => asc ? query.OrderBy(r => r.nombre_reactivo) : query.OrderByDescending(r => r.nombre_reactivo),
+                nameof(ReactivoDto.Fabricante) => asc ? query.OrderBy(r => r.fabricante) : query.OrderByDescending(r => r.fabricante),
+                nameof(ReactivoDto.Unidad) => asc ? query.OrderBy(r => r.unidad) : query.OrderByDescending(r => r.unidad),
+                nameof(ReactivoDto.CantidadDisponible) => asc ? query.OrderBy(r => r.cantidad_disponible) : query.OrderByDescending(r => r.cantidad_disponible),
+                _ => asc ? query.OrderBy(r => r.id_reactivo) : query.OrderByDescending(r => r.id_reactivo)
+            };
+
+            var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
+            var pageSize = filtro.PageSize <= 0 ? 10 : Math.Min(filtro.PageSize, 200);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(r => new ReactivoDto
+                {
+                    IdReactivo = r.id_reactivo,
+                    NombreReactivo = r.nombre_reactivo,
+                    Fabricante = r.fabricante,
+                    Unidad = r.unidad,
+                    Anulado = r.anulado ?? false,
+                    CantidadDisponible = (decimal)r.cantidad_disponible
+                })
+                .ToListAsync();
+
+            return new ResultadoPaginadoDto<ReactivoDto>
+            {
+                TotalCount = total,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Items = items
+            };
         }
     }
 }

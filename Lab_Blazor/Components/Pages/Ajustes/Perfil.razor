@@ -1,11 +1,11 @@
 ﻿@page "/ajustes/perfil"
-@inject Lab_Blazor.Services.Perfil.IPerfilApiService PerfilApi
+@inject IPerfilApiService PerfilService
 @inject ILogger<Pages.Ajustes.Perfil> Logger
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthProvider
-@inject IJSRuntime JS
+@inject IJSRuntime JsRuntime
 @inject AuthenticationStateProvider AuthProvider
 @using Lab_Blazor.Services.Auth
 @inject SesionVerificacionService SesionService
+@using Lab_Blazor.Services.Perfil
 @using Lab_Contracts.Ajustes.Perfil
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
@@ -14,14 +14,14 @@
 <PageTitle>Mi Perfil</PageTitle>
 
 <AuthorizeView>
-    <Authorized Context="authState">
+    <Authorized Context="EstadoAutenticacion">
         @{
-            var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+            var Usuario = EstadoAutenticacion.User;
+            var Rol = Usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool PuedeVer = Rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
         }
 
-        @if (!puedeVer)
+        @if (!PuedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -46,14 +46,14 @@
                     <span class="fw-semibold">Mi Perfil</span>
                 </h4>
 
-                @if (!cargado)
+                @if (!Cargado)
                 {
                     <div class="text-center py-5">
                         <div class="spinner-border text-primary mb-3" role="status"></div>
                         <p class="text-muted">Cargando información de usuario...</p>
                     </div>
                 }
-                else if (perfil is null)
+                else if (PerfilUsuario is null)
                 {
                     <div class="alert alert-danger shadow-sm" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -67,9 +67,9 @@
                             <div class="col-lg-4 bg-primary bg-gradient text-white d-flex flex-column justify-content-center align-items-center p-4">
                                 <div class="text-center">
                                     <i class="bi bi-person-circle display-3 mb-3"></i>
-                                    <h5 class="fw-bold">@perfil.Nombre</h5>
-                                    <p class="mb-1"><i class="bi bi-envelope me-1"></i>@perfil.Correo</p>
-                                    <span class="badge bg-light text-primary fw-semibold">@perfil.Rol</span>
+                                    <h5 class="fw-bold">@PerfilUsuario.Nombre</h5>
+                                    <p class="mb-1"><i class="bi bi-envelope me-1"></i>@PerfilUsuario.Correo</p>
+                                    <span class="badge bg-light text-primary fw-semibold">@PerfilUsuario.Rol</span>
                                 </div>
                             </div>
                             <div class="col-lg-8 bg-white p-4">
@@ -77,37 +77,37 @@
                                     <div class="col-md-6">
                                         <label class="form-label text-secondary fw-semibold small text-uppercase">Estado</label>
                                         <div class="form-control-plaintext fs-6">
-                                            <i class="bi @(perfil.Activo ? "bi-check-circle text-success" : "bi-x-circle text-danger") me-1"></i>
-                                            @(perfil.Activo ? "ACTIVO" : "INACTIVO")
+                                            <i class="bi @(PerfilUsuario.Activo ? "bi-check-circle text-success" : "bi-x-circle text-danger") me-1"></i>
+                                            @(PerfilUsuario.Activo ? "ACTIVO" : "INACTIVO")
                                         </div>
                                     </div>
-                                    @if (perfil.Rol.Equals("Paciente", StringComparison.OrdinalIgnoreCase))
+                                    @if (PerfilUsuario.Rol.Equals("Paciente", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <div class="col-md-6">
                                             <label class="form-label text-secondary fw-semibold small text-uppercase">Cédula</label>
-                                            <div class="form-control-plaintext">@perfil.Cedula</div>
+                                            <div class="form-control-plaintext">@PerfilUsuario.Cedula</div>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label text-secondary fw-semibold small text-uppercase">Fecha de nacimiento</label>
-                                            <div class="form-control-plaintext">@perfil.FechaNacimiento.ToString("dd/MM/yyyy")</div>
+                                            <div class="form-control-plaintext">@PerfilUsuario.FechaNacimiento.ToString("dd/MM/yyyy")</div>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label text-secondary fw-semibold small text-uppercase">Teléfono</label>
-                                            <div class="form-control-plaintext">@perfil.Telefono</div>
+                                            <div class="form-control-plaintext">@PerfilUsuario.Telefono</div>
                                         </div>
                                         <div class="col-12">
                                             <label class="form-label text-secondary fw-semibold small text-uppercase">Dirección</label>
-                                            <div class="form-control-plaintext">@perfil.Direccion</div>
+                                            <div class="form-control-plaintext">@PerfilUsuario.Direccion</div>
                                         </div>
                                     }
                                     <div class="col-md-6">
                                         <label class="form-label text-secondary fw-semibold small text-uppercase">Fecha de registro</label>
-                                        <div class="form-control-plaintext">@perfil.FechaRegistro?.ToString("dd/MM/yyyy HH:mm")</div>
+                                        <div class="form-control-plaintext">@PerfilUsuario.FechaRegistro?.ToString("dd/MM/yyyy HH:mm")</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label text-secondary fw-semibold small text-uppercase">Último acceso</label>
                                         <div class="form-control-plaintext">
-                                            @(perfil.UltimoAcceso.HasValue ? perfil.UltimoAcceso.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")
+                                            @(PerfilUsuario.UltimoAcceso.HasValue ? PerfilUsuario.UltimoAcceso.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")
                                         </div>
                                     </div>
                                 </div>
@@ -138,8 +138,8 @@
 </AuthorizeView>
 
 @code {
-    private PerfilDto? perfil;
-    private bool cargado = false;
+    private PerfilDto? PerfilUsuario;
+    private bool Cargado = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,8 +147,8 @@
 
         try
         {
-            var response = await PerfilApi.ObtenerPerfilAsync();
-            perfil = response?.Perfil;
+            var Respuesta = await PerfilService.ObtenerPerfilAsync();
+            PerfilUsuario = Respuesta?.Perfil;
         }
         catch (Exception ex)
         {
@@ -156,9 +156,9 @@
         }
         finally
         {
-            cargado = true;
+            Cargado = true;
         }
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtras() => await JsRuntime.InvokeVoidAsync("history.back");
 }

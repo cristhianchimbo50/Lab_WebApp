@@ -1,15 +1,17 @@
 ﻿using Lab_Contracts.Reactivos;
+using Lab_Contracts.Common;
 
 namespace Lab_APIRest.Services.Reactivos
 {
     public interface IReactivoService
     {
-        Task<List<ReactivoDto>> ObtenerReactivosAsync();
-        Task<ReactivoDto?> ObtenerReactivoPorIdAsync(int IdReactivo);
-        Task<ReactivoDto> CrearReactivoAsync(ReactivoDto Reactivo);
-        Task<bool> EditarReactivoAsync(int IdReactivo, ReactivoDto Reactivo);
-        Task<bool> AnularReactivoAsync(int IdReactivo);
-        Task<bool> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> Ingresos);
-        Task<bool> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> Egresos);
+        Task<List<ReactivoDto>> ListarReactivosAsync();
+        Task<ReactivoDto?> ObtenerDetalleReactivoAsync(int idReactivo);
+        Task<ReactivoDto> GuardarReactivoAsync(ReactivoDto reactivo);
+        Task<bool> GuardarReactivoAsync(int idReactivo, ReactivoDto reactivo);
+        Task<bool> AnularReactivoAsync(int idReactivo);
+        Task<bool> RegistrarIngresosReactivosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos);
+        Task<bool> RegistrarEgresosReactivosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos);
+        Task<ResultadoPaginadoDto<ReactivoDto>> ListarReactivosPaginadosAsync(ReactivoFiltroDto filtro);
     }
 }

@@ -3,92 +3,111 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using Lab_Contracts.Common;
 
 namespace Lab_Blazor.Services.Pacientes
 {
     public class PacientesApiService : BaseApiService, IPacientesApiService
     {
-        public PacientesApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
-            : base(factory, session, js) { }
+        public PacientesApiService(IHttpClientFactory Factory, ProtectedSessionStorage Session, IJSRuntime Js)
+            : base(Factory, Session, Js) { }
 
-        public async Task<List<PacienteDto>> GetPacientesAsync()
+        public async Task<List<PacienteDto>> ObtenerPacientesAsync()
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/pacientes");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, "api/pacientes");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<PacienteDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<PacienteDto>>() ?? new();
         }
 
-        public async Task<PacienteDto?> GetPacientePorIdAsync(int id)
+        public async Task<PacienteDto?> ObtenerPacientePorIdAsync(int Id)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/{id}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/{Id}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<PacienteDto>();
+            return await Respuesta.Content.ReadFromJsonAsync<PacienteDto>();
         }
 
-        public async Task<List<PacienteDto>> BuscarPacientesAsync(string campo, string valor)
+        public async Task<List<PacienteDto>> BuscarPacientesAsync(string Campo, string Valor)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var campoQuery = Uri.EscapeDataString(campo ?? string.Empty);
-            var valorQuery = Uri.EscapeDataString(valor ?? string.Empty);
+            var CampoQuery = Uri.EscapeDataString(Campo ?? string.Empty);
+            var ValorQuery = Uri.EscapeDataString(Valor ?? string.Empty);
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda={campoQuery}&ValorBusqueda={valorQuery}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda={CampoQuery}&ValorBusqueda={ValorQuery}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<List<PacienteDto>>() ?? new();
+            return await Respuesta.Content.ReadFromJsonAsync<List<PacienteDto>>() ?? new();
         }
 
-        public async Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> CrearPacienteAsync(PacienteDto paciente)
+        public async Task<ResultadoPaginadoDto<PacienteDto>> BuscarPacientesAsync(PacienteFiltroDto filtro)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/pacientes")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pacientes/buscar")
             {
-                Content = JsonContent.Create(paciente)
+                Content = JsonContent.Create(filtro)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            if (response.IsSuccessStatusCode)
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
+
+            return await Respuesta.Content.ReadFromJsonAsync<ResultadoPaginadoDto<PacienteDto>>()
+                ?? new ResultadoPaginadoDto<PacienteDto> { Items = new List<PacienteDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
+        }
+
+        public async Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> CrearPacienteAsync(PacienteDto Paciente)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, "api/pacientes")
+            {
+                Content = JsonContent.Create(Paciente)
+            };
+            AddTokenHeader(Solicitud);
+
+            var Respuesta = await _http.SendAsync(Solicitud);
+            if (Respuesta.IsSuccessStatusCode)
             {
                 try
                 {
-                    var contenido = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var dto = new PacienteDto();
+                    var Contenido = await Respuesta.Content.ReadFromJsonAsync<JsonElement>();
+                    var Dto = new PacienteDto();
 
-                    if (contenido.TryGetProperty("idPaciente", out var id))
-                        dto.IdPaciente = id.GetInt32();
-                    if (contenido.TryGetProperty("nombrePaciente", out var nombre))
-                        dto.NombrePaciente = nombre.GetString() ?? "";
-                    if (contenido.TryGetProperty("correoElectronicoPaciente", out var correo))
-                        dto.CorreoElectronicoPaciente = correo.GetString() ?? "";
-                    if (contenido.TryGetProperty("contraseniaTemporal", out var tempPass))
-                        dto.ContraseniaTemporal = tempPass.GetString();
+                    if (Contenido.TryGetProperty("idPaciente", out var Id))
+                        Dto.IdPaciente = Id.GetInt32();
+                    if (Contenido.TryGetProperty("nombrePaciente", out var Nombre))
+                        Dto.NombrePaciente = Nombre.GetString() ?? "";
+                    if (Contenido.TryGetProperty("correoElectronicoPaciente", out var Correo))
+                        Dto.CorreoElectronicoPaciente = Correo.GetString() ?? "";
+                    if (Contenido.TryGetProperty("contraseniaTemporal", out var Temporal))
+                        Dto.ContraseniaTemporal = Temporal.GetString();
 
-                    string mensaje = contenido.TryGetProperty("mensaje", out var msg)
-                        ? msg.GetString() ?? "Paciente registrado correctamente."
+                    string Mensaje = Contenido.TryGetProperty("mensaje", out var Msg)
+                        ? Msg.GetString() ?? "Paciente registrado correctamente."
                         : "Paciente registrado correctamente.";
 
-                    return (true, mensaje, dto);
+                    return (true, Mensaje, Dto);
                 }
                 catch
                 {
@@ -96,68 +115,68 @@ namespace Lab_Blazor.Services.Pacientes
                 }
             }
 
-            string errorMsg = response.StatusCode == System.Net.HttpStatusCode.Conflict
-                ? await response.Content.ReadAsStringAsync()
-                : $"Error {response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+            string ErrorMsg = Respuesta.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? await Respuesta.Content.ReadAsStringAsync()
+                : $"Error {Respuesta.StatusCode}: {await Respuesta.Content.ReadAsStringAsync()}";
 
-            return (false, errorMsg, null);
+            return (false, ErrorMsg, null);
         }
 
-        public async Task<HttpResponseMessage> EditarPacienteAsync(int id, PacienteDto paciente)
+        public async Task<HttpResponseMessage> EditarPacienteAsync(int Id, PacienteDto Paciente)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/pacientes/{id}")
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/pacientes/{Id}")
             {
-                Content = JsonContent.Create(paciente)
+                Content = JsonContent.Create(Paciente)
             };
-            AddTokenHeader(request);
+            AddTokenHeader(Solicitud);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<HttpResponseMessage> AnularPacienteAsync(int id)
+        public async Task<HttpResponseMessage> AnularPacienteAsync(int Id)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"api/pacientes/anular/{id}");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Put, $"api/pacientes/anular/{Id}");
+            AddTokenHeader(Solicitud);
 
-            return await _http.SendAsync(request);
+            return await _http.SendAsync(Solicitud);
         }
 
-        public async Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string cedula)
+        public async Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string Cedula)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var cedulaQuery = Uri.EscapeDataString(cedula ?? string.Empty);
-            var request = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda=cedula&ValorBusqueda={cedulaQuery}");
-            AddTokenHeader(request);
+            var CedulaQuery = Uri.EscapeDataString(Cedula ?? string.Empty);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/buscar?CampoBusqueda=cedula&ValorBusqueda={CedulaQuery}");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            var Respuesta = await _http.SendAsync(Solicitud);
+            Respuesta.EnsureSuccessStatusCode();
 
-            var pacientes = await response.Content.ReadFromJsonAsync<List<PacienteDto>>();
-            return pacientes?.FirstOrDefault();
+            var Pacientes = await Respuesta.Content.ReadFromJsonAsync<List<PacienteDto>>();
+            return Pacientes?.FirstOrDefault();
         }
 
-        public async Task<(bool Exito, string Mensaje)> ReenviarTemporalAsync(int idPaciente)
+        public async Task<(bool Exito, string Mensaje)> ReenviarTemporalAsync(int IdPaciente)
         {
             if (!await SetAuthHeaderAsync())
                 throw new HttpRequestException("Token no disponible o sesión expirada.");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"api/pacientes/{idPaciente}/reenviar-temporal");
-            AddTokenHeader(request);
+            var Solicitud = new HttpRequestMessage(HttpMethod.Post, $"api/pacientes/{IdPaciente}/reenviar-temporal");
+            AddTokenHeader(Solicitud);
 
-            var response = await _http.SendAsync(request);
-            if (response.IsSuccessStatusCode)
+            var Respuesta = await _http.SendAsync(Solicitud);
+            if (Respuesta.IsSuccessStatusCode)
                 return (true, "Se envió una nueva contraseña temporal al correo del paciente.");
 
-            var err = await response.Content.ReadAsStringAsync();
-            return (false, string.IsNullOrWhiteSpace(err) ? "No se pudo reenviar la contraseña temporal." : err);
+            var Error = await Respuesta.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(Error) ? "No se pudo reenviar la contraseña temporal." : Error);
         }
     }
 }

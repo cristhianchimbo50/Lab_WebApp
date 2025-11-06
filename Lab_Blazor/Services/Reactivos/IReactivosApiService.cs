@@ -1,17 +1,17 @@
 ﻿using Lab_Contracts.Reactivos;
+using Lab_Contracts.Common;
 
 namespace Lab_Blazor.Services.Reactivos
 {
     public interface IReactivosApiService
     {
-        Task<List<ReactivoDto>> GetReactivosAsync();
-        Task<ReactivoDto?> GetReactivoPorIdAsync(int id);
-        Task<HttpResponseMessage> CrearReactivoAsync(ReactivoDto dto);
-        Task<HttpResponseMessage> EditarReactivoAsync(int id, ReactivoDto dto);
-        Task<HttpResponseMessage> AnularReactivoAsync(int id);
-
-        Task<HttpResponseMessage> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos);
-        Task<HttpResponseMessage> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos);
-
+        Task<List<ReactivoDto>> ObtenerReactivosAsync();
+        Task<ReactivoDto?> ObtenerReactivoPorIdAsync(int IdReactivo);
+        Task<HttpResponseMessage> CrearReactivoAsync(ReactivoDto Reactivo);
+        Task<HttpResponseMessage> EditarReactivoAsync(int IdReactivo, ReactivoDto Reactivo);
+        Task<HttpResponseMessage> AnularReactivoAsync(int IdReactivo);
+        Task<HttpResponseMessage> RegistrarIngresosAsync(IEnumerable<MovimientoReactivoIngresoDto> Ingresos);
+        Task<HttpResponseMessage> RegistrarEgresosAsync(IEnumerable<MovimientoReactivoEgresoDto> Egresos);
+        Task<ResultadoPaginadoDto<ReactivoDto>> BuscarReactivosAsync(ReactivoFiltroDto filtro);
     }
 }

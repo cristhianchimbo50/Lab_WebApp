@@ -7,94 +7,94 @@ namespace Lab_Blazor.Services.Auth
 {
     public class AuthApiService : IAuthApiService
     {
-        private readonly HttpClient _http;
-        private readonly IJSRuntime _js;
+        private readonly HttpClient ClienteHttp;
+        private readonly IJSRuntime JsRuntime;
 
-        public AuthApiService(IHttpClientFactory factory, IJSRuntime js)
+        public AuthApiService(IHttpClientFactory FactoryHttp, IJSRuntime JsRuntime)
         {
-            _http = factory.CreateClient("Api");
-            _js = js;
+            ClienteHttp = FactoryHttp.CreateClient("Api");
+            this.JsRuntime = JsRuntime;
         }
 
-        public async Task<(bool Exito, string Mensaje, LoginResponseDto? Usuario, bool RequiereCambioClave)> LoginAsync(LoginRequestDto dto, CancellationToken ct = default)
+        public async Task<(bool Exito, string Mensaje, LoginResponseDto? Usuario, bool RequiereCambioClave)> LoginAsync(LoginRequestDto Solicitud, CancellationToken Ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("api/auth/login", dto, ct);
+            var Respuesta = await ClienteHttp.PostAsJsonAsync("api/auth/login", Solicitud, Ct);
 
-            if (resp.IsSuccessStatusCode)
+            if (Respuesta.IsSuccessStatusCode)
             {
-                var loginResp = await resp.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
-                if (loginResp is not null)
+                var RespuestaLogin = await Respuesta.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: Ct);
+                if (RespuestaLogin is not null)
                 {
-                    if (loginResp.EsContraseniaTemporal && string.IsNullOrEmpty(loginResp.AccessToken))
-                        return (true, "Debe cambiar su contraseña antes de continuar.", loginResp, true);
+                    if (RespuestaLogin.EsContraseniaTemporal && string.IsNullOrEmpty(RespuestaLogin.AccessToken))
+                        return (true, "Debe cambiar su contraseña antes de continuar.", RespuestaLogin, true);
 
-                    return (true, loginResp.Mensaje ?? "Inicio de sesión exitoso.", loginResp, false);
+                    return (true, RespuestaLogin.Mensaje ?? "Inicio de sesión exitoso.", RespuestaLogin, false);
                 }
             }
 
-            string mensajeError = "Error desconocido.";
+            string MensajeError = "Error desconocido.";
             try
             {
-                var contenido = await resp.Content.ReadAsStringAsync(ct);
-                if (!string.IsNullOrWhiteSpace(contenido))
+                var Contenido = await Respuesta.Content.ReadAsStringAsync(Ct);
+                if (!string.IsNullOrWhiteSpace(Contenido))
                 {
-                    var json = JsonDocument.Parse(contenido);
-                    string? msg = null;
-                    string? exp = null;
+                    var DocumentoJson = JsonDocument.Parse(Contenido);
+                    string? MensajeServidor = null;
+                    string? Expiracion = null;
 
-                    foreach (var prop in json.RootElement.EnumerateObject())
+                    foreach (var Propiedad in DocumentoJson.RootElement.EnumerateObject())
                     {
-                        if (prop.Name.Equals("mensaje", StringComparison.OrdinalIgnoreCase))
-                            msg = prop.Value.GetString();
-                        else if (prop.Name.Equals("expiracion", StringComparison.OrdinalIgnoreCase))
-                            exp = prop.Value.GetString();
+                        if (Propiedad.Name.Equals("mensaje", StringComparison.OrdinalIgnoreCase))
+                            MensajeServidor = Propiedad.Value.GetString();
+                        else if (Propiedad.Name.Equals("expiracion", StringComparison.OrdinalIgnoreCase))
+                            Expiracion = Propiedad.Value.GetString();
                     }
 
-                    mensajeError = msg ?? mensajeError;
-                    if (!string.IsNullOrEmpty(exp))
-                        mensajeError += $" (Expiró el {exp})";
+                    MensajeError = MensajeServidor ?? MensajeError;
+                    if (!string.IsNullOrEmpty(Expiracion))
+                        MensajeError += $" (Expiró el {Expiracion})";
                 }
             }
             catch (Exception ex)
             {
-                mensajeError = $"Error al leer la respuesta del servidor: {ex.Message}";
+                MensajeError = $"Error al leer la respuesta del servidor: {ex.Message}";
             }
 
-            return (false, mensajeError, null, false);
+            return (false, MensajeError, null, false);
         }
 
-        public async Task LogoutAsync(CancellationToken ct = default)
+        public async Task LogoutAsync(CancellationToken Ct = default)
         {
-            await _js.InvokeVoidAsync("localStorage.removeItem", "jwt");
-            await _js.InvokeVoidAsync("localStorage.removeItem", "usuario");
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "jwt");
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "usuario");
         }
 
-        public async Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto dto, CancellationToken ct = default)
+        public async Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto Solicitud, CancellationToken Ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("api/auth/cambiar-contrasenia", dto, ct);
-            if (resp.IsSuccessStatusCode)
+            var Respuesta = await ClienteHttp.PostAsJsonAsync("api/auth/cambiar-contrasenia", Solicitud, Ct);
+            if (Respuesta.IsSuccessStatusCode)
             {
-                var data = await resp.Content.ReadFromJsonAsync<CambiarContraseniaResponseDto>(cancellationToken: ct);
-                return (data?.Exito ?? true, data?.Mensaje ?? "Contraseña actualizada correctamente.");
+                var RespuestaCambio = await Respuesta.Content.ReadFromJsonAsync<CambiarContraseniaResponseDto>(cancellationToken: Ct);
+                return (RespuestaCambio?.Exito ?? true, RespuestaCambio?.Mensaje ?? "Contraseña actualizada correctamente.");
             }
 
-            var error = await resp.Content.ReadAsStringAsync(ct);
-            return (false, string.IsNullOrWhiteSpace(error) ? "No se pudo cambiar la contraseña." : error);
+            var ErrorRespuesta = await Respuesta.Content.ReadAsStringAsync(Ct);
+            return (false, string.IsNullOrWhiteSpace(ErrorRespuesta) ? "No se pudo cambiar la contraseña." : ErrorRespuesta);
         }
 
-        public async Task<bool> VerificarSesionAsync(CancellationToken ct = default)
+        public async Task<bool> VerificarSesionAsync(CancellationToken Ct = default)
         {
             try
             {
-                var token = await _js.InvokeAsync<string>("localStorage.getItem", "jwt");
-                if (string.IsNullOrWhiteSpace(token))
+                var TokenJwt = await JsRuntime.InvokeAsync<string>("localStorage.getItem", "jwt");
+                if (string.IsNullOrWhiteSpace(TokenJwt))
                     return false;
 
-                _http.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                ClienteHttp.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenJwt);
 
-                var resp = await _http.GetAsync("api/auth/verificar-sesion", ct);
-                return resp.IsSuccessStatusCode;
+                var Respuesta = await ClienteHttp.GetAsync("api/auth/verificar-sesion", Ct);
+                return Respuesta.IsSuccessStatusCode;
             }
             catch
             {
@@ -104,27 +104,27 @@ namespace Lab_Blazor.Services.Auth
 
         public async Task<string?> ObtenerTokenAsync()
         {
-            return await _js.InvokeAsync<string>("localStorage.getItem", "jwt");
+            return await JsRuntime.InvokeAsync<string>("localStorage.getItem", "jwt");
         }
 
         public async Task<LoginResponseDto?> ObtenerUsuarioAsync()
         {
-            var data = await _js.InvokeAsync<string>("localStorage.getItem", "usuario");
-            return string.IsNullOrWhiteSpace(data)
+            var DatosUsuario = await JsRuntime.InvokeAsync<string>("localStorage.getItem", "usuario");
+            return string.IsNullOrWhiteSpace(DatosUsuario)
                 ? null
-                : JsonSerializer.Deserialize<LoginResponseDto>(data);
+                : JsonSerializer.Deserialize<LoginResponseDto>(DatosUsuario);
         }
 
-        public async Task<bool> RegisterAsync(RegisterRequestDto dto, CancellationToken ct = default)
+        public async Task<bool> RegisterAsync(RegisterRequestDto Solicitud, CancellationToken Ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("api/auth/register", dto, ct);
-            return resp.IsSuccessStatusCode;
+            var Respuesta = await ClienteHttp.PostAsJsonAsync("api/auth/register", Solicitud, Ct);
+            return Respuesta.IsSuccessStatusCode;
         }
 
-        public async Task<bool> ActivateAccountAsync(ActivateAccountDto dto, CancellationToken ct = default)
+        public async Task<bool> ActivarCuentaAsync(ActivateAccountDto Solicitud, CancellationToken Ct = default)
         {
-            var resp = await _http.PostAsJsonAsync("api/auth/activate", dto, ct);
-            return resp.IsSuccessStatusCode;
+            var Respuesta = await ClienteHttp.PostAsJsonAsync("api/auth/activate", Solicitud, Ct);
+            return Respuesta.IsSuccessStatusCode;
         }
     }
 }

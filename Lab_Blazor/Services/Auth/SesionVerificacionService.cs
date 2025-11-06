@@ -6,30 +6,30 @@ namespace Lab_Blazor.Services.Auth
 {
     public class SesionVerificacionService
     {
-        private readonly IAuthApiService _authApi;
-        private readonly IJSRuntime _js;
-        private readonly NavigationManager _nav;
+        private readonly IAuthApiService AuthService;
+        private readonly IJSRuntime JsRuntime;
+        private readonly NavigationManager Navegacion;
 
-        public SesionVerificacionService(IAuthApiService authApi, IJSRuntime js, NavigationManager nav)
+        public SesionVerificacionService(IAuthApiService AuthService, IJSRuntime JsRuntime, NavigationManager Navegacion)
         {
-            _authApi = authApi;
-            _js = js;
-            _nav = nav;
+            this.AuthService = AuthService;
+            this.JsRuntime = JsRuntime;
+            this.Navegacion = Navegacion;
         }
 
         public async Task<bool> VerificarOSalirAsync()
         {
-            bool sesionValida = await _authApi.VerificarSesionAsync();
-            if (!sesionValida)
+            bool IsSessionValid = await AuthService.VerificarSesionAsync();
+            if (!IsSessionValid)
             {
-                var currentUrl = _nav.ToBaseRelativePath(_nav.Uri);
-                await _js.InvokeVoidAsync("localStorage.setItem", "redirectAfterLogin", currentUrl);
+                var CurrentUrl = Navegacion.ToBaseRelativePath(Navegacion.Uri);
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "redirectAfterLogin", CurrentUrl);
 
-                await _authApi.LogoutAsync();
+                await AuthService.LogoutAsync();
 
-                _nav.NavigateTo("/login", forceLoad: true);
+                Navegacion.NavigateTo("/login", forceLoad: true);
             }
-            return sesionValida;
+            return IsSessionValid;
         }
     }
 }

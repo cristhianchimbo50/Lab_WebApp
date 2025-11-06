@@ -4,6 +4,6 @@ namespace Lab_APIRest.Services.Perfil
 {
     public interface IPerfilService
     {
-        Task<PerfilResponseDto?> ObtenerPerfilAsync(int idUsuario, CancellationToken ct);
+        Task<PerfilResponseDto?> ObtenerDetallePerfilAsync(int idUsuario, CancellationToken ct);
     }
 }

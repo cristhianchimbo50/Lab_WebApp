@@ -5,7 +5,7 @@ namespace Lab_Blazor.Services.Auth
 {
     public interface IRecuperacionApiService
     {
-        Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto dto);
-        Task<RespuestaMensajeDto> RestablecerContraseniaAsync(RestablecerContraseniaDto dto);
+        Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto Dto);
+        Task<RespuestaMensajeDto> RestablecerContraseniaAsync(RestablecerContraseniaDto Dto);
     }
 }

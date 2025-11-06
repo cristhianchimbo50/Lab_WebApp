@@ -4,12 +4,12 @@ namespace Lab_Blazor.Services.Usuarios
 {
     public interface IUsuariosApiService
     {
-        Task<List<UsuarioListadoDto>> GetUsuariosAsync(UsuarioFiltroDto filtro);
-        Task<UsuarioListadoDto?> GetUsuarioPorIdAsync(int idUsuario);
-        Task<int> CrearUsuarioAsync(UsuarioCrearDto dto);
-        Task<bool> EditarUsuarioAsync(UsuarioEditarDto dto);
-        Task<bool> CambiarEstadoAsync(int idUsuario, bool activo);
-        Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int idUsuario);
+        Task<List<UsuarioListadoDto>> ObtenerUsuariosAsync(UsuarioFiltroDto Filtro);
+        Task<UsuarioListadoDto?> ObtenerUsuarioPorIdAsync(int IdUsuario);
+        Task<int> CrearUsuarioAsync(UsuarioCrearDto Usuario);
+        Task<bool> EditarUsuarioAsync(UsuarioEditarDto Usuario);
+        Task<bool> CambiarEstadoAsync(int IdUsuario, bool Activo);
+        Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesAsync(int IdUsuario);
     }
 
 }
