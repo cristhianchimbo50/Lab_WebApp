@@ -1,4 +1,5 @@
 using Lab_Contracts.Examenes;
+using Lab_Contracts.Common;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -141,6 +142,23 @@ namespace Lab_Blazor.Services.Examenes
             AddTokenHeader(request);
 
             return await _http.SendAsync(request);
+        }
+
+        public async Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/examenes/buscar")
+            {
+                Content = JsonContent.Create(filtro)
+            };
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ExamenDto>>()
+                ?? new ResultadoPaginadoDto<ExamenDto> { Items = new List<ExamenDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
         }
     }
 }

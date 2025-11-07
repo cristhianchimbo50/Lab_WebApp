@@ -1,8 +1,11 @@
 using Lab_Contracts.Examenes;
+using Lab_Contracts.Common;
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Lab_APIRest.Services.Examenes
 {
@@ -114,6 +117,71 @@ namespace Lab_APIRest.Services.Examenes
             _context.examen_composicion.Remove(composicion);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro)
+        {
+            var query = _context.examen.AsNoTracking().AsQueryable();
+
+            if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
+            {
+                if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
+                    query = query.Where(e => e.anulado == true);
+                else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
+                    query = query.Where(e => e.anulado == false || e.anulado == null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
+            {
+                var val = filtro.ValorBusqueda.ToLower();
+                switch (filtro.CriterioBusqueda)
+                {
+                    case "nombre": query = query.Where(e => (e.nombre_examen ?? "").ToLower().Contains(val)); break;
+                    case "estudio": query = query.Where(e => (e.estudio ?? "").ToLower().Contains(val)); break;
+                    case "tipo": query = query.Where(e => (e.tipo_examen ?? "").ToLower().Contains(val)); break;
+                    case "tecnica": query = query.Where(e => (e.tecnica ?? "").ToLower().Contains(val)); break;
+                }
+            }
+
+            var total = await query.CountAsync();
+
+            bool asc = filtro.SortAsc;
+            query = filtro.SortBy switch
+            {
+                nameof(ExamenDto.NombreExamen) => asc ? query.OrderBy(e => e.nombre_examen) : query.OrderByDescending(e => e.nombre_examen),
+                nameof(ExamenDto.Estudio) => asc ? query.OrderBy(e => e.estudio) : query.OrderByDescending(e => e.estudio),
+                nameof(ExamenDto.TipoExamen) => asc ? query.OrderBy(e => e.tipo_examen) : query.OrderByDescending(e => e.tipo_examen),
+                nameof(ExamenDto.Tecnica) => asc ? query.OrderBy(e => e.tecnica) : query.OrderByDescending(e => e.tecnica),
+                _ => asc ? query.OrderBy(e => e.id_examen) : query.OrderByDescending(e => e.id_examen)
+            };
+
+            var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
+            var pageSize = filtro.PageSize <= 0 ? 10 : Math.Min(filtro.PageSize, 200);
+
+            var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize)
+                .Select(e => new ExamenDto
+                {
+                    IdExamen = e.id_examen,
+                    NombreExamen = e.nombre_examen ?? string.Empty,
+                    ValorReferencia = e.valor_referencia,
+                    Unidad = e.unidad,
+                    Precio = e.precio,
+                    Anulado = e.anulado ?? false,
+                    Estudio = e.estudio,
+                    TipoMuestra = e.tipo_muestra,
+                    TiempoEntrega = e.tiempo_entrega,
+                    TipoExamen = e.tipo_examen,
+                    Tecnica = e.tecnica,
+                    TituloExamen = e.titulo_examen
+                }).ToListAsync();
+
+            return new ResultadoPaginadoDto<ExamenDto>
+            {
+                TotalCount = total,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Items = items
+            };
         }
 
         private static ExamenDto Map(examen e) => new()

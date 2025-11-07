@@ -3,6 +3,7 @@
 
 <PageTitle>Gestión de Exámenes</PageTitle>
 
+@using Lab_Contracts.Common
 @using Lab_Contracts.Examenes
 @using Lab_Blazor.Services.Examenes
 @using Microsoft.AspNetCore.Components.Authorization
@@ -51,7 +52,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="_criterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="estudio">Estudio</option>
@@ -61,12 +62,38 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="_valorBusqueda" placeholder="Ingrese valor a buscar"
-                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsync(); })" />
+                        <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda" placeholder="Ingrese valor a buscar"
+    @onkeypress="OnBuscarKeyPress" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarAsync"><i class="bi bi-search me-1"></i>Buscar</button>
-                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                        <button class="btn btn-primary" @onclick="() => BuscarExamenesAsync(true)" disabled="@_buscando">
+                            @if (_buscando){<span class="spinner-border spinner-border-sm me-1"></span>}
+                            <i class="bi bi-search me-1"></i>Buscar
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div class="text-muted small">
+                    @if (_resultado != null)
+                    {
+                        <span>@RangoMostrado</span>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small">Registros por página:</label>
+                    <select class="form-select form-select-sm w-auto" @bind="_filtro.PageSize" @bind:after="async () => { _filtro.PageNumber = 1; await BuscarExamenesAsync(); }">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <div class="d-flex align-items-center ms-2">
+                        <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(_resultado == null || _resultado.PageNumber == 1)" @onclick="(() => CambiarPaginaAsync(-1))"><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(_resultado == null || _resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPaginaAsync(1))"><i class="bi bi-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -79,13 +106,13 @@
                 </div>
             }
 
-            @if (_listaExamenes == null)
+            @if (_resultado == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                 </div>
             }
-            else if (_listaExamenes.Count == 0)
+            else if (_resultado.TotalCount == 0)
             {
                 <div class="alert alert-warning text-center shadow-sm">
                     <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron resultados.
@@ -95,40 +122,6 @@
             {
 
 
-                @if (_listaExamenes?.Count > 0)
-                {
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div class="text-muted small">
-                            Mostrando @((_paginaActual - 1) * _tamPagina + 1)
-                            - @(Math.Min(_paginaActual * _tamPagina, _listaExamenes.Count))
-                            de @_listaExamenes.Count exámenes
-                        </div>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="form-label mb-0 small">Registros por página:</label>
-                            <select class="form-select form-select-sm w-auto" @bind="_tamPagina" @bind:after="CambiarTamPagina">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                            </select>
-
-                            <div class="d-flex align-items-center ms-2">
-                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                        disabled="@(_paginaActual == 1)"
-                                        @onclick="PrevPagina">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-
-                                <button class="btn btn-sm btn-outline-secondary"
-                                        disabled="@(_paginaActual >= TotalPaginas)"
-                                        @onclick="NextPagina">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
 
                 <div class="tabla-fija shadow-sm rounded border">
                     <div class="tabla-body">
@@ -146,7 +139,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var examen in ExamenesPaginados)
+                                @foreach (var examen in _resultado.Items)
                                 {
                                     <tr>
                                         <td data-label="Nombre" class="text-truncate">@examen.NombreExamen</td>
@@ -390,64 +383,75 @@
 </AuthorizeView>
 
 @code {
-    private List<ExamenDto>? _listaExamenes;
-    private ExamenDto _examenActual = new();
-    private bool _modalVisible;
-    private string _criterioBusqueda = "";
-    private string _valorBusqueda = "";
-    private string _mensaje = "";
-    private string _tipoMensaje = "info";
-    private int _paginaActual = 1;
-    private int _tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((_listaExamenes?.Count ?? 1) / (double)_tamPagina);
-    private IEnumerable<ExamenDto> ExamenesPaginados => _listaExamenes?.Skip((_paginaActual - 1) * _tamPagina).Take(_tamPagina) ?? new List<ExamenDto>();
+    // Eliminados duplicados y variables no usadas
+    private ExamenFiltroDto _filtro = new()
+    {
+        PageNumber = 1,
+        PageSize = 10,
+        SortBy = nameof(ExamenDto.NombreExamen),
+        SortAsc = true,
+        IncluirAnulados = true,
+        IncluirVigentes = true
+    };
 
+    private ResultadoPaginadoDto<ExamenDto>? _resultado;
+    private bool _buscando = false;
+    private ExamenDto _examenActual = new();
     private List<ExamenDto> _hijosSeleccionados = new();
+    private bool _modalVisible = false;
+    private string _mensaje = string.Empty;
+    private string _tipoMensaje = "info";
     private bool _mostrarModalBusquedaHijo = false;
     private string _filtroBusquedaHijo = "nombre";
-    private string _valorBusquedaHijo = "";
+    private string _valorBusquedaHijo = string.Empty;
     private List<ExamenDto> _resultadosBusquedaHijos = new();
+    private int _paginaActual = 1;
+    private List<string> _estudiosDisponibles = new();
+    private List<string> _tiposMuestraDisponibles = new();
+    private List<string> _tiposExamenDisponibles = new();
 
-    private bool _cargadoInicial = false;
-    private bool _sesionVerificada = false;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task CargarListasAsync()
     {
-        if (firstRender && !_sesionVerificada)
-        {
-            _sesionVerificada = true;
-
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            await CargarListasAsync();
-            _cargadoInicial = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task BuscarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
         var examenes = await ExamenesApiService.ListarExamenesAsync();
 
-        if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(_valorBusqueda))
-            _listaExamenes = examenes;
-        else
-        {
-            var valorBusqueda = _valorBusqueda.ToLower();
-            _listaExamenes = _criterioBusqueda switch
-            {
-                "nombre" => examenes.Where(x => x.NombreExamen.ToLower().Contains(valorBusqueda)).ToList(),
-                "estudio" => examenes.Where(x => x.Estudio?.ToLower().Contains(valorBusqueda) ?? false).ToList(),
-                "tipo" => examenes.Where(x => x.TipoExamen?.ToLower().Contains(valorBusqueda) ?? false).ToList(),
-                "tecnica" => examenes.Where(x => x.Tecnica?.ToLower().Contains(valorBusqueda) ?? false).ToList(),
-                _ => examenes
-            };
-        }
+        _estudiosDisponibles = examenes
+            .Select(e => e.Estudio?.ToUpper())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
 
-        _paginaActual = 1;
+        _tiposMuestraDisponibles = examenes
+            .Select(e => e.TipoMuestra?.ToUpper())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        _tiposExamenDisponibles = examenes
+            .Select(e => e.TipoExamen?.ToUpper())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    private async Task BuscarExamenesAsync(bool mostrarToast = true)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        if (_buscando) return;
+        try
+        {
+            _buscando = true;
+            _resultado = await ExamenesApiService.ListarExamenesPaginadosAsync(_filtro);
+            if (mostrarToast)
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Exámenes cargados correctamente.", "success");
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar exámenes.", "danger");
+        }
+        finally { _buscando = false; }
     }
 
     private async Task MostrarModalNuevoAsync()
@@ -531,7 +535,7 @@
             await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
             _modalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
-            await BuscarAsync();
+            await BuscarExamenesAsync();
         }
         else
         {
@@ -552,7 +556,7 @@
             {
                 _mensaje = "Examen anulado correctamente.";
                 _tipoMensaje = "success";
-                await BuscarAsync();
+                await BuscarExamenesAsync();
             }
         }
     }
@@ -580,7 +584,7 @@
             if (result.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
-                await BuscarAsync();
+                await BuscarExamenesAsync();
             }
             else
             {
@@ -621,40 +625,38 @@
 
     private async Task LimpiarBusquedaAsync()
     {
-        _criterioBusqueda = "";
-        _valorBusqueda = "";
-        _listaExamenes = null;
+        _filtro = new ExamenFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+        _resultado = null;
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
 
-    private List<string> _estudiosDisponibles = new();
-    private List<string> _tiposMuestraDisponibles = new();
-    private List<string> _tiposExamenDisponibles = new();
-
-    private async Task CargarListasAsync()
+    private async Task CambiarPaginaAsync(int delta)
     {
-        var examenes = await ExamenesApiService.ListarExamenesAsync();
-
-        _estudiosDisponibles = examenes
-            .Select(e => e.Estudio?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-
-        _tiposMuestraDisponibles = examenes
-            .Select(e => e.TipoMuestra?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-
-        _tiposExamenDisponibles = examenes
-            .Select(e => e.TipoExamen?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
+        if (_resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, _resultado.PageNumber + delta));
+        if (nueva == _resultado.PageNumber) return;
+        _filtro.PageNumber = nueva;
+        await BuscarExamenesAsync(false);
     }
+
+    private string RangoMostrado
+    {
+        get
+        {
+            if (_resultado == null || _resultado.TotalCount == 0) return "";
+            int desde = ((_resultado.PageNumber - 1) * _resultado.PageSize) + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} exámenes";
+        }
+    }
+
+    private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
+
+    private void IrAPagina(int pagina) => _paginaActual = pagina;
+    private void PrevPagina() { if (_paginaActual > 1) _paginaActual--; }
+    private void NextPagina() { if (_paginaActual < TotalPaginas) _paginaActual++; }
+    private void CambiarTamPagina() => _paginaActual = 1;
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
     private async Task ValidarEstudioAsync(ChangeEventArgs e)
     {
@@ -683,32 +685,9 @@
             await JS.InvokeVoidAsync("alert", "Ya existe un tipo de examen similar registrado.");
     }
 
-    private List<int> PaginasParaMostrar()
+    private async Task OnBuscarKeyPress(KeyboardEventArgs e)
     {
-        var paginas = new List<int>();
-
-        if (TotalPaginas <= 10)
-        {
-            paginas.AddRange(Enumerable.Range(1, TotalPaginas));
-            return paginas;
-        }
-
-        paginas.AddRange(Enumerable.Range(1, 3));
-        if (_paginaActual > 5) paginas.Add(-1);
-
-        int inicio = Math.Max(4, _paginaActual - 1);
-        int fin = Math.Min(TotalPaginas - 3, _paginaActual + 1);
-        for (int i = inicio; i <= fin; i++) paginas.Add(i);
-
-        if (_paginaActual < TotalPaginas - 4) paginas.Add(-1);
-        paginas.AddRange(Enumerable.Range(TotalPaginas - 2, 3));
-
-        return paginas.Distinct().Where(p => p >= 1 && p <= TotalPaginas).ToList();
+        if (e.Key == "Enter")
+            await BuscarExamenesAsync(true);
     }
-
-    private void IrAPagina(int pagina) => _paginaActual = pagina;
-    private void PrevPagina() { if (_paginaActual > 1) _paginaActual--; }
-    private void NextPagina() { if (_paginaActual < TotalPaginas) _paginaActual++; }
-    private void CambiarTamPagina() => _paginaActual = 1;
-    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

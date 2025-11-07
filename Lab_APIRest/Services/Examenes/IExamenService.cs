@@ -1,4 +1,7 @@
 using Lab_Contracts.Examenes;
+using Lab_Contracts.Common;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Lab_APIRest.Services.Examenes
 {
@@ -13,5 +16,6 @@ namespace Lab_APIRest.Services.Examenes
         Task<List<ExamenDto>> ListarExamenesHijosAsync(int idExamenPadre);
         Task<bool> AsignarExamenHijoAsync(int idExamenPadre, int idExamenHijo);
         Task<bool> EliminarExamenHijoAsync(int idExamenPadre, int idExamenHijo);
+        Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro);
     }
 }

@@ -1,4 +1,5 @@
 using Lab_Contracts.Examenes;
+using Lab_Contracts.Common;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -17,5 +18,6 @@ namespace Lab_Blazor.Services.Examenes
         Task<List<ExamenDto>> ListarExamenesHijosAsync(int idPadre);
         Task<HttpResponseMessage> AsignarExamenHijoAsync(int idPadre, int idHijo);
         Task<HttpResponseMessage> EliminarExamenHijoAsync(int idPadre, int idHijo);
+        Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro);
     }
 }
