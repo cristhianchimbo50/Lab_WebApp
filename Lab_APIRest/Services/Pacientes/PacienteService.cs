@@ -30,14 +30,13 @@ namespace Lab_APIRest.Services.Pacientes
                 CedulaPaciente = p.cedula_paciente,
                 NombrePaciente = p.nombre_paciente,
                 FechaNacPaciente = p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-                EdadPaciente = CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
+                EdadPaciente = PacienteService.CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
                 DireccionPaciente = p.direccion_paciente,
                 CorreoElectronicoPaciente = p.correo_electronico_paciente,
                 TelefonoPaciente = p.telefono_paciente,
                 FechaRegistro = p.fecha_registro,
                 Anulado = p.anulado ?? false,
-                IdUsuario = p.id_usuario,
-                EsContraseniaTemporal = p.id_usuarioNavigation == null ? null : p.id_usuarioNavigation.es_contrasenia_temporal
+                IdUsuario = p.id_usuario
             }).ToList();
         }
 
@@ -53,14 +52,13 @@ namespace Lab_APIRest.Services.Pacientes
                 CedulaPaciente = entidad.cedula_paciente,
                 NombrePaciente = entidad.nombre_paciente,
                 FechaNacPaciente = entidad.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-                EdadPaciente = CalcularEdad(entidad.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
+                EdadPaciente = PacienteService.CalcularEdad(entidad.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
                 DireccionPaciente = entidad.direccion_paciente,
                 CorreoElectronicoPaciente = entidad.correo_electronico_paciente,
                 TelefonoPaciente = entidad.telefono_paciente,
                 FechaRegistro = entidad.fecha_registro,
                 Anulado = entidad.anulado ?? false,
-                IdUsuario = entidad.id_usuario,
-                EsContraseniaTemporal = entidad.id_usuarioNavigation == null ? null : entidad.id_usuarioNavigation.es_contrasenia_temporal
+                IdUsuario = entidad.id_usuario
             };
         }
 
@@ -134,14 +132,13 @@ namespace Lab_APIRest.Services.Pacientes
                     CedulaPaciente = p.cedula_paciente,
                     NombrePaciente = p.nombre_paciente,
                     FechaNacPaciente = p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-                    EdadPaciente = CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
+                    EdadPaciente = PacienteService.CalcularEdad(p.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
                     DireccionPaciente = p.direccion_paciente,
                     CorreoElectronicoPaciente = p.correo_electronico_paciente,
                     TelefonoPaciente = p.telefono_paciente,
                     FechaRegistro = p.fecha_registro,
                     Anulado = p.anulado ?? false,
-                    IdUsuario = p.id_usuario,
-                    EsContraseniaTemporal = p.id_usuarioNavigation == null ? null : p.id_usuarioNavigation.es_contrasenia_temporal
+                    IdUsuario = p.id_usuario
                 }).ToListAsync();
 
             return new ResultadoPaginadoDto<PacienteDto>
@@ -158,28 +155,63 @@ namespace Lab_APIRest.Services.Pacientes
             if (!ValidarCedula(dto.CedulaPaciente))
                 return (false, "La cédula ingresada no es válida.", null);
 
-            var existePaciente = await _context.pacientes
-                .AnyAsync(p => p.cedula_paciente == dto.CedulaPaciente || p.correo_electronico_paciente == dto.CorreoElectronicoPaciente);
-            if (existePaciente)
-                return (false, "Ya existe un paciente con la misma cédula o correo.", null);
+            var usuarioExistente = await _context.usuarios
+                .FirstOrDefaultAsync(u => u.correo_usuario == dto.CorreoElectronicoPaciente);
 
-            string contraseniaTemporal = GenerarContraseniaTemporal();
-            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
-            string hashClave = hasher.HashPassword(null!, contraseniaTemporal);
+            int idUsuario;
 
-            var usuario = new usuario
+            if (usuarioExistente != null)
             {
-                correo_usuario = dto.CorreoElectronicoPaciente,
-                clave_usuario = hashClave,
-                nombre = dto.NombrePaciente,
-                rol = "paciente",
-                es_contrasenia_temporal = true,
-                fecha_expira_temporal = DateTime.UtcNow.AddHours(48),
-                activo = true,
-            };
+                idUsuario = usuarioExistente.id_usuario;
+            }
+            else
+            {
+                var usuario = new usuario
+                {
+                    correo_usuario = dto.CorreoElectronicoPaciente,
+                    clave_usuario = null,
+                    nombre = dto.NombrePaciente,
+                    rol = "paciente",
+                    activo = false,
+                    fecha_creacion = DateTime.UtcNow
+                };
+                _context.usuarios.Add(usuario);
+                await _context.SaveChangesAsync();
 
-            _context.usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+                idUsuario = usuario.id_usuario;
+
+                var randomBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+                var token = Convert.ToBase64String(randomBytes);
+                var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
+
+                var tokenRegistro = new tokens_usuarios
+                {
+                    id_usuario = usuario.id_usuario,
+                    token_hash = tokenHash,
+                    tipo_token = "activacion",
+                    fecha_solicitud = DateTime.UtcNow,
+                    fecha_expiracion = DateTime.UtcNow.AddHours(24),
+                    usado = false
+                };
+                _context.tokens_usuarios.Add(tokenRegistro);
+                await _context.SaveChangesAsync();
+
+                var dominio = "https://localhost:7283";
+                var enlace = $"{dominio}/activar-cuenta?token={Uri.EscapeDataString(token)}";
+
+                var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
+                var cuerpo = $@"
+            <p>Hola <b>{dto.NombrePaciente}</b>,</p>
+            <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
+            <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
+            <p><a href='{enlace}' target='_blank'>Activar mi cuenta</a></p>
+            <p>Este enlace estará disponible durante 24 horas.</p>";
+
+                await _emailService.EnviarCorreoAsync(dto.CorreoElectronicoPaciente, dto.NombrePaciente, asunto, cuerpo);
+            }
+
+            if (await _context.pacientes.AnyAsync(p => p.id_usuario == idUsuario))
+                return (false, "Este usuario ya está registrado como paciente.", null);
 
             var entidadPaciente = new paciente
             {
@@ -189,28 +221,22 @@ namespace Lab_APIRest.Services.Pacientes
                 direccion_paciente = dto.DireccionPaciente,
                 correo_electronico_paciente = dto.CorreoElectronicoPaciente,
                 telefono_paciente = dto.TelefonoPaciente,
-                fecha_registro = DateTime.Now,
+                fecha_registro = DateTime.UtcNow,
                 anulado = false,
-                id_usuario = usuario.id_usuario
+                id_usuario = idUsuario
             };
 
             _context.pacientes.Add(entidadPaciente);
             await _context.SaveChangesAsync();
 
-            var cuerpoCorreo = $"\n        <h2>Bienvenido al Laboratorio Clínico <strong>'La Inmaculada'</strong></h2>\n        <p>Estimado(a) <b>{dto.NombrePaciente}</b>, su cuenta ha sido creada exitosamente.</p>\n        <p><b>Usuario:</b> {dto.CorreoElectronicoPaciente}</p>\n        <p><b>Contraseña temporal:</b> {contraseniaTemporal}</p>\n        <p>Por motivos de seguridad, cambie su contraseña al iniciar sesión.</p>";
-
-            await _emailService.EnviarCorreoAsync(
-                dto.CorreoElectronicoPaciente,
-                dto.NombrePaciente,
-                "Credenciales de acceso - Laboratorio Clínico <strong>'La Inmaculada'</strong>",
-                cuerpoCorreo
-            );
-            
             dto.IdPaciente = entidadPaciente.id_paciente;
             dto.EdadPaciente = CalcularEdad(dto.FechaNacPaciente);
-            dto.ContraseniaTemporal = contraseniaTemporal;
 
-            return (true, "Paciente registrado correctamente.", dto);
+            var mensaje = usuarioExistente != null
+                ? "El paciente se vinculó correctamente con su cuenta existente."
+                : "Paciente registrado correctamente. Se envió el enlace de activación.";
+
+            return (true, mensaje, dto);
         }
 
         public async Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto)
@@ -240,37 +266,6 @@ namespace Lab_APIRest.Services.Pacientes
             return true;
         }
 
-        public async Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesPacienteAsync(int idPaciente)
-        {
-            var entidad = await _context.pacientes.FirstOrDefaultAsync(p => p.id_paciente == idPaciente);
-            if (entidad == null)
-                return (false, "Paciente no encontrado.", null);
-
-            var usuario = await _context.usuarios.FirstOrDefaultAsync(u => u.id_usuario == entidad.id_usuario);
-            if (usuario == null)
-                return (false, "Usuario asociado no encontrado.", null);
-
-            var nuevaTemp = GenerarContraseniaTemporal();
-            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
-
-            usuario.clave_usuario = hasher.HashPassword(null!, nuevaTemp);
-            usuario.es_contrasenia_temporal = true;
-            usuario.fecha_expira_temporal = DateTime.UtcNow.AddHours(48);
-
-            await _context.SaveChangesAsync();
-
-            var cuerpo = $"\n                <h2>Reinicio de contraseña temporal</h2>\n                <p>Estimado(a) <b>{entidad.nombre_paciente}</b>, se ha generado una nueva contraseña temporal.</p>\n                <p><b>Usuario:</b> {entidad.correo_electronico_paciente}</p>\n                <p><b>Nueva contraseña temporal:</b> <span style='color:#0d6efd'>{nuevaTemp}</span></p>\n                <p>Esta contraseña expirará en <b>48 horas</b>.</p>";
-
-            await _emailService.EnviarCorreoAsync(
-                entidad.correo_electronico_paciente,
-                entidad.nombre_paciente,
-                "Nueva contraseña temporal - Laboratorio Clínico <strong>'La Inmaculada'</strong>",
-                cuerpo
-            );
-
-            return (true, "Se envió una nueva contraseña temporal al correo del paciente.", nuevaTemp);
-        }
-
         private bool ValidarCedula(string cedula)
         {
             if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit))
@@ -290,15 +285,7 @@ namespace Lab_APIRest.Services.Pacientes
             return ultimoDigito == digitoCalculado;
         }
 
-        private string GenerarContraseniaTemporal()
-        {
-            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-
-        private int CalcularEdad(DateTime fechaNacimiento)
+        private static int CalcularEdad(DateTime fechaNacimiento)
         {
             var hoy = DateTime.Today;
             var edad = hoy.Year - fechaNacimiento.Year;
@@ -307,19 +294,19 @@ namespace Lab_APIRest.Services.Pacientes
         }
 
         private PacienteDto MapPaciente(paciente entidadPaciente) =>
-        new()
-        {
-            IdPaciente = entidadPaciente.id_paciente,
-            CedulaPaciente = entidadPaciente.cedula_paciente,
-            NombrePaciente = entidadPaciente.nombre_paciente,
-            FechaNacPaciente = entidadPaciente.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
-            EdadPaciente = CalcularEdad(entidadPaciente.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)), 
-            DireccionPaciente = entidadPaciente.direccion_paciente,
-            CorreoElectronicoPaciente = entidadPaciente.correo_electronico_paciente,
-            TelefonoPaciente = entidadPaciente.telefono_paciente,
-            FechaRegistro = entidadPaciente.fecha_registro,
-            Anulado = entidadPaciente.anulado ?? false,
-            IdUsuario = entidadPaciente.id_usuario
-        };
+            new()
+            {
+                IdPaciente = entidadPaciente.id_paciente,
+                CedulaPaciente = entidadPaciente.cedula_paciente,
+                NombrePaciente = entidadPaciente.nombre_paciente,
+                FechaNacPaciente = entidadPaciente.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue),
+                EdadPaciente = PacienteService.CalcularEdad(entidadPaciente.fecha_nac_paciente.ToDateTime(TimeOnly.MinValue)),
+                DireccionPaciente = entidadPaciente.direccion_paciente,
+                CorreoElectronicoPaciente = entidadPaciente.correo_electronico_paciente,
+                TelefonoPaciente = entidadPaciente.telefono_paciente,
+                FechaRegistro = entidadPaciente.fecha_registro,
+                Anulado = entidadPaciente.anulado ?? false,
+                IdUsuario = entidadPaciente.id_usuario
+            };
     }
 }

@@ -39,7 +39,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -50,7 +50,7 @@
         {
             <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
                 <span><i class="bi bi-link-45deg fs-3 text-primary me-2"></i>Asociaciones Exámenes - Reactivos</span>
-                <button class="btn btn-success shadow-sm" @onclick="IrAVinculoReactivos">
+                <button class="btn btn-success shadow-sm" @onclick="IrAVinculoReactivosAsync">
                     <i class="bi bi-plus-circle me-1"></i>Vincular Reactivos
                 </button>
             </h3>
@@ -59,7 +59,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                        <InputSelect class="form-select" @bind-Value="_criterioBusqueda">
                             <option value="">-- Seleccione --</option>
                             <option value="examen">Examen</option>
                             <option value="reactivo">Reactivo</option>
@@ -68,21 +68,21 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="valorBusqueda"
-                                   placeholder="@(criterioBusqueda switch
+                        <InputText class="form-control" @bind-Value="_valorBusqueda"
+                                   placeholder="@(_criterioBusqueda switch
                                    {
                                        "examen" => "Ej: HEMOGRAMA COMPLETO",
                                        "reactivo" => "Ej: SUERO FISIOLÓGICO",
                                        "unidad" => "Ej: ML",
                                        _ => "Ingrese valor a buscar"
                                    })"
-                               @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsociaciones(); })" />
+                               @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsociacionesAsync(); })" />
                 </div>
                 <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                    <button class="btn btn-primary shadow-sm" @onclick="BuscarAsociaciones">
+                    <button class="btn btn-primary shadow-sm" @onclick="BuscarAsociacionesAsync">
                         <i class="bi bi-search me-1"></i>Buscar
                     </button>
-                    <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarBusqueda">
+                    <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarBusquedaAsync">
                         <i class="bi bi-eraser me-1"></i>Limpiar
                     </button>
 
@@ -90,13 +90,13 @@
             </div>
         </div>
 
-        @if (asociacionesFiltradas == null)
+        @if (_asociacionesFiltradas == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                 </div>
             }
-            else if (asociacionesFiltradas.Count == 0)
+            else if (_asociacionesFiltradas.Count == 0)
             {
                 <div class="alert alert-warning text-center shadow-sm">
                     <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron asociaciones.
@@ -104,18 +104,18 @@
             }
             else
             {
-                @if (asociacionesFiltradas?.Count > 0)
+                @if (_asociacionesFiltradas?.Count > 0)
                 {
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="text-muted small">
-                            Mostrando @((paginaActual - 1) * tamPagina + 1)
-                            - @(Math.Min(paginaActual * tamPagina, asociacionesFiltradas.Count))
-                            de @asociacionesFiltradas.Count asociaciones
+                            Mostrando @((_paginaActual - 1) * _tamPagina + 1)
+                            - @(Math.Min(_paginaActual * _tamPagina, _asociacionesFiltradas.Count))
+                            de @_asociacionesFiltradas.Count asociaciones
                         </div>
 
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 small">Registros por página:</label>
-                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                            <select class="form-select form-select-sm w-auto" @bind="_tamPagina" @bind:after="CambiarTamPagina">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
                                 <option value="15">15</option>
@@ -124,13 +124,13 @@
 
                             <div class="d-flex align-items-center ms-2">
                                 <button class="btn btn-sm btn-outline-secondary me-1"
-                                        disabled="@(paginaActual == 1)"
+                                        disabled="@(_paginaActual == 1)"
                                         @onclick="PrevPagina">
                                     <i class="bi bi-chevron-left"></i>
                                 </button>
 
                                 <button class="btn btn-sm btn-outline-secondary"
-                                        disabled="@(paginaActual >= TotalPaginas)"
+                                        disabled="@(_paginaActual >= TotalPaginas)"
                                         @onclick="NextPagina">
                                     <i class="bi bi-chevron-right"></i>
                                 </button>
@@ -160,10 +160,10 @@
                                         <td data-label="Unidad">@item.Unidad</td>
                                         <td data-label="Acciones">
                                             <div class="d-flex justify-content-center gap-2">
-                                                <button class="btn btn-warning btn-sm" title="Editar" @onclick="() => IrAEditar(item.IdExamen)">
+                                                <button class="btn btn-warning btn-sm" title="Editar" @onclick="() => IrAEditarAsync(item.IdExamen)">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
-                                                <button class="btn btn-danger btn-sm" title="Eliminar" @onclick="() => EliminarAsociacion(item.IdExamenReactivo)">
+                                                <button class="btn btn-danger btn-sm" title="Eliminar" @onclick="() => EliminarAsociacionAsync(item.IdExamenReactivo)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -195,67 +195,64 @@
 </AuthorizeView>
 
 @code {
-    private List<AsociacionReactivoDto> asociaciones = new();
-    private List<AsociacionReactivoDto> asociacionesFiltradas = new();
-    private bool cargando = true;
-    private string criterioBusqueda = "";
-    private string valorBusqueda = "";
-    private bool errorCarga = false;
-    private bool mostroError = false;
-    private bool datosCargados;
-    private int paginaActual = 1;
-    private int tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((asociacionesFiltradas?.Count ?? 1) / (double)tamPagina);
+    private List<AsociacionReactivoDto> _asociaciones = new();
+    private List<AsociacionReactivoDto> _asociacionesFiltradas = new();
+    private bool _cargando = true;
+    private string _criterioBusqueda = "";
+    private string _valorBusqueda = "";
+    private bool _errorCarga = false;
+    private bool _mostroError = false;
+    private bool _datosCargados;
+    private int _paginaActual = 1;
+    private int _tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((_asociacionesFiltradas?.Count ?? 1) / (double)_tamPagina);
     private IEnumerable<AsociacionReactivoDto> AsociacionesPaginadas =>
-        asociacionesFiltradas?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<AsociacionReactivoDto>();
+        _asociacionesFiltradas?.Skip((_paginaActual - 1) * _tamPagina).Take(_tamPagina) ?? new List<AsociacionReactivoDto>();
 
     private void PrevPagina()
     {
-        if (paginaActual > 1) paginaActual--;
+        if (_paginaActual > 1) _paginaActual--;
     }
 
     private void NextPagina()
     {
-        if (paginaActual < TotalPaginas) paginaActual++;
+        if (_paginaActual < TotalPaginas) _paginaActual++;
     }
 
-    private void CambiarTamPagina() => paginaActual = 1;
-
-
+    private void CambiarTamPagina() => _paginaActual = 1;
 
     protected override Task OnInitializedAsync()
     {
-        asociaciones = new();
-        asociacionesFiltradas = null;
-        cargando = false;
+        _asociaciones = new();
+        _asociacionesFiltradas = null;
+        _cargando = false;
         return Task.CompletedTask;
     }
 
-
-    private async Task BuscarAsociaciones()
+    private async Task BuscarAsociacionesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        cargando = true;
+        _cargando = true;
         StateHasChanged();
 
         try
         {
-            asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
-            var valor = valorBusqueda?.Trim().ToLower() ?? string.Empty;
+            _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
+            var valor = _valorBusqueda?.Trim().ToLower() ?? string.Empty;
 
-            if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
+            if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
             {
-                asociacionesFiltradas = asociaciones.ToList();
+                _asociacionesFiltradas = _asociaciones.ToList();
             }
             else
             {
-                asociacionesFiltradas = criterioBusqueda switch
+                _asociacionesFiltradas = _criterioBusqueda switch
                 {
-                    "examen" => asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
-                    "reactivo" => asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
-                    "unidad" => asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
-                    _ => asociaciones.ToList()
+                    "examen" => _asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
+                    "reactivo" => _asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
+                    "unidad" => _asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
+                    _ => _asociaciones.ToList()
                 };
             }
         }
@@ -264,21 +261,20 @@
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar asociaciones.", "danger");
         }
 
-        cargando = false;
+        _cargando = false;
         StateHasChanged();
     }
 
-    private async Task LimpiarBusqueda()
+    private async Task LimpiarBusquedaAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        criterioBusqueda = "";
-        valorBusqueda = "";
-        asociacionesFiltradas = null;
+        _criterioBusqueda = "";
+        _valorBusqueda = "";
+        _asociacionesFiltradas = null;
     }
 
-
-    private async Task EliminarAsociacion(int idAsociacion)
+    private async Task EliminarAsociacionAsync(int idAsociacion)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -288,8 +284,8 @@
         if (ok)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación eliminada correctamente.", "success");
-            asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
-            asociacionesFiltradas = asociaciones.ToList();
+            _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
+            _asociacionesFiltradas = _asociaciones.ToList();
         }
         else
         {
@@ -297,20 +293,19 @@
         }
     }
 
-    private async void IrAEditar(int idExamen)
+    private async Task IrAEditarAsync(int idExamen)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         Navigation.NavigateTo($"/examenes-reactivos?idExamen={idExamen}");
     }
 
-    private async void IrAVinculoReactivos()
+    private async Task IrAVinculoReactivosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         Navigation.NavigateTo("/examenes-reactivos");
     }
 
-
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

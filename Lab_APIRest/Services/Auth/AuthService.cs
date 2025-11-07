@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Lab_APIRest.Services.Auth
 {
@@ -27,9 +29,7 @@ namespace Lab_APIRest.Services.Auth
             string nombre,
             string rol,
             string clave_usuario,
-            bool activo,
-            bool es_contrasenia_temporal,
-            DateTime? fecha_expira_temporal
+            bool activo
         );
 
         private static readonly Func<LabDbContext, string, IAsyncEnumerable<UsuarioLoginProjection>> QryUsuarioPorCorreo =
@@ -43,9 +43,7 @@ namespace Lab_APIRest.Services.Auth
                         u.nombre,
                         u.rol,
                         u.clave_usuario,
-                        u.activo,
-                        u.es_contrasenia_temporal,
-                        u.fecha_expira_temporal
+                        u.activo
                     ))
             );
 
@@ -100,36 +98,6 @@ namespace Lab_APIRest.Services.Auth
 
             _cache.Remove(cacheKey);
 
-            if (usuarioEntidad.es_contrasenia_temporal == true)
-            {
-                if (usuarioEntidad.fecha_expira_temporal.HasValue && usuarioEntidad.fecha_expira_temporal.Value < DateTime.UtcNow)
-                {
-                    return new LoginResponseDto
-                    {
-                        IdUsuario = usuarioEntidad.id_usuario,
-                        CorreoUsuario = usuarioEntidad.correo_usuario,
-                        Nombre = usuarioEntidad.nombre,
-                        Rol = usuarioEntidad.rol,
-                        EsContraseniaTemporal = true,
-                        AccessToken = null!,
-                        ExpiresAtUtc = usuarioEntidad.fecha_expira_temporal.Value,
-                        Mensaje = "La contraseña temporal ha expirado. Solicite una nueva."
-                    };
-                }
-
-                return new LoginResponseDto
-                {
-                    IdUsuario = usuarioEntidad.id_usuario,
-                    CorreoUsuario = usuarioEntidad.correo_usuario,
-                    Nombre = usuarioEntidad.nombre,
-                    Rol = usuarioEntidad.rol,
-                    EsContraseniaTemporal = true,
-                    AccessToken = null!,
-                    ExpiresAtUtc = usuarioEntidad.fecha_expira_temporal ?? DateTime.UtcNow,
-                    Mensaje = "Debe cambiar su contraseña temporal antes de continuar."
-                };
-            }
-
             try
             {
                 var usuarioActualizar = new Infrastructure.EF.Models.usuario
@@ -172,7 +140,6 @@ namespace Lab_APIRest.Services.Auth
                 CorreoUsuario = usuarioEntidad.correo_usuario,
                 Nombre = usuarioEntidad.nombre,
                 Rol = usuarioEntidad.rol,
-                EsContraseniaTemporal = false,
                 AccessToken = token,
                 ExpiresAtUtc = expiraUtc,
                 Mensaje = "Inicio de sesión exitoso. La sesión expirará en 1 hora."
@@ -195,25 +162,67 @@ namespace Lab_APIRest.Services.Auth
             if (usuarioEntidad == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            if (usuarioEntidad.es_contrasenia_temporal == true &&
-                usuarioEntidad.fecha_expira_temporal.HasValue &&
-                usuarioEntidad.fecha_expira_temporal.Value < DateTime.UtcNow)
-            {
-                return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña temporal ha expirado. Solicite una nueva." };
-            }
-
             var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.clave_usuario, cambio.ContraseniaActual);
             if (verificacion == PasswordVerificationResult.Failed)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
             var nuevaHash = _hasher.HashPassword(null!, cambio.NuevaContrasenia);
             usuarioEntidad.clave_usuario = nuevaHash;
-            usuarioEntidad.es_contrasenia_temporal = false;
-            usuarioEntidad.fecha_expira_temporal = null;
 
             await _context.SaveChangesAsync(ct);
 
             return new CambiarContraseniaResponseDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
+        }
+
+
+        public async Task<RespuestaMensajeDto> ActivarCuentaAsync(RestablecerContraseniaDto dto, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Token) ||
+                string.IsNullOrWhiteSpace(dto.NuevaContrasenia) ||
+                string.IsNullOrWhiteSpace(dto.ConfirmarContrasenia))
+                return new RespuestaMensajeDto { Exito = false, Mensaje = "Datos inválidos." };
+
+            if (dto.NuevaContrasenia != dto.ConfirmarContrasenia)
+                return new RespuestaMensajeDto { Exito = false, Mensaje = "Las contraseñas no coinciden." };
+
+            using var sha = SHA256.Create();
+            var tokenHash = sha.ComputeHash(Encoding.UTF8.GetBytes(dto.Token));
+
+            var registros = await _context.tokens_usuarios
+                .Include(r => r.Usuario)
+                .Where(r => r.tipo_token == "activacion" && !r.usado)
+                .ToListAsync(ct);
+
+            var registro = registros.FirstOrDefault(r => r.token_hash.SequenceEqual(tokenHash));
+
+            if (registro == null)
+                return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido o ya fue usado." };
+
+            if (registro.fecha_expiracion < DateTime.UtcNow)
+                return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
+
+            var usuario = registro.Usuario;
+            usuario.clave_usuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            usuario.activo = true;
+
+            registro.usado = true;
+            registro.usado_en = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(ct);
+
+            var asunto = "Cuenta activada correctamente";
+            var cuerpo = $@"
+        <p>Hola <b>{usuario.nombre}</b>,</p>
+        <p>Tu cuenta ha sido activada exitosamente.</p>
+        <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
+
+            await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpo);
+
+            return new RespuestaMensajeDto
+            {
+                Exito = true,
+                Mensaje = "Cuenta activada correctamente. Ya puedes iniciar sesión."
+            };
         }
     }
 }

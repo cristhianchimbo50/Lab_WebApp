@@ -27,7 +27,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras"><i class="bi bi-arrow-left"></i> Regresar</button>
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync"><i class="bi bi-arrow-left"></i> Regresar</button>
                     </div>
                 </div>
             </div>
@@ -36,14 +36,14 @@
         {
             <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
                 <span><i class="bi bi-people text-primary fs-4 me-2"></i>Gestión de Pacientes</span>
-                <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevo"><i class="bi bi-person-plus-fill me-1"></i>Nuevo Paciente</button>
+                <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevoAsync"><i class="bi bi-person-plus-fill me-1"></i>Nuevo Paciente</button>
             </h3>
 
             <div class="card mb-3 shadow-sm border-0">
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="Filtro.CriterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="cedula">Cédula</option>
                             <option value="nombre">Nombre</option>
@@ -52,15 +52,15 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="Filtro.ValorBusqueda" placeholder="Ingrese valor a buscar"
-                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarPacientes(); })" />
+                        <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda" placeholder="Ingrese valor a buscar"
+                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarPacientesAsync(); })" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarPacientes" disabled="@Buscando">
-                            @if (Buscando){<span class="spinner-border spinner-border-sm me-1"></span>}
+                        <button class="btn btn-primary" @onclick="BuscarPacientesAsync" disabled="@_buscando">
+                            @if (_buscando){<span class="spinner-border spinner-border-sm me-1"></span>}
                             <i class="bi bi-search me-1"></i>Buscar
                         </button>
-                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda" disabled="@Buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
@@ -68,11 +68,11 @@
             <div class="card mb-3 shadow-sm border-0">
                 <div class="card-body row g-3">
                     <div class="col-md-3 d-flex align-items-center mt-2">
-                        <InputCheckbox @bind-Value="Filtro.IncluirAnulados" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_filtro.IncluirAnulados" class="form-check-input me-2" />
                         <label class="form-check-label">Anulado</label>
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-2">
-                        <InputCheckbox @bind-Value="Filtro.IncluirVigentes" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
                         <label class="form-check-label">No Anulado</label>
                     </div>
                 </div>
@@ -80,14 +80,14 @@
 
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
                 <div class="text-muted small">
-                    @if (Resultado != null)
+                    @if (_resultado != null)
                     {
-                        <span>Mostrando página @Resultado.PageNumber de @TotalPaginas (Total: @Resultado.TotalCount)</span>
+                        <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
                     }
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <label class="form-label mb-0 small">Registros por página:</label>
-                    <select class="form-select form-select-sm w-auto" @bind="Filtro.PageSize" @bind:after="(() => { Filtro.PageNumber = 1; BuscarPacientes(); })">
+                    <select class="form-select form-select-sm w-auto" @bind="_filtro.PageSize" @bind:after="(() => { _filtro.PageNumber = 1; BuscarPacientesAsync(); })">
                         <option value="5">5</option>
                         <option value="10">10</option>
                         <option value="15">15</option>
@@ -95,17 +95,17 @@
                         <option value="50">50</option>
                     </select>
                     <div class="d-flex align-items-center ms-2">
-                        <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(Resultado == null || Resultado.PageNumber == 1)" @onclick="(() => CambiarPagina(-1))"><i class="bi bi-chevron-left"></i></button>
-                        <button class="btn btn-sm btn-outline-secondary" disabled="@(Resultado == null || Resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPagina(1))"><i class="bi bi-chevron-right"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(_resultado == null || _resultado.PageNumber == 1)" @onclick="(() => CambiarPaginaAsync(-1))"><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(_resultado == null || _resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPaginaAsync(1))"><i class="bi bi-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
 
-            @if (Resultado == null || Resultado.Items == null)
+            @if (_resultado == null || _resultado.Items == null)
             {
                 <div class="alert alert-info text-center shadow-sm"><i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.</div>
             }
-            else if (!Resultado.Items.Any())
+            else if (!_resultado.Items.Any())
             {
                 <div class="alert alert-warning text-center shadow-sm"><i class="bi bi-exclamation-triangle me-2"></i>No se encontraron pacientes registrados.</div>
             }
@@ -123,33 +123,31 @@
                                     <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.CorreoElectronicoPaciente))">Correo @OrdenIcono(nameof(PacienteDto.CorreoElectronicoPaciente))</th>
                                     <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.TelefonoPaciente))">Teléfono @OrdenIcono(nameof(PacienteDto.TelefonoPaciente))</th>
                                     <th style="width:10%">Estado</th>
-                                    <th style="width:8%">Contraseña</th>
                                     <th style="width:10%">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var Paciente in Resultado.Items)
+                                @foreach (var paciente in _resultado.Items)
                                 {
                                     <tr>
-                                        <td data-label="Cédula">@Paciente.CedulaPaciente</td>
-                                        <td data-label="Nombre">@Paciente.NombrePaciente</td>
-                                        <td data-label="Edad">@Paciente.EdadPaciente</td>
-                                        <td data-label="Dirección">@Paciente.DireccionPaciente</td>
-                                        <td data-label="Correo">@Paciente.CorreoElectronicoPaciente</td>
-                                        <td data-label="Teléfono">@Paciente.TelefonoPaciente</td>
-                                        <td data-label="Estado"><span class="badge bg-@(Paciente.Anulado ? "danger" : "success")">@(Paciente.Anulado ? "Deshabilitado" : "Activo")</span></td>
-                                        <td data-label="Contraseña"><span class="badge bg-@((Paciente.EsContraseniaTemporal == true) ? "warning text-dark" : "info")">@(Paciente.EsContraseniaTemporal == true ? "Pendiente" : "Cambiada")</span></td>
+                                        <td data-label="Cédula">@paciente.CedulaPaciente</td>
+                                        <td data-label="Nombre">@paciente.NombrePaciente</td>
+                                        <td data-label="Edad">@paciente.EdadPaciente</td>
+                                        <td data-label="Dirección">@paciente.DireccionPaciente</td>
+                                        <td data-label="Correo">@paciente.CorreoElectronicoPaciente</td>
+                                        <td data-label="Teléfono">@paciente.TelefonoPaciente</td>
+                                        <td data-label="Estado"><span class="badge bg-@(paciente.Anulado ? "danger" : "success")">@(paciente.Anulado ? "Deshabilitado" : "Activo")</span></td>
                                         <td data-label="Acciones">
                                             @if (puedeModificar)
                                             {
-                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarPaciente(Paciente)"><i class="bi bi-pencil-square"></i></button>
-                                                @if (Paciente.Anulado)
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarPacienteAsync(paciente)"><i class="bi bi-pencil-square"></i></button>
+                                                @if (paciente.Anulado)
                                                 {
-                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(Paciente)"><i class="bi bi-check-circle-fill"></i></button>
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacionAsync(paciente)"><i class="bi bi-check-circle-fill"></i></button>
                                                 }
                                                 else
                                                 {
-                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(Paciente.IdPaciente)"><i class="bi bi-x-circle-fill"></i></button>
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacionAsync(paciente.IdPaciente)"><i class="bi bi-x-circle-fill"></i></button>
                                                 }
                                             }
                                             else { <span class="text-muted small">Sin permisos</span> }
@@ -162,42 +160,29 @@
                 </div>
             }
 
-            <div class="modal fade @(ModalVisible ? "show d-block" : "")" tabindex="-1" role="dialog" aria-modal="true" style="display:@(ModalVisible ? "block" : "none")">
+            <div class="modal fade @(_modalVisible ? "show d-block" : "")" tabindex="-1" role="dialog" aria-modal="true" style="display:@(_modalVisible ? "block" : "none")">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
-                        <EditForm Model="@PacienteActual" OnValidSubmit="ValidarYGuardar">
+                        <EditForm Model="@_pacienteActual" OnValidSubmit="ValidarYGuardarAsync">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>@(PacienteActual.IdPaciente == 0 ? "Nuevo Paciente" : "Editar Paciente")</h5>
-                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                                <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>@(_pacienteActual.IdPaciente == 0 ? "Nuevo Paciente" : "Editar Paciente")</h5>
+                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalAsync"></button>
                             </div>
                             <div class="modal-body">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Cédula</label><InputText class="form-control" @bind-Value="PacienteActual.CedulaPaciente" /></div>
-                                    <div class="col-md-6"><label class="form-label">Nombre</label><InputText class="form-control text-uppercase" @bind-Value="PacienteActual.NombrePaciente" @oninput="(e => PacienteActual.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="PacienteActual.FechaNacPaciente" TValue="DateTime" /></div>
-                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="PacienteActual.TelefonoPaciente" /></div>
-                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="PacienteActual.CorreoElectronicoPaciente" readonly="@(PacienteActual.IdPaciente != 0)" disabled="@(PacienteActual.IdPaciente != 0)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="PacienteActual.DireccionPaciente" /></div>
-                                    @if (PacienteActual.IdPaciente != 0)
-                                    {
-                                        <div class="col-md-6">
-                                            <label class="form-label">Estado de Contraseña</label>
-                                            <div class="input-group">
-                                                <input class="form-control" readonly value="@(PacienteActual.EsContraseniaTemporal == true ? "Pendiente de cambio" : "Cambiada")" />
-                                                @if (PacienteActual.EsContraseniaTemporal == true)
-                                                {
-                                                    <button type="button" class="btn btn-outline-warning" @onclick="ReenviarTemporal"><i class="bi bi-envelope-arrow-up me-1"></i>Reenviar temporal</button>
-                                                }
-                                            </div>
-                                        </div>
-                                    }
+                                    <div class="col-md-6"><label class="form-label">Cédula</label><InputText class="form-control" @bind-Value="_pacienteActual.CedulaPaciente" /></div>
+                                    <div class="col-md-6"><label class="form-label">Nombre</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.NombrePaciente" @oninput="(e => _pacienteActual.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="_pacienteActual.FechaNacPaciente" TValue="DateTime" /></div>
+                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.TelefonoPaciente" /></div>
+                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.CorreoElectronicoPaciente" readonly="@(_pacienteActual.IdPaciente != 0)" disabled="@(_pacienteActual.IdPaciente != 0)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="_pacienteActual.DireccionPaciente" /></div>
                                 </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary px-3"><i class="bi bi-save me-1"></i>Guardar</button>
-                                <button type="button" class="btn btn-secondary" @onclick="CerrarModal"><i class="bi bi-x-lg me-1"></i>Cancelar</button>
+                                <button type="button" class="btn btn-secondary" @onclick="CerrarModalAsync"><i class="bi bi-x-lg me-1"></i>Cancelar</button>
                             </div>
                         </EditForm>
                     </div>
@@ -208,7 +193,7 @@
 </AuthorizeView>
 
 @code {
-    private PacienteFiltroDto Filtro = new()
+    private PacienteFiltroDto _filtro = new()
     {
         PageNumber = 1,
         PageSize = 10,
@@ -218,166 +203,154 @@
         IncluirVigentes = true
     };
 
-    private ResultadoPaginadoDto<PacienteDto>? Resultado;
+    private ResultadoPaginadoDto<PacienteDto>? _resultado;
 
-    private PacienteDto PacienteActual = new();
-    private bool ModalVisible;
-    private bool Buscando = false;
-
-    private bool _SesionVerificada = false;
+    private PacienteDto _pacienteActual = new();
+    private bool _modalVisible;
+    private bool _buscando = false;
+    private bool _sesionVerificada = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_SesionVerificada)
+        if (firstRender && !_sesionVerificada)
         {
-            _SesionVerificada = true;
+            _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
-            await BuscarPacientes();
+            await BuscarPacientesAsync();
         }
     }
 
-    private int TotalPaginas => Resultado == null || Resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
+    private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
-    private async Task BuscarPacientes()
+    private async Task BuscarPacientesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (Buscando) return;
+        if (_buscando) return;
         try
         {
-            Buscando = true;
-            Resultado = await PacientesApiService.ListarPacientesPaginadosAsync(Filtro);
+            _buscando = true;
+            _resultado = await PacientesApiService.ListarPacientesPaginadosAsync(_filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
         }
         catch
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar pacientes.", "danger");
         }
-        finally { Buscando = false; }
+        finally { _buscando = false; }
     }
 
-    private async Task LimpiarBusqueda()
+    private async Task LimpiarBusquedaAsync()
     {
-        Filtro = new PacienteFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
-        Resultado = null;
+        _filtro = new PacienteFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+        _resultado = null;
         await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
 
-    private async Task CambiarPagina(int delta)
+    private async Task CambiarPaginaAsync(int delta)
     {
-        if (Resultado == null) return;
-        var nueva = Math.Max(1, Math.Min(TotalPaginas, Resultado.PageNumber + delta));
-        if (nueva == Resultado.PageNumber) return;
-        Filtro.PageNumber = nueva;
-        await BuscarPacientes();
+        if (_resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, _resultado.PageNumber + delta));
+        if (nueva == _resultado.PageNumber) return;
+        _filtro.PageNumber = nueva;
+        await BuscarPacientesAsync();
     }
 
     private MarkupString OrdenIcono(string columna)
     {
-        if (Filtro.SortBy != columna) return (MarkupString)string.Empty;
-        var icon = Filtro.SortAsc ? "&uarr;" : "&darr;";
+        if (_filtro.SortBy != columna) return (MarkupString)string.Empty;
+        var icon = _filtro.SortAsc ? "&uarr;" : "&darr;";
         return (MarkupString)$"<span class=\"ms-1\">{icon}</span>";
     }
 
     private void OrdenarPor(string columna)
     {
-        if (Filtro.SortBy == columna)
-            Filtro.SortAsc = !Filtro.SortAsc;
+        if (_filtro.SortBy == columna)
+            _filtro.SortAsc = !_filtro.SortAsc;
         else
         {
-            Filtro.SortBy = columna;
-            Filtro.SortAsc = true;
+            _filtro.SortBy = columna;
+            _filtro.SortAsc = true;
         }
-        Filtro.PageNumber = 1;
-        _ = BuscarPacientes();
+        _filtro.PageNumber = 1;
+        _ = BuscarPacientesAsync();
     }
 
-    private async Task MostrarModalNuevo()
+    private async Task MostrarModalNuevoAsync()
     {
-        PacienteActual = new PacienteDto { FechaNacPaciente = DateTime.Today.AddYears(-20) };
-        ModalVisible = true;
+        _pacienteActual = new PacienteDto { FechaNacPaciente = DateTime.Today.AddYears(-20) };
+        _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task CerrarModal()
+    private async Task CerrarModalAsync()
     {
-        ModalVisible = false;
+        _modalVisible = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
-    private async Task EditarPaciente(PacienteDto Paciente)
+    private async Task EditarPacienteAsync(PacienteDto paciente)
     {
-        var AuthState = await AuthProvider.GetAuthenticationStateAsync();
-        var Rol = AuthState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        if (Rol != "administrador")
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        if (rol != "administrador")
         {
             await JS.InvokeVoidAsync("alert", "No tienes permisos para editar pacientes.");
             return;
         }
-        PacienteActual = Paciente;
-        ModalVisible = true;
+        _pacienteActual = paciente;
+        _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task ValidarYGuardar()
+    private async Task ValidarYGuardarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (PacienteActual.IdPaciente == 0)
+        if (_pacienteActual.IdPaciente == 0)
         {
-            var (Exito, Msg, _) = await PacientesApiService.GuardarPacienteAsync(PacienteActual);
-            await JS.InvokeVoidAsync("mostrarToastAsync", Msg, Exito ? "success" : "danger");
-            if (Exito)
+            var (exito, msg, _) = await PacientesApiService.GuardarPacienteAsync(_pacienteActual);
+            await JS.InvokeVoidAsync("mostrarToastAsync", msg, exito ? "success" : "danger");
+            if (exito)
             {
-                ModalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientes();
+                _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync();
             }
         }
         else
         {
-            var ResultadoOp = await PacientesApiService.GuardarPacienteAsync(PacienteActual.IdPaciente, PacienteActual);
-            var Mensaje = ResultadoOp.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
-            await JS.InvokeVoidAsync("mostrarToastAsync", Mensaje, ResultadoOp.IsSuccessStatusCode ? "success" : "danger");
-            if (ResultadoOp.IsSuccessStatusCode) { ModalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientes(); }
+            var resultadoOp = await PacientesApiService.GuardarPacienteAsync(_pacienteActual.IdPaciente, _pacienteActual);
+            var mensaje = resultadoOp.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
+            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, resultadoOp.IsSuccessStatusCode ? "success" : "danger");
+            if (resultadoOp.IsSuccessStatusCode) { _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync(); }
         }
     }
 
-    private async Task ConfirmarAnulacion(int Id)
+    private async Task ConfirmarAnulacionAsync(int id)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este paciente?"))
         {
-            var ResultadoOp = await PacientesApiService.AnularPacienteAsync(Id);
-            if (ResultadoOp.IsSuccessStatusCode)
+            var resultadoOp = await PacientesApiService.AnularPacienteAsync(id);
+            if (resultadoOp.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente anulado correctamente.", "success");
-                await BuscarPacientes();
+                await BuscarPacientesAsync();
             }
         }
     }
 
-    private async Task ConfirmarReactivacion(PacienteDto Paciente)
+    private async Task ConfirmarReactivacionAsync(PacienteDto paciente)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {Paciente.NombrePaciente}?"))
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.NombrePaciente}?"))
         {
-            Paciente.Anulado = false;
-            var ResultadoOp = await PacientesApiService.GuardarPacienteAsync(Paciente.IdPaciente, Paciente);
-            if (ResultadoOp.IsSuccessStatusCode)
+            paciente.Anulado = false;
+            var resultadoOp = await PacientesApiService.GuardarPacienteAsync(paciente.IdPaciente, paciente);
+            if (resultadoOp.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente reactivado correctamente.", "success");
-                await BuscarPacientes();
+                await BuscarPacientesAsync();
             }
         }
     }
 
-    private async Task ReenviarTemporal()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (PacienteActual.IdPaciente == 0) return;
-        var Ok = await JS.InvokeAsync<bool>("confirm", $"¿Reenviar una nueva contraseña temporal a {PacienteActual.CorreoElectronicoPaciente}?");
-        if (!Ok) return;
-        var (Exito, Msg) = await PacientesApiService.ReenviarCredencialesTemporalesAsync(PacienteActual.IdPaciente);
-        await JS.InvokeVoidAsync("mostrarToastAsync", Msg, Exito ? "success" : "danger");
-        if (Exito) await BuscarPacientes();
-    }
-
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

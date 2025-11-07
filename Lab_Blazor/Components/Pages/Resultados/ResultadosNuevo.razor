@@ -34,7 +34,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para ingresar resultados.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -43,14 +43,14 @@
         }
         else
         {
-            @if (cargando)
+            @if (_cargando)
             {
                 <div class="text-center text-primary my-5">
                     <div class="spinner-border" role="status"></div>
                     <div class="mt-2">Cargando datos...</div>
                 </div>
             }
-            else if (DatosOrden == null)
+            else if (_datosOrden == null)
             {
                 <div class="alert alert-warning text-center mt-5">
                     <i class="bi bi-exclamation-triangle me-2"></i> No se encontraron datos de la orden.
@@ -67,19 +67,19 @@
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Cédula</label>
-                                <input class="form-control" value="@DatosOrden.CedulaPaciente" disabled />
+                                <input class="form-control" value="@_datosOrden.CedulaPaciente" disabled />
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Nombre</label>
-                                <input class="form-control" value="@DatosOrden.NombrePaciente" disabled />
+                                <input class="form-control" value="@_datosOrden.NombrePaciente" disabled />
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Fecha Resultado</label>
-                                <InputDate class="form-control" @bind-Value="fechaResultado" />
+                                <InputDate class="form-control" @bind-Value="_fechaResultado" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Médico</label>
-                                <input class="form-control" value="@DatosOrden.NombreMedico" disabled />
+                                <input class="form-control" value="@_datosOrden.NombreMedico" disabled />
                             </div>
                         </div>
 
@@ -98,7 +98,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var grupo in ExamenesAgrupados)
+                                    @foreach (var grupo in _examenesAgrupados)
                                     {
                                         <tr class="table-primary">
                                             <td class="text-start fw-semibold">@grupo.Padre.NombreExamen</td>
@@ -111,7 +111,7 @@
                                                 <tr>
                                                     <td class="ps-4">@hijo.NombreExamen</td>
                                                     <td>
-                                                        <input type="text" class="form-control text-end" @bind="ValoresIngresados[hijo.IdExamen]" />
+                                                        <input type="text" class="form-control text-end" @bind="_valoresIngresados[hijo.IdExamen]" />
                                                     </td>
                                                     <td>@hijo.Unidad</td>
                                                     <td>@hijo.ValorReferencia</td>
@@ -123,7 +123,7 @@
                                             <tr>
                                                 <td class="ps-4">@grupo.Padre.NombreExamen</td>
                                                 <td>
-                                                    <input type="text" class="form-control text-end" @bind="ValoresIngresados[grupo.Padre.IdExamen]" />
+                                                    <input type="text" class="form-control text-end" @bind="_valoresIngresados[grupo.Padre.IdExamen]" />
                                                 </td>
                                                 <td>@grupo.Padre.Unidad</td>
                                                 <td>@grupo.Padre.ValorReferencia</td>
@@ -136,11 +136,11 @@
 
                         <div class="mb-4 mt-3">
                             <label class="form-label fw-semibold">Observaciones Generales</label>
-                            <textarea class="form-control" rows="3" placeholder="Ingrese observaciones adicionales..." @bind="observacionesGenerales"></textarea>
+                            <textarea class="form-control" rows="3" placeholder="Ingrese observaciones adicionales..." @bind="_observacionesGenerales"></textarea>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
-                            <button class="btn btn-success shadow-sm" @onclick="GuardarResultados">
+                            <button class="btn btn-success shadow-sm" @onclick="GuardarResultadosAsync">
                                 <i class="bi bi-save me-1"></i> Guardar Resultado
                             </button>
                             <button class="btn btn-secondary shadow-sm" @onclick="@(() => Navigation.NavigateTo("/ordenes"))">
@@ -173,12 +173,12 @@
     [Parameter] public int idOrden { get; set; }
     [Parameter] public List<int> idsExamenes { get; set; } = new();
 
-    private OrdenDetalleDto? DatosOrden;
-    private List<(ExamenDto Padre, List<ExamenDto> Hijos)> ExamenesAgrupados = new();
-    private Dictionary<int, string> ValoresIngresados = new();
-    private DateTime fechaResultado = DateTime.Today;
-    private string observacionesGenerales = string.Empty;
-    private bool cargando = true;
+    private OrdenDetalleDto? _datosOrden;
+    private List<(ExamenDto Padre, List<ExamenDto> Hijos)> _examenesAgrupados = new();
+    private Dictionary<int, string> _valoresIngresados = new();
+    private DateTime _fechaResultado = DateTime.Today;
+    private string _observacionesGenerales = string.Empty;
+    private bool _cargando = true;
 
     private bool _sesionVerificada = false;
 
@@ -206,7 +206,7 @@
                             idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
                         if (query.TryGetValue("idsExamenes", out var ids))
                             idsExamenes = ids.Select(int.Parse).ToList();
-                        await InicializarDatos();
+                        await InicializarDatosAsync();
                     }
                 }
             }
@@ -216,18 +216,18 @@
             }
             finally
             {
-                cargando = false;
+                _cargando = false;
                 StateHasChanged();
             }
         }
     }
 
-    private async Task InicializarDatos()
+    private async Task InicializarDatosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        DatosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
-        if (DatosOrden == null) return;
+        _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+        if (_datosOrden == null) return;
 
         var todos = await ExamenesApi.ListarExamenesAsync();
         foreach (var idPadre in idsExamenes)
@@ -235,14 +235,14 @@
             var padre = todos.FirstOrDefault(e => e.IdExamen == idPadre);
             if (padre == null) continue;
             var hijos = await ExamenesApi.ListarExamenesHijosAsync(idPadre);
-            ExamenesAgrupados.Add((padre, hijos));
-            ValoresIngresados.TryAdd(padre.IdExamen, string.Empty);
+            _examenesAgrupados.Add((padre, hijos));
+            _valoresIngresados.TryAdd(padre.IdExamen, string.Empty);
             foreach (var hijo in hijos)
-                ValoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
+                _valoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
         }
     }
 
-    private async Task GuardarResultados()
+    private async Task GuardarResultadosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -250,7 +250,7 @@
         {
             var resultados = new List<ResultadoExamenDto>();
 
-            foreach (var grupo in ExamenesAgrupados)
+            foreach (var grupo in _examenesAgrupados)
             {
                 if (grupo.Hijos.Any())
                 {
@@ -260,7 +260,7 @@
                         {
                             IdExamen = hijo.IdExamen,
                             NombreExamen = hijo.NombreExamen ?? "",
-                            Valor = ValoresIngresados.GetValueOrDefault(hijo.IdExamen, ""),
+                            Valor = _valoresIngresados.GetValueOrDefault(hijo.IdExamen, ""),
                             Unidad = hijo.Unidad ?? "",
                             ValorReferencia = hijo.ValorReferencia ?? "",
                             Observacion = ""
@@ -273,7 +273,7 @@
                     {
                         IdExamen = grupo.Padre.IdExamen,
                         NombreExamen = grupo.Padre.NombreExamen ?? "",
-                        Valor = ValoresIngresados.GetValueOrDefault(grupo.Padre.IdExamen, ""),
+                        Valor = _valoresIngresados.GetValueOrDefault(grupo.Padre.IdExamen, ""),
                         Unidad = grupo.Padre.Unidad ?? "",
                         ValorReferencia = grupo.Padre.ValorReferencia ?? "",
                         Observacion = ""
@@ -284,10 +284,10 @@
             var dto = new ResultadoGuardarDto
             {
                 IdOrden = idOrden,
-                IdPaciente = DatosOrden?.IdPaciente ?? 0,
-                FechaResultado = fechaResultado,
+                IdPaciente = _datosOrden?.IdPaciente ?? 0,
+                FechaResultado = _fechaResultado,
                 Examenes = resultados,
-                ObservacionesGenerales = observacionesGenerales
+                ObservacionesGenerales = _observacionesGenerales
             };
 
             var response = await OrdenesApi.GuardarResultadosAsync(dto);
@@ -318,5 +318,5 @@
         }
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

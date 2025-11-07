@@ -39,7 +39,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -52,7 +52,7 @@
                 <i class="bi bi-handshake text-primary fs-4 me-2"></i>Registrar Nuevo Convenio
             </h4>
 
-            @if (!isRendered)
+            @if (!_isRendered)
             {
                 <div class="text-center py-5 text-primary">
                     <div class="spinner-border me-2"></div>
@@ -65,9 +65,9 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Médico</label>
-                            <select class="form-select" @bind="idMedicoSeleccionado">
+                            <select class="form-select" @bind="_idMedicoSeleccionado">
                                 <option value="">Seleccione un médico</option>
-                                @foreach (var m in medicos)
+                                @foreach (var m in _medicos)
                                 {
                                     <option value="@m.IdMedico">@m.NombreMedico</option>
                                 }
@@ -75,24 +75,24 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Fecha Convenio</label>
-                            <input type="text" class="form-control" value="@fechaConvenio.ToString("dd/MM/yyyy")" disabled />
+                            <input type="text" class="form-control" value="@_fechaConvenio.ToString("dd/MM/yyyy")" disabled />
                         </div>
                         <div class="col-md-3">
-                            <button class="btn btn-primary w-100" @onclick="CargarOrdenes" disabled="@(!idMedicoSeleccionado.HasValue)">
+                            <button class="btn btn-primary w-100" @onclick="CargarOrdenesAsync" disabled="@(!_idMedicoSeleccionado.HasValue)">
                                 <i class="bi bi-search me-1"></i> Cargar Órdenes
                             </button>
                         </div>
                     </div>
                 </div>
 
-                @if (idMedicoSeleccionado == null)
+                @if (_idMedicoSeleccionado == null)
                 {
                     <div class="alert alert-info text-center shadow-sm">
                         <i class="bi bi-info-circle me-2"></i>Seleccione un médico y presione <strong>Cargar Órdenes</strong> para continuar.
                     </div>
                 }
 
-                @if (cargandoOrdenes)
+                @if (_cargandoOrdenes)
                 {
                     <div class="text-center py-5 text-primary">
                         <div class="spinner-border me-2"></div>
@@ -101,7 +101,7 @@
                 }
 
 
-                @if (ordenesDisponibles.Any())
+                @if (_ordenesDisponibles.Any())
                 {
                     <div class="row g-4">
                         <div class="col-lg-6">
@@ -122,7 +122,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var o in ordenesDisponibles)
+                                                @foreach (var o in _ordenesDisponibles)
                                                 {
                                                     <tr>
                                                         <td data-label="N° Orden">@o.NumeroOrden</td>
@@ -137,10 +137,10 @@
                                         </table>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-                                        <small class="text-muted">Total de órdenes disponibles: <strong>@ordenesDisponibles.Count</strong></small>
+                                        <small class="text-muted">Total de órdenes disponibles: <strong>@_ordenesDisponibles.Count</strong></small>
                                         <div class="text-end fw-bold mt-2 border-top pt-2">
                                             <span class="text-muted me-2">Total general:</span>
-                                            <span class="text-primary fs-6">@ordenesDisponibles.Sum(o => o.Total).ToString("C")</span>
+                                            <span class="text-primary fs-6">@_ordenesDisponibles.Sum(o => o.Total).ToString("C")</span>
                                         </div>
                                     </div>
                                 </div>
@@ -154,7 +154,7 @@
                                     <small class="text-muted">Estas órdenes serán incluidas en el convenio</small>
                                 </div>
                                 <div class="card-body p-2">
-                                    @if (ordenesSeleccionadas.Count == 0)
+                                    @if (OrdenesSeleccionadas.Count == 0)
                                     {
                                         <div class="alert alert-info text-center my-3 shadow-sm">
                                             <i class="bi bi-info-circle me-2"></i>No ha seleccionado ninguna orden.
@@ -172,7 +172,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach (var s in ordenesSeleccionadas)
+                                                    @foreach (var s in OrdenesSeleccionadas)
                                                     {
                                                         <tr>
                                                             <td data-label="N° Orden">@s.NumeroOrden</td>
@@ -184,10 +184,10 @@
                                             </table>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-                                            <small class="text-muted">Órdenes seleccionadas: <strong>@ordenesSeleccionadas.Count</strong></small>
+                                            <small class="text-muted">Órdenes seleccionadas: <strong>@OrdenesSeleccionadas.Count</strong></small>
                                             <div class="text-end fw-bold mt-2 border-top pt-2">
                                                 <span class="text-muted me-2">Total seleccionado:</span>
-                                                <span class="text-success fs-6">@ordenesSeleccionadas.Sum(o => o.Total).ToString("C")</span>
+                                                <span class="text-success fs-6">@OrdenesSeleccionadas.Sum(o => o.Total).ToString("C")</span>
                                             </div>
                                         </div>
                                     }
@@ -197,13 +197,13 @@
                     </div>
 
                     <div class="mt-4 text-end">
-                        <button class="btn btn-success px-4" @onclick="MostrarModalPago" disabled="@(ordenesSeleccionadas.Count == 0)">
+                        <button class="btn btn-success px-4" @onclick="MostrarModalPagoAsync" disabled="@(OrdenesSeleccionadas.Count == 0)">
                             <i class="bi bi-cash-coin me-1"></i> Calcular Pago
                         </button>
                     </div>
                 }
 
-                @if (mostrarModal)
+                @if (_mostrarModal)
                 {
                     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                         <div class="modal-dialog modal-dialog-centered">
@@ -212,25 +212,25 @@
                                     <h5 class="modal-title">
                                         <i class="bi bi-calculator me-2"></i>Pago al Médico
                                     </h5>
-                                    <button class="btn-close" @onclick="CerrarModal"></button>
+                                    <button class="btn-close" @onclick="CerrarModalAsync"></button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Porcentaje de Comisión (%)</label>
-                                        <InputNumber class="form-control" @bind-Value="porcentajeComision" Min="0" Max="100" />
+                                        <InputNumber class="form-control" @bind-Value="_porcentajeComision" Min="0" Max="100" />
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Monto Total</label>
-                                        <input class="form-control" value="@ordenesSeleccionadas.Sum(o => o.Total).ToString("C")" disabled />
+                                        <input class="form-control" value="@OrdenesSeleccionadas.Sum(o => o.Total).ToString("C")" disabled />
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Total a Pagar</label>
-                                        <input class="form-control" value="@totalPagar.ToString("C")" disabled />
+                                        <input class="form-control" value="@TotalPagar.ToString("C")" disabled />
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
-                                    <button class="btn btn-primary" @onclick="RegistrarConvenio">
+                                    <button class="btn btn-secondary" @onclick="CerrarModalAsync">Cancelar</button>
+                                    <button class="btn btn-primary" @onclick="RegistrarConvenioAsync">
                                         <i class="bi bi-save me-1"></i> Registrar
                                     </button>
                                 </div>
@@ -259,17 +259,18 @@
 </AuthorizeView>
 
 @code {
-    private List<MedicoDto> medicos = new();
-    private List<OrdenDisponibleExtendida> ordenesDisponibles = new();
-    private List<OrdenDisponibleExtendida> ordenesSeleccionadas => ordenesDisponibles.Where(o => o.Seleccionado).ToList();
-    private int? idMedicoSeleccionado;
-    private DateTime fechaConvenio = DateTime.Today;
-    private decimal porcentajeComision;
-    private bool isRendered;
-    private bool mostrarModal;
-    private decimal totalPagar => ordenesSeleccionadas.Sum(o => o.Total) * (porcentajeComision / 100m);
-
+    private List<MedicoDto> _medicos = new();
+    private List<OrdenDisponibleExtendida> _ordenesDisponibles = new();
+    private int? _idMedicoSeleccionado;
+    private DateTime _fechaConvenio = DateTime.Today;
+    private decimal _porcentajeComision;
+    private bool _isRendered;
+    private bool _mostrarModal;
     private bool _sesionVerificada = false;
+    private bool _cargandoOrdenes = false;
+
+    private List<OrdenDisponibleExtendida> OrdenesSeleccionadas => _ordenesDisponibles.Where(o => o.Seleccionado).ToList();
+    private decimal TotalPagar => OrdenesSeleccionadas.Sum(o => o.Total) * (_porcentajeComision / 100m);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -285,7 +286,7 @@
 
             if (!user.Identity?.IsAuthenticated ?? true)
             {
-                isRendered = true;
+                _isRendered = true;
                 StateHasChanged();
                 return;
             }
@@ -299,28 +300,26 @@
 
             if (puedeVer)
             {
-                medicos = await MedicosApi.ListarMedicosAsync();
+                _medicos = await MedicosApi.ListarMedicosAsync();
             }
 
-            isRendered = true;
+            _isRendered = true;
             StateHasChanged();
         }
     }
 
-    private bool cargandoOrdenes = false;
-
-    private async Task CargarOrdenes()
+    private async Task CargarOrdenesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (idMedicoSeleccionado.HasValue)
+        if (_idMedicoSeleccionado.HasValue)
         {
-            cargandoOrdenes = true;
+            _cargandoOrdenes = true;
             StateHasChanged();
 
-            var result = await ConveniosApi.ListarOrdenesDisponiblesPorMedicoAsync(idMedicoSeleccionado.Value);
+            var result = await ConveniosApi.ListarOrdenesDisponiblesPorMedicoAsync(_idMedicoSeleccionado.Value);
 
-            ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
+            _ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
             {
                 IdOrden = o.IdOrden,
                 NumeroOrden = o.NumeroOrden,
@@ -329,45 +328,42 @@
                 Total = o.Total
             }).ToList();
 
-            cargandoOrdenes = false;
-            await JS.InvokeVoidAsync("mostrarToastAsync", $"{ordenesDisponibles.Count} órdenes cargadas correctamente.", "success");
+            _cargandoOrdenes = false;
+            await JS.InvokeVoidAsync("mostrarToastAsync", $"{_ordenesDisponibles.Count} órdenes cargadas correctamente.", "success");
             StateHasChanged();
         }
     }
 
-    private async Task MostrarModalPago()
+    private async Task MostrarModalPagoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModal = true;
+        _mostrarModal = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
         StateHasChanged();
     }
 
-    private async Task CerrarModal()
+    private async Task CerrarModalAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModal = false;
-        porcentajeComision = 0;
+        _mostrarModal = false;
+        _porcentajeComision = 0;
         await JS.InvokeVoidAsync("marcarModalCerrado");
         StateHasChanged();
     }
 
-
-
-
-    private async Task RegistrarConvenio()
+    private async Task RegistrarConvenioAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         var dto = new ConvenioRegistroDto
         {
-            IdMedico = idMedicoSeleccionado,
-            FechaConvenio = DateOnly.FromDateTime(fechaConvenio),
-            PorcentajeComision = porcentajeComision,
-            MontoTotal = ordenesSeleccionadas.Sum(o => o.Total),
-            Ordenes = ordenesSeleccionadas.Select(o => new DetalleConvenioRegistroDto
+            IdMedico = _idMedicoSeleccionado,
+            FechaConvenio = DateOnly.FromDateTime(_fechaConvenio),
+            PorcentajeComision = _porcentajeComision,
+            MontoTotal = OrdenesSeleccionadas.Sum(o => o.Total),
+            Ordenes = OrdenesSeleccionadas.Select(o => new DetalleConvenioRegistroDto
             {
                 IdOrden = o.IdOrden,
                 Subtotal = o.Total
@@ -376,7 +372,7 @@
 
         var exito = await ConveniosApi.RegistrarConvenioAsync(dto);
 
-        mostrarModal = false;
+        _mostrarModal = false;
         await JS.InvokeVoidAsync("eval", @"
         document.body.classList.remove('modal-activo','modal-open');
         document.body.style.overflow='';
@@ -401,8 +397,5 @@
         public bool Seleccionado { get; set; }
     }
 
-
-
-
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

@@ -9,6 +9,5 @@ namespace Lab_APIRest.Services.Usuarios
         Task<int> GuardarUsuarioAsync(UsuarioCrearDto usuario, CancellationToken ct = default);
         Task<bool> GuardarUsuarioAsync(UsuarioEditarDto usuario, CancellationToken ct = default);
         Task<bool> CambiarEstadoUsuarioAsync(int idUsuario, bool activo, string correoUsuarioActual, CancellationToken ct = default);
-        Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesUsuarioAsync(int idUsuario, CancellationToken ct = default);
     }
 }

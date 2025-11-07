@@ -1,5 +1,4 @@
 ﻿using Lab_Contracts.Auth;
-using Lab_Contracts.Shared;
 
 namespace Lab_APIRest.Services.Auth
 {

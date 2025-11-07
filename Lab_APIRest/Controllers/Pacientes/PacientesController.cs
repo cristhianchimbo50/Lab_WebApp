@@ -64,11 +64,10 @@ namespace Lab_APIRest.Controllers
                 new { idPaciente = resultado.Paciente!.IdPaciente },
                 new
                 {
-                    Mensaje = "Paciente registrado correctamente. Se ha enviado un correo con sus credenciales.",
+                    Mensaje = "Paciente registrado correctamente. Se ha enviado un correo con el enlace de activación.",
                     resultado.Paciente!.IdPaciente,
                     resultado.Paciente!.NombrePaciente,
-                    resultado.Paciente!.CorreoElectronicoPaciente,
-                    resultado.Paciente!.ContraseniaTemporal
+                    resultado.Paciente!.CorreoElectronicoPaciente
                 }
             );
         }
@@ -91,14 +90,6 @@ namespace Lab_APIRest.Controllers
                 return NotFound("Paciente no encontrado o ya estaba anulado.");
 
             return Ok(new { Mensaje = "Paciente anulado correctamente." });
-        }
-
-        [HttpPost("{idPaciente:int}/reenviar-temporal")]
-        public async Task<IActionResult> ReenviarCredencialesTemporalesPaciente(int idPaciente)
-        {
-            var (Exito, Mensaje, NuevaTemporal) = await _pacienteService.ReenviarCredencialesTemporalesPacienteAsync(idPaciente);
-            if (!Exito) return BadRequest(new { Mensaje });
-            return Ok(new { Mensaje, NuevaTemporal });
         }
     }
 }

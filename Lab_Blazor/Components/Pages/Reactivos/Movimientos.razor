@@ -30,7 +30,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -55,7 +55,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect class="form-select" @bind-Value="FiltroSeleccionado">
+                        <InputSelect class="form-select" @bind-Value="_filtroSeleccionado">
                             <option value="">-- Seleccione --</option>
                             <option value="numero">N° Movimiento</option>
                             <option value="reactivo">Reactivo</option>
@@ -64,13 +64,13 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="ValorFiltro"
+                        <InputText class="form-control" @bind-Value="_valorFiltro"
                                    placeholder="Ingrese valor a buscar"
                                    @onkeypress="@(e => { if (e.Key == "Enter") FiltrarMovimientosAsync(); })" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="FiltrarMovimientosAsync" disabled="@Buscando"><i class="bi bi-search me-1"></i>Buscar</button>
-                        <button class="btn btn-outline-secondary" @onclick="LimpiarFiltros" disabled="@Buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                        <button class="btn btn-primary" @onclick="FiltrarMovimientosAsync" disabled="@_buscando"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarFiltrosAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
@@ -79,18 +79,18 @@
                 <div class="card-body row g-3">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Desde</label>
-                        <InputDate @bind-Value="Filtro.FechaDesde" class="form-control" />
+                        <InputDate @bind-Value="_filtro.FechaDesde" class="form-control" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Hasta</label>
-                        <InputDate @bind-Value="Filtro.FechaHasta" class="form-control" />
+                        <InputDate @bind-Value="_filtro.FechaHasta" class="form-control" />
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-4">
-                        <InputCheckbox @bind-Value="Filtro.IncluirIngresos" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_filtro.IncluirIngresos" class="form-check-input me-2" />
                         <label class="form-check-label">Ingresos</label>
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-4">
-                        <InputCheckbox @bind-Value="Filtro.IncluirEgresos" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_filtro.IncluirEgresos" class="form-check-input me-2" />
                         <label class="form-check-label">Egresos</label>
                     </div>
                 </div>
@@ -98,15 +98,15 @@
 
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div class="text-muted small">
-                    @if (Resultado != null)
+                    @if (_resultado != null)
                     {
-                        <span>Mostrando página @Resultado.PageNumber de @TotalPaginas (Total: @Resultado.TotalCount)</span>
+                        <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
                     }
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
                     <label class="form-label mb-0 small">Registros por página:</label>
-                    <select class="form-select form-select-sm w-auto" @bind="Filtro.PageSize" @bind:after="(() => { Filtro.PageNumber = 1; FiltrarMovimientosAsync(); })">
+                    <select class="form-select form-select-sm w-auto" @bind="_filtro.PageSize" @bind:after="(() => { _filtro.PageNumber = 1; FiltrarMovimientosAsync(); })">
                         <option value="5">5</option>
                         <option value="10">10</option>
                         <option value="15">15</option>
@@ -116,27 +116,27 @@
 
                     <div class="d-flex align-items-center ms-2">
                         <button class="btn btn-sm btn-outline-secondary me-1"
-                                disabled="@(Resultado == null || Resultado.PageNumber == 1)"
-                                @onclick="(() => CambiarPagina(-1))">
+                                disabled="@(_resultado == null || _resultado.PageNumber == 1)"
+                                @onclick="(() => CambiarPaginaAsync(-1))">
                             <i class="bi bi-chevron-left"></i>
                         </button>
 
                         <button class="btn btn-sm btn-outline-secondary"
-                                disabled="@(Resultado == null || Resultado.PageNumber >= TotalPaginas)"
-                                @onclick="(() => CambiarPagina(1))">
+                                disabled="@(_resultado == null || _resultado.PageNumber >= TotalPaginas)"
+                                @onclick="(() => CambiarPaginaAsync(1))">
                             <i class="bi bi-chevron-right"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
-            @if (Resultado == null || Resultado.Items == null)
+            @if (_resultado == null || _resultado.Items == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                 </div>
             }
-            else if (!Resultado.Items.Any())
+            else if (!_resultado.Items.Any())
             {
                 <div class="alert alert-warning text-center shadow-sm">
                     <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron movimientos.
@@ -159,7 +159,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var m in Resultado.Items)
+                                @foreach (var m in _resultado.Items)
                                 {
                                     <tr>
                                         <td data-label="N° Movimiento">@m.IdMovimientoReactivo</td>
@@ -209,14 +209,12 @@
 </AuthorizeView>
 
 @code {
-    private bool cargado;
-    private MovimientoReactivoFiltroDto Filtro = new();
-    private ResultadoPaginadoDto<MovimientoReactivoDto>? Resultado = null;
-    private string? FiltroSeleccionado = null;
-    private string ValorFiltro = string.Empty;
-
-    private bool Buscando = false;
-
+    private bool _cargado;
+    private MovimientoReactivoFiltroDto _filtro = new();
+    private ResultadoPaginadoDto<MovimientoReactivoDto>? _resultado = null;
+    private string? _filtroSeleccionado = null;
+    private string _valorFiltro = string.Empty;
+    private bool _buscando = false;
     private bool _sesionVerificada = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -228,46 +226,46 @@
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            cargado = true;
-            Resultado = null;
+            _cargado = true;
+            _resultado = null;
             StateHasChanged();
         }
     }
 
-    private int TotalPaginas => Resultado == null || Resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
+    private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
     private async Task FiltrarMovimientosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (Buscando) return;
+        if (_buscando) return;
 
         try
         {
-            Buscando = true;
-            Filtro.PageNumber = 1;
+            _buscando = true;
+            _filtro.PageNumber = 1;
 
-            Filtro.IdMovimientoReactivo = null;
-            Filtro.NombreReactivo = null;
-            Filtro.Observacion = null;
+            _filtro.IdMovimientoReactivo = null;
+            _filtro.NombreReactivo = null;
+            _filtro.Observacion = null;
 
-            if (!string.IsNullOrWhiteSpace(FiltroSeleccionado) && !string.IsNullOrWhiteSpace(ValorFiltro))
+            if (!string.IsNullOrWhiteSpace(_filtroSeleccionado) && !string.IsNullOrWhiteSpace(_valorFiltro))
             {
-                switch (FiltroSeleccionado)
+                switch (_filtroSeleccionado)
                 {
                     case "numero":
-                        if (int.TryParse(ValorFiltro, out var id))
-                            Filtro.IdMovimientoReactivo = id.ToString();
+                        if (int.TryParse(_valorFiltro, out var id))
+                            _filtro.IdMovimientoReactivo = id.ToString();
                         break;
                     case "reactivo":
-                        Filtro.NombreReactivo = ValorFiltro;
+                        _filtro.NombreReactivo = _valorFiltro;
                         break;
                     case "observacion":
-                        Filtro.Observacion = ValorFiltro;
+                        _filtro.Observacion = _valorFiltro;
                         break;
                 }
             }
 
-            Resultado = await MovimientosApi.BuscarMovimientosAsync(Filtro);
+            _resultado = await MovimientosApi.BuscarMovimientosAsync(_filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Movimientos cargados correctamente.", "success");
         }
         catch
@@ -276,51 +274,51 @@
         }
         finally
         {
-            Buscando = false;
-            cargado = true;
+            _buscando = false;
+            _cargado = true;
             StateHasChanged();
         }
     }
 
-    private async Task LimpiarFiltros()
+    private async Task LimpiarFiltrosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        Filtro = new();
-        ValorFiltro = string.Empty;
-        FiltroSeleccionado = null;
-        Resultado = null;
+        _filtro = new();
+        _valorFiltro = string.Empty;
+        _filtroSeleccionado = null;
+        _resultado = null;
         StateHasChanged();
     }
 
-    private async Task CambiarPagina(int delta)
+    private async Task CambiarPaginaAsync(int delta)
     {
-        if (Resultado == null) return;
-        var nueva = Math.Max(1, Math.Min(TotalPaginas, Resultado.PageNumber + delta));
-        if (nueva == Resultado.PageNumber) return;
-        Filtro.PageNumber = nueva;
+        if (_resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, _resultado.PageNumber + delta));
+        if (nueva == _resultado.PageNumber) return;
+        _filtro.PageNumber = nueva;
         await FiltrarMovimientosAsync();
     }
 
     private MarkupString OrdenIcono(string columna)
     {
-        if (Filtro.SortBy != columna) return (MarkupString)string.Empty;
-        var icon = Filtro.SortAsc ? "&uarr;" : "&darr;";
+        if (_filtro.SortBy != columna) return (MarkupString)string.Empty;
+        var icon = _filtro.SortAsc ? "&uarr;" : "&darr;";
         return (MarkupString)$"<span class=\"ms-1\">{icon}</span>";
     }
 
     private void OrdenarPor(string columna)
     {
-        if (Filtro.SortBy == columna)
-            Filtro.SortAsc = !Filtro.SortAsc;
+        if (_filtro.SortBy == columna)
+            _filtro.SortAsc = !_filtro.SortAsc;
         else
         {
-            Filtro.SortBy = columna;
-            Filtro.SortAsc = true;
+            _filtro.SortBy = columna;
+            _filtro.SortAsc = true;
         }
-        Filtro.PageNumber = 1;
+        _filtro.PageNumber = 1;
         _ = FiltrarMovimientosAsync();
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

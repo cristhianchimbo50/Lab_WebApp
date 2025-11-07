@@ -1,4 +1,5 @@
 ﻿@page "/usuarios"
+<PageTitle>Gestión de Usuarios</PageTitle>
 @using Lab_Blazor.Services.Usuarios
 @using Lab_Contracts.Usuarios
 @using Microsoft.AspNetCore.Components.Authorization
@@ -24,7 +25,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos para acceder a la gestión de usuarios.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -44,7 +45,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Filtrar por</label>
-                        <select class="form-select" @bind="campoFiltro">
+                        <select class="form-select" @bind="_campoFiltro">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="correo">Correo</option>
@@ -54,18 +55,18 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        @if (campoFiltro == "rol")
+                        @if (_campoFiltro == "rol")
                         {
-                            <select class="form-select" @bind="valorFiltro">
+                            <select class="form-select" @bind="_valorFiltro">
                                 <option value="">-- Todos --</option>
                                 <option value="administrador">Administrador</option>
                                 <option value="recepcionista">Recepcionista</option>
                                 <option value="laboratorista">Laboratorista</option>
                             </select>
                         }
-                        else if (campoFiltro == "activo")
+                        else if (_campoFiltro == "activo")
                         {
-                            <select class="form-select" @bind="valorFiltro">
+                            <select class="form-select" @bind="_valorFiltro">
                                 <option value="">-- Todos --</option>
                                 <option value="true">Activo</option>
                                 <option value="false">Inactivo</option>
@@ -73,11 +74,11 @@
                         }
                         else
                         {
-                            <input class="form-control" @bind="valorFiltro" placeholder="Ingrese valor a buscar..." />
+                            <input class="form-control" @bind="_valorFiltro" placeholder="Ingrese valor a buscar..." />
                         }
                     </div>
                     <div class="col-md-2 text-end">
-                        <button class="btn btn-primary w-100 shadow-sm" @onclick="Buscar">
+                        <button class="btn btn-primary w-100 shadow-sm" @onclick="BuscarAsync">
                             <i class="bi bi-search">Buscar</i>
                         </button>
                     </div>
@@ -89,21 +90,21 @@
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(mensaje))
+            @if (!string.IsNullOrEmpty(_mensaje))
             {
-                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
-                    @mensaje
-                    <button type="button" class="btn-close" @onclick="() => mensaje = null"></button>
+                <div class="alert alert-@_tipoMensaje alert-dismissible fade show" role="alert">
+                    @_mensaje
+                    <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
                 </div>
             }
 
-            @if (!mostroBusqueda)
+            @if (!_mostroBusqueda)
             {
                 <div class="alert alert-info text-center">
                     <i class="bi bi-info-circle me-2"></i> Usa los filtros y presiona <strong>Buscar</strong> para ver los usuarios.
                 </div>
             }
-            else if (usuarios.Count == 0)
+            else if (_usuarios.Count == 0)
             {
                 <div class="alert alert-warning text-center">
                     <i class="bi bi-exclamation-triangle me-2"></i> No se encontraron usuarios internos.
@@ -119,14 +120,13 @@
                                 <th>Correo</th>
                                 <th>Rol</th>
                                 <th>Estado</th>
-                                <th>Temporal</th>
                                 <th>Creación</th>
                                 <th>Último acceso</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var usuario in usuarios)
+                            @foreach (var usuario in _usuarios)
                             {
                                 <tr>
                                     <td>@usuario.NombreUsuario</td>
@@ -137,18 +137,12 @@
                                             @(usuario.Activo ? "Activo" : "Inactivo")
                                         </span>
                                     </td>
-                                    <td>
-                                        @if (usuario.EsContraseniaTemporal)
-                                        {
-                                            <span class="badge bg-warning text-dark">Temporal</span>
-                                        }
-                                    </td>
                                     <td>@usuario.FechaCreacion.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                     <td>@(usuario.UltimoAcceso?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                                     <td>
                                         <div class="d-flex justify-content-center gap-2">
                                             <button class="btn btn-link p-0 text-primary" title="Ver detalle"
-                                                    @onclick="() => AbrirModalDetalle(usuario.IdUsuario)">
+                                                    @onclick="() => AbrirModalDetalleAsync(usuario.IdUsuario)">
                                                 <i class="bi bi-eye"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-primary" title="Editar"
@@ -157,8 +151,8 @@
                                             </button>
                                             <button class="btn btn-sm @(usuario.Activo ? "btn-outline-danger" : "btn-outline-success")"
                                                     title="@(usuario.Activo ? "Deshabilitar" : "Habilitar")"
-                                                    @onclick="() => CambiarEstado(usuario)"
-                                                    disabled="@(usuario.CorreoUsuario == usuarioActualCorreo)">
+                                                    @onclick="() => CambiarEstadoAsync(usuario)"
+                                                    disabled="@(usuario.CorreoUsuario == _usuarioActualCorreo)">
                                                 <i class="bi @(usuario.Activo ? "bi-x-circle-fill" : "bi-check-circle-fill")"></i>
                                             </button>
                                         </div>
@@ -170,24 +164,24 @@
                 </div>
             }
 
-            <div class="modal fade @(modalDetalleVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal fade @(_modalDetalleVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-md modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
                         <div class="modal-header bg-info text-white">
                             <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Detalle de Usuario</h5>
-                            <button type="button" class="btn-close" @onclick="CerrarModalDetalle"></button>
+                            <button type="button" class="btn-close" @onclick="CerrarModalDetalle">
+                            </button>
                         </div>
                         <div class="modal-body">
-                            @if (detalleUsuario != null)
+                            @if (_detalleUsuario != null)
                             {
                                 <ul class="list-group list-group-flush">
-                                    <li class="list-group-item"><strong>Nombre:</strong> @detalleUsuario.NombreUsuario</li>
-                                    <li class="list-group-item"><strong>Correo:</strong> @detalleUsuario.CorreoUsuario</li>
-                                    <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@detalleUsuario.Rol</span></li>
-                                    <li class="list-group-item"><strong>Activo:</strong> @(detalleUsuario.Activo ? "Sí" : "No")</li>
-                                    <li class="list-group-item"><strong>Temporal:</strong> @(detalleUsuario.EsContraseniaTemporal ? "Sí" : "No")</li>
-                                    <li class="list-group-item"><strong>Fecha creación:</strong> @detalleUsuario.FechaCreacion.ToLocalTime()</li>
-                                    <li class="list-group-item"><strong>Último acceso:</strong> @(detalleUsuario.UltimoAcceso?.ToLocalTime().ToString() ?? "-")</li>
+                                    <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.NombreUsuario</li>
+                                    <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.CorreoUsuario</li>
+                                    <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.Rol</span></li>
+                                    <li class="list-group-item"><strong>Activo:</strong> @_detalleUsuario.Activo ? "Sí" : "No"</li>
+                                    <li class="list-group-item"><strong>Fecha creación:</strong> @_detalleUsuario.FechaCreacion.ToLocalTime()</li>
+                                    <li class="list-group-item"><strong>Último acceso:</strong> @_detalleUsuario.UltimoAcceso?.ToLocalTime().ToString() ?? "-"</li>
                                 </ul>
                             }
                         </div>
@@ -200,47 +194,40 @@
                 </div>
             </div>
 
-            <div class="modal fade @(modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal fade @(_modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-md modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
-                        <EditForm Model="@usuarioActual" OnValidSubmit="GuardarUsuario">
+                        <EditForm Model="@_usuarioActual" OnValidSubmit="GuardarUsuarioAsync">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">
-                                    <i class="bi bi-person-circle me-2"></i>@(usuarioActual.IdUsuario == 0 ? "Nuevo Usuario" : "Editar Usuario")
+                                    <i class="bi bi-person-circle me-2"></i>@(_usuarioActual.IdUsuario == 0 ? "Nuevo Usuario" : "Editar Usuario")
                                 </h5>
-                                <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                                <button type="button" class="btn-close" @onclick="CerrarModal">
+                                </button>
                             </div>
                             <div class="modal-body">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="mb-2">
                                     <label class="form-label">Nombre</label>
-                                    <InputText class="form-control" @bind-Value="usuarioActual.NombreUsuario" />
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.NombreUsuario" />
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Correo</label>
-                                    <InputText class="form-control" @bind-Value="usuarioActual.CorreoUsuario" readonly="@(usuarioActual.IdUsuario != 0)" />
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.CorreoUsuario" readonly="@(_usuarioActual.IdUsuario != 0)" />
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Rol</label>
-                                    <InputSelect class="form-select" @bind-Value="usuarioActual.Rol">
+                                    <InputSelect class="form-select" @bind-Value="_usuarioActual.Rol">
                                         <option value="">Seleccione</option>
                                         <option value="administrador">Administrador</option>
                                         <option value="recepcionista">Recepcionista</option>
                                         <option value="laboratorista">Laboratorista</option>
                                     </InputSelect>
                                 </div>
-                                @if (usuarioActual.IdUsuario != 0 && usuarioActual.EsContraseniaTemporal && usuarioActual.Activo)
-                                {
-                                    <div class="mt-3">
-                                        <button type="button" class="btn btn-warning w-100" @onclick="() => ReenviarCredenciales(usuarioActual.IdUsuario)">
-                                            <i class="bi bi-envelope-arrow-up me-1"></i> Reenviar contraseña temporal
-                                        </button>
-                                    </div>
-                                }
                             </div>
                             <div class="modal-footer">
-                                <button type="submit" class="btn btn-primary" disabled="@cargando">
+                                <button type="submit" class="btn btn-primary" disabled="@_cargando">
                                     <i class="bi bi-save me-1"></i>Guardar
                                 </button>
                                 <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
@@ -271,15 +258,14 @@
 </AuthorizeView>
 
 @code {
-    List<UsuarioListadoDto> usuarios = new();
-    UsuarioFiltroDto filtro = new();
-    UsuarioEditarDto usuarioActual = new();
-    UsuarioListadoDto? detalleUsuario;
-    bool modalVisible, modalDetalleVisible, cargando, esNuevo, mostroBusqueda;
-    string mensaje = "", tipoMensaje = "info";
-    string campoFiltro = "", valorFiltro = "";
-    string usuarioActualCorreo = "";
-
+    private List<UsuarioListadoDto> _usuarios = new();
+    private UsuarioFiltroDto _filtro = new();
+    private UsuarioEditarDto _usuarioActual = new();
+    private UsuarioListadoDto? _detalleUsuario;
+    private bool _modalVisible, _modalDetalleVisible, _cargando, _esNuevo, _mostroBusqueda;
+    private string _mensaje = "", _tipoMensaje = "info";
+    private string _campoFiltro = "", _valorFiltro = "";
+    private string _usuarioActualCorreo = "";
     private bool _sesionVerificada = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -292,117 +278,117 @@
                 return;
 
             var auth = await AuthProvider.GetAuthenticationStateAsync();
-            usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
+            _usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
             StateHasChanged();
         }
     }
 
-    async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
-    async Task Buscar()
+    private async Task BuscarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostroBusqueda = true;
-        filtro = new();
-        if (!string.IsNullOrWhiteSpace(campoFiltro) && !string.IsNullOrWhiteSpace(valorFiltro))
+        _mostroBusqueda = true;
+        _filtro = new();
+        if (!string.IsNullOrWhiteSpace(_campoFiltro) && !string.IsNullOrWhiteSpace(_valorFiltro))
         {
-            switch (campoFiltro)
+            switch (_campoFiltro)
             {
-                case "nombre": filtro.Nombre = valorFiltro; break;
-                case "correo": filtro.Correo = valorFiltro; break;
-                case "rol": filtro.Rol = valorFiltro; break;
-                case "activo": filtro.Activo = valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
+                case "nombre": _filtro.Nombre = _valorFiltro; break;
+                case "correo": _filtro.Correo = _valorFiltro; break;
+                case "rol": _filtro.Rol = _valorFiltro; break;
+                case "activo": _filtro.Activo = _valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
             }
         }
-        usuarios = await UsuariosApi.ListarUsuariosAsync(filtro);
+        _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
     }
 
-    void LimpiarFiltro()
+    private void LimpiarFiltro()
     {
-        campoFiltro = valorFiltro = "";
-        mostroBusqueda = false;
-        usuarios.Clear();
+        _campoFiltro = _valorFiltro = "";
+        _mostroBusqueda = false;
+        _usuarios.Clear();
     }
 
-    void AbrirModalNuevo()
+    private void AbrirModalNuevo()
     {
-        usuarioActual = new() { Activo = true };
-        esNuevo = true;
-        modalVisible = true;
+        _usuarioActual = new() { Activo = true };
+        _esNuevo = true;
+        _modalVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    void AbrirModalEditar(UsuarioListadoDto user)
+    private void AbrirModalEditar(UsuarioListadoDto user)
     {
-        usuarioActual = new()
+        _usuarioActual = new()
         {
             IdUsuario = user.IdUsuario,
             NombreUsuario = user.NombreUsuario,
             CorreoUsuario = user.CorreoUsuario,
             Rol = user.Rol,
-            Activo = user.Activo,
-            EsContraseniaTemporal = user.EsContraseniaTemporal
+            Activo = user.Activo
         };
-        esNuevo = false;
-        modalVisible = true;
+        _esNuevo = false;
+        _modalVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    void CerrarModal()
+    private void CerrarModal()
     {
-        modalVisible = false;
+        _modalVisible = false;
         JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
-    async Task GuardarUsuario()
+    private async Task GuardarUsuarioAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        cargando = true;
+        _cargando = true;
         try
         {
-            if (esNuevo)
+            if (_esNuevo)
             {
                 var crearDto = new UsuarioCrearDto
                 {
-                    NombreUsuario = usuarioActual.NombreUsuario,
-                    CorreoUsuario = usuarioActual.CorreoUsuario,
-                    Rol = usuarioActual.Rol
+                    NombreUsuario = _usuarioActual.NombreUsuario,
+                    CorreoUsuario = _usuarioActual.CorreoUsuario,
+                    Rol = _usuarioActual.Rol
                 };
+
                 await UsuariosApi.GuardarUsuarioAsync(crearDto);
-                mensaje = "Usuario creado correctamente y credenciales enviadas.";
+                _mensaje = "Usuario registrado correctamente. Se ha enviado un enlace de activación al correo del usuario.";
             }
             else
             {
-                await UsuariosApi.GuardarUsuarioAsync(usuarioActual);
-                mensaje = "Usuario actualizado correctamente.";
+                await UsuariosApi.GuardarUsuarioAsync(_usuarioActual);
+                _mensaje = "Usuario actualizado correctamente.";
             }
 
-            tipoMensaje = "success";
-            modalVisible = false;
-            await Buscar();
+            _tipoMensaje = "success";
+            _modalVisible = false;
+            await BuscarAsync();
         }
         catch (Exception ex)
         {
-            mensaje = $"Error: {ex.Message}";
-            tipoMensaje = "danger";
+            _mensaje = $"Error: {ex.Message}";
+            _tipoMensaje = "danger";
         }
         finally
         {
-            cargando = false;
+            _cargando = false;
             JS.InvokeVoidAsync("marcarModalCerrado");
         }
     }
 
-    async Task CambiarEstado(UsuarioListadoDto usuario)
+    private async Task CambiarEstadoAsync(UsuarioListadoDto usuario)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (usuario.CorreoUsuario == usuarioActualCorreo)
+        if (usuario.CorreoUsuario == _usuarioActualCorreo)
         {
-            mensaje = "No puedes deshabilitar tu propio usuario.";
-            tipoMensaje = "warning";
+            _mensaje = "No puedes deshabilitar tu propio usuario.";
+            _tipoMensaje = "warning";
             return;
         }
 
@@ -412,42 +398,29 @@
         try
         {
             await UsuariosApi.CambiarEstadoUsuarioAsync(usuario.IdUsuario, !usuario.Activo);
-            mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
-            tipoMensaje = "success";
-            await Buscar();
+            _mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
+            _tipoMensaje = "success";
+            await BuscarAsync();
         }
         catch (Exception ex)
         {
-            mensaje = ex.Message;
-            tipoMensaje = "danger";
+            _mensaje = ex.Message;
+            _tipoMensaje = "danger";
         }
     }
 
-    async Task ReenviarCredenciales(int idUsuario)
+    private async Task AbrirModalDetalleAsync(int idUsuario)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Deseas reenviar una nueva contraseña temporal?");
-        if (!confirmar) return;
-
-        await UsuariosApi.ReenviarCredencialesTemporalesUsuarioAsync(idUsuario);
-        mensaje = "Se envió una nueva contraseña temporal al correo.";
-        tipoMensaje = "info";
-        await Buscar();
-    }
-
-    async Task AbrirModalDetalle(int idUsuario)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        detalleUsuario = await UsuariosApi.ObtenerDetalleUsuarioAsync(idUsuario);
-        modalDetalleVisible = true;
+        _detalleUsuario = await UsuariosApi.ObtenerDetalleUsuarioAsync(idUsuario);
+        _modalDetalleVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    void CerrarModalDetalle()
+    private void CerrarModalDetalle()
     {
-        modalDetalleVisible = false;
+        _modalDetalleVisible = false;
         JS.InvokeVoidAsync("marcarModalCerrado");
     }
 }

@@ -36,7 +36,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -49,7 +49,7 @@
                 <i class="bi bi-cash-coin text-primary fs-4 me-2"></i>Cobros de Pacientes
             </h3>
 
-            @if (!datosCargados)
+            @if (!_datosCargados)
             {
                 <div class="text-center py-5 text-primary">
                     <div class="spinner-border me-2"></div>
@@ -71,7 +71,7 @@
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Nombre</label>
-                                    <input class="form-control" value="@nombrePaciente" disabled />
+                                    <input class="form-control" value="@_nombrePaciente" disabled />
                                 </div>
 
                                 <h6 class="mt-4 text-secondary">Órdenes por Cobrar</h6>
@@ -81,7 +81,7 @@
                                     <span>Seleccione una orden para cobrar usando el botón verde <strong>✔️</strong>.</span>
                                 </div>
 
-                                @if (ordenesPorCobrar.Count == 0)
+                                @if (_ordenesPorCobrar.Count == 0)
                                 {
                                     <div class="alert alert-light border">
                                         <i class="bi bi-info-circle me-2"></i>Sin órdenes pendientes.
@@ -101,7 +101,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var orden in ordenesPorCobrar)
+                                                @foreach (var orden in _ordenesPorCobrar)
                                                 {
                                                     <tr>
                                                         <td>@orden.NumeroOrden</td>
@@ -110,7 +110,7 @@
                                                         <td class="text-danger fw-bold">@orden.SaldoPendiente.ToString("C")</td>
                                                         <td>
                                                             <button class="btn btn-sm btn-success" title="Agregar a selección"
-                                                                    @onclick="(() => SeleccionarOrden(orden))">
+                                                                    @onclick="(() => SeleccionarOrdenAsync(orden))">
                                                                 <i class="bi bi-check-lg"></i>
                                                             </button>
                                                         </td>
@@ -144,7 +144,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @if (ordenesSeleccionadas.Count == 0)
+                                            @if (_ordenesSeleccionadas.Count == 0)
                                             {
                                                 <tr>
                                                     <td colspan="3" class="text-muted">Ninguna orden seleccionada</td>
@@ -152,14 +152,14 @@
                                             }
                                             else
                                             {
-                                                @foreach (var orden in ordenesSeleccionadas)
+                                                @foreach (var orden in _ordenesSeleccionadas)
                                                 {
                                                     <tr>
                                                         <td>@orden.NumeroOrden</td>
                                                         <td>@orden.SaldoPendiente.ToString("C")</td>
                                                         <td>
                                                             <button class="btn btn-sm btn-danger" title="Quitar de selección"
-                                                                    @onclick="(() => QuitarOrden(orden))">
+                                                                    @onclick="(() => QuitarOrdenAsync(orden))">
                                                                 <i class="bi bi-x-lg"></i>
                                                             </button>
                                                         </td>
@@ -187,7 +187,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @if (pagosPrevios.Count == 0)
+                                            @if (_pagosPrevios.Count == 0)
                                             {
                                                 <tr>
                                                     <td colspan="3" class="text-muted">Sin pagos registrados</td>
@@ -195,7 +195,7 @@
                                             }
                                             else
                                             {
-                                                @foreach (var pago in pagosPrevios)
+                                                @foreach (var pago in _pagosPrevios)
                                                 {
                                                     <tr>
                                                         <td>@pago.FechaPago?.ToString("dd/MM/yyyy")</td>
@@ -215,26 +215,26 @@
                 <div class="row mt-4 g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Total Deuda</label>
-                        <input class="form-control" value="@totalDeuda.ToString("C")" disabled />
+                        <input class="form-control" value="@_totalDeuda.ToString("C")" disabled />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Total Pagos</label>
-                        <input class="form-control" value="@totalPagos.ToString("C")" disabled />
+                        <input class="form-control" value="@_totalPagos.ToString("C")" disabled />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Saldo Seleccionado</label>
-                        <input class="form-control" value="@totalSaldoSeleccionado.ToString("C")" disabled />
+                        <input class="form-control" value="@_totalSaldoSeleccionado.ToString("C")" disabled />
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-end mt-4">
-                    <button class="btn btn-success px-4" @onclick="MostrarModalCobro" disabled="@(ordenesSeleccionadas.Count == 0)">
+                    <button class="btn btn-success px-4" @onclick="MostrarModalCobroAsync" disabled="@(_ordenesSeleccionadas.Count == 0)">
                         <i class="bi bi-cash-stack me-1"></i> Registrar Cobro
                     </button>
                 </div>
             }
 
-            @if (mostrarModalCobro)
+            @if (_mostrarModalCobro)
             {
                 <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                     <div class="modal-dialog modal-dialog-centered">
@@ -243,35 +243,35 @@
                                 <h5 class="modal-title">
                                     <i class="bi bi-wallet2 me-2"></i>Registrar Cobro
                                 </h5>
-                                <button type="button" class="btn-close" @onclick="CerrarModalCobro"></button>
+                                <button type="button" class="btn-close" @onclick="CerrarModalCobroAsync"></button>
                             </div>
                             <div class="modal-body">
                                 <div class="mb-3">
                                     <label class="form-label">Dinero en Efectivo</label>
-                                    <InputNumber class="form-control" @bind-Value="dineroEfectivo" />
+                                    <InputNumber class="form-control" @bind-Value="_dineroEfectivo" />
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Transferencia</label>
-                                    <InputNumber class="form-control" @bind-Value="transferencia" />
+                                    <InputNumber class="form-control" @bind-Value="_transferencia" />
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Observación</label>
-                                    <InputText class="form-control text-uppercase" @bind-Value="observacion"
-                                               @oninput="(e => observacion = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                    <InputText class="form-control text-uppercase" @bind-Value="_observacion"
+                                               @oninput="(e => _observacion = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                 </div>
                                 <hr />
-                                <p><strong>Total Cobro:</strong> @totalCobro.ToString("C")</p>
-                                <p><strong>Saldo Seleccionado:</strong> @totalSaldoSeleccionado.ToString("C")</p>
-                                @if (totalCobro > totalSaldoSeleccionado)
+                                <p><strong>Total Cobro:</strong> @TotalCobro.ToString("C")</p>
+                                <p><strong>Saldo Seleccionado:</strong> @_totalSaldoSeleccionado.ToString("C")</p>
+                                @if (TotalCobro > _totalSaldoSeleccionado)
                                 {
-                                    <p><strong>Cambio:</strong> <span class="text-warning fw-bold">@((totalCobro - totalSaldoSeleccionado).ToString("C"))</span></p>
+                                    <p><strong>Cambio:</strong> <span class="text-warning fw-bold">@((TotalCobro - _totalSaldoSeleccionado).ToString("C"))</span></p>
                                 }
                                 else
                                 {
                                     <p>
                                         <strong>Restante:</strong>
-                                        <span class="@( (totalSaldoSeleccionado - totalCobro) > 0 ? "text-danger fw-bold" : "text-success fw-bold")">
-                                            @((totalSaldoSeleccionado - totalCobro).ToString("C"))
+                                        <span class="@( (_totalSaldoSeleccionado - TotalCobro) > 0 ? "text-danger fw-bold" : "text-success fw-bold")">
+                                            @((_totalSaldoSeleccionado - TotalCobro).ToString("C"))
                                         </span>
                                     </p>
                                 }
@@ -280,7 +280,7 @@
                                 <button class="btn btn-primary" @onclick="RegistrarCobroAsync">
                                     <i class="bi bi-check-circle me-1"></i> Confirmar
                                 </button>
-                                <button class="btn btn-secondary" @onclick="CerrarModalCobro">Cancelar</button>
+                                <button class="btn btn-secondary" @onclick="CerrarModalCobroAsync">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -307,28 +307,28 @@
 
 @code {
     [Parameter] public string cedula { get; set; } = string.Empty;
-    private string nombrePaciente = string.Empty;
-    private List<OrdenDto> ordenesPorCobrar = new();
-    private List<OrdenDto> ordenesSeleccionadas = new();
-    private List<DetallePagoDto> pagosPrevios = new();
-    private decimal totalDeuda, totalPagos, totalSaldoSeleccionado, dineroEfectivo, transferencia;
-    private string observacion = string.Empty;
-    private bool mostrarModalCobro;
-    private bool datosCargados;
-
+    private string _nombrePaciente = string.Empty;
+    private List<OrdenDto> _ordenesPorCobrar = new();
+    private List<OrdenDto> _ordenesSeleccionadas = new();
+    private List<DetallePagoDto> _pagosPrevios = new();
+    private decimal _totalDeuda, _totalPagos, _totalSaldoSeleccionado, _dineroEfectivo, _transferencia;
+    private string _observacion = string.Empty;
+    private bool _mostrarModalCobro;
+    private bool _datosCargados;
     private bool _sesionVerificada = false;
 
+    private decimal TotalCobro => _dineroEfectivo + _transferencia;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !datosCargados && !_sesionVerificada)
+        if (firstRender && !_datosCargados && !_sesionVerificada)
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
             if (!user.Identity?.IsAuthenticated ?? true)
             {
-                datosCargados = true;
+                _datosCargados = true;
                 StateHasChanged();
                 return;
             }
@@ -339,7 +339,7 @@
             if (puedeVer)
                 await CargarOrdenesAsync();
 
-            datosCargados = true;
+            _datosCargados = true;
             StateHasChanged();
         }
     }
@@ -349,21 +349,21 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         var filtro = new PagoFiltroDto { Cedula = cedula, IncluirAnulados = false };
         var ordenes = await PagosApi.ListarCuentasPorCobrarAsync(filtro);
-        ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
-        if (ordenesPorCobrar.Any()) nombrePaciente = ordenesPorCobrar.First().NombrePaciente ?? "";
-        totalDeuda = ordenesPorCobrar.Sum(o => o.SaldoPendiente);
+        _ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
+        if (_ordenesPorCobrar.Any()) _nombrePaciente = _ordenesPorCobrar.First().NombrePaciente ?? "";
+        _totalDeuda = _ordenesPorCobrar.Sum(o => o.SaldoPendiente);
     }
 
     private async Task CargarPagosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        pagosPrevios.Clear();
-        foreach (var orden in ordenesSeleccionadas)
+        _pagosPrevios.Clear();
+        foreach (var orden in _ordenesSeleccionadas)
         {
             var pagos = await PagosApi.ListarPagosAsync(orden.IdOrden);
             foreach (var pago in pagos)
                 if (pago.DetallePagos != null)
-                    pagosPrevios.AddRange(pago.DetallePagos.Select(d => new DetallePagoDto
+                    _pagosPrevios.AddRange(pago.DetallePagos.Select(d => new DetallePagoDto
                     {
                         IdDetallePago = d.IdDetallePago,
                         IdPago = pago.IdPago,
@@ -372,51 +372,49 @@
                         FechaPago = pago.FechaPago
                     }));
         }
-        totalPagos = pagosPrevios.Sum(p => p.Monto);
+        _totalPagos = _pagosPrevios.Sum(p => p.Monto);
     }
 
-    private async void SeleccionarOrden(OrdenDto orden)
+    private async Task SeleccionarOrdenAsync(OrdenDto orden)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (!ordenesSeleccionadas.Any(o => o.IdOrden == orden.IdOrden))
+        if (!_ordenesSeleccionadas.Any(o => o.IdOrden == orden.IdOrden))
         {
-            ordenesSeleccionadas.Add(orden);
-            ordenesPorCobrar.Remove(orden);
+            _ordenesSeleccionadas.Add(orden);
+            _ordenesPorCobrar.Remove(orden);
             await CargarPagosAsync();
             CalcularSaldoSeleccionado();
             StateHasChanged();
         }
     }
 
-    private async void QuitarOrden(OrdenDto orden)
+    private async Task QuitarOrdenAsync(OrdenDto orden)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        ordenesPorCobrar.Add(orden);
-        ordenesSeleccionadas.Remove(orden);
+        _ordenesPorCobrar.Add(orden);
+        _ordenesSeleccionadas.Remove(orden);
         await CargarPagosAsync();
         CalcularSaldoSeleccionado();
         StateHasChanged();
     }
 
+    private void CalcularSaldoSeleccionado() => _totalSaldoSeleccionado = _ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
 
-    private void CalcularSaldoSeleccionado() => totalSaldoSeleccionado = ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
-    private decimal totalCobro => dineroEfectivo + transferencia;
-
-    private async Task MostrarModalCobro()
+    private async Task MostrarModalCobroAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModalCobro = true;
+        _mostrarModalCobro = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task CerrarModalCobro()
+    private async Task CerrarModalCobroAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModalCobro = false;
+        _mostrarModalCobro = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
@@ -424,8 +422,8 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        decimal saldoTotal = totalSaldoSeleccionado;
-        decimal cobroTotal = totalCobro;
+        decimal saldoTotal = _totalSaldoSeleccionado;
+        decimal cobroTotal = TotalCobro;
         decimal cambio = 0;
 
         if (cobroTotal > saldoTotal)
@@ -436,14 +434,14 @@
 
         var pagoDto = new PagoDto
         {
-            DineroEfectivo = dineroEfectivo,
-            Transferencia = transferencia,
-            Observacion = observacion
+            DineroEfectivo = _dineroEfectivo,
+            Transferencia = _transferencia,
+            Observacion = _observacion
         };
 
         bool errores = false;
 
-        foreach (var orden in ordenesSeleccionadas)
+        foreach (var orden in _ordenesSeleccionadas)
         {
             if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -465,5 +463,5 @@
         Navigation.NavigateTo(Navigation.Uri, true);
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

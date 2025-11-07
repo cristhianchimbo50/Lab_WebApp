@@ -61,13 +61,5 @@ namespace Lab_APIRest.Controllers.Usuarios
                 return BadRequest(new { Mensaje = ex.Message });
             }
         }
-
-        [HttpPut("{idUsuario}/reenviar")]
-        public async Task<ActionResult<UsuarioReenviarDto>> ReenviarCredencialesTemporalesUsuario(int idUsuario, CancellationToken ct)
-        {
-            var resultado = await _usuariosService.ReenviarCredencialesTemporalesUsuarioAsync(idUsuario, ct);
-            if (resultado == null) return NotFound();
-            return Ok(resultado);
-        }
     }
 }

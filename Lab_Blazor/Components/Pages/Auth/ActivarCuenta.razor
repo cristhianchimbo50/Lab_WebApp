@@ -1,45 +1,50 @@
-﻿@page "/auth/restablecer"
-@using Lab_Contracts.Auth
-@rendermode InteractiveServer
+﻿@page "/activar-cuenta"
+@layout EmptyLayout
+
+@inject IAuthApiService AuthService
 @inject NavigationManager Navigation
-@inject Lab_Blazor.Services.Auth.IRecuperacionApiService RecuperacionApi
 @inject IJSRuntime JS
 
-<PageTitle>Restablecer Contraseña</PageTitle>
+@using Lab_Blazor.Components.Layout
+@using Lab_Blazor.Services.Auth
+@using Lab_Contracts.Auth
+@rendermode InteractiveServer
+
+<PageTitle>Activar Cuenta</PageTitle>
 
 <div class="d-flex justify-content-center align-items-center vh-100">
     <div class="card shadow-sm border-0" style="max-width: 450px; width: 100%;">
         <div class="card-body p-4">
             <h5 class="text-center mb-3 text-primary fw-semibold">
-                <i class="bi bi-shield-lock me-2"></i>Restablecer Contraseña
+                <i class="bi bi-person-check-fill me-2"></i>Activar Cuenta
             </h5>
 
             @if (!_exito)
             {
-                <EditForm Model="@_modelo" OnValidSubmit="RestablecerAsync">
+                <EditForm Model="@_modelo" OnValidSubmit="ActivarCuentaAsync">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nueva contraseña</label>
-                        <InputText @bind-Value="_modelo.NuevaContrasenia" class="form-control" type="password" required />
+                        <InputText @bind-Value="_modelo.NuevaContrasenia" class="form-control" type="password" required minlength="8" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Confirmar contraseña</label>
-                        <InputText @bind-Value="_modelo.ConfirmarContrasenia" class="form-control" type="password" required />
+                        <InputText @bind-Value="_modelo.ConfirmarContrasenia" class="form-control" type="password" required minlength="8" />
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100 shadow-sm" disabled="@_procesando">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm" disabled="@_procesando">
                         @if (_procesando)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span>
-                            <span>Procesando...</span>
+                            <span>Activando...</span>
                         }
                         else
                         {
                             <i class="bi bi-check2-circle me-1"></i>
-                            <span>Guardar nueva contraseña</span>
+                            <span>Activar cuenta</span>
                         }
                     </button>
                 </EditForm>
@@ -48,7 +53,7 @@
             {
                 <div class="text-center py-3">
                     <i class="bi bi-check-circle-fill text-success fs-1 mb-3"></i>
-                    <p>La contraseña se ha restablecido correctamente.</p>
+                    <p>Tu cuenta ha sido activada correctamente.</p>
                     <button class="btn btn-outline-success mt-3" @onclick="IrLogin">Iniciar sesión</button>
                 </div>
             }
@@ -69,27 +74,28 @@
 
         if (string.IsNullOrEmpty(token))
         {
-            JS.InvokeVoidAsync("alert", "Token de recuperación inválido o ausente.");
-            Navigation.NavigateTo("/auth/login");
+            JS.InvokeVoidAsync("alert", "Token inválido o ausente.");
+            Navigation.NavigateTo("/login");
             return;
         }
 
         _modelo.Token = token;
     }
 
-    private async Task RestablecerAsync()
+    private async Task ActivarCuentaAsync()
     {
         _procesando = true;
-        var resp = await RecuperacionApi.RestablecerContraseniaAsync(_modelo);
+        var resultado = await AuthService.ActivarCuentaAsync(_modelo);
         _procesando = false;
 
-        if (resp.Exito)
+        if (resultado.Exito)
         {
             _exito = true;
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Cuenta activada correctamente.", "success");
         }
         else
         {
-            await JS.InvokeVoidAsync("alert", resp.Mensaje);
+            await JS.InvokeVoidAsync("alert", resultado.Mensaje ?? "El enlace no es válido o ha expirado.");
         }
     }
 

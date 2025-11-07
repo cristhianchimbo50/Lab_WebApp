@@ -41,7 +41,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -50,7 +50,7 @@
         }
         else
         {
-            @if (!isRendered)
+            @if (!_isRendered)
             {
                 <div class="d-flex justify-content-center align-items-center py-5 text-primary">
                     <div class="spinner-border me-2" role="status"></div>
@@ -66,29 +66,29 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Examen Seleccionado</label>
-                            <input class="form-control" value="@examenSeleccionado?.NombreExamen" disabled placeholder="Seleccione un examen..." />
+                            <input class="form-control" value="@_examenSeleccionado?.NombreExamen" disabled placeholder="Seleccione un examen..." />
                         </div>
                         <div class="col-md-4">
-                            <button class="btn btn-primary w-100 shadow-sm" @onclick="MostrarModalExamen">
+                            <button class="btn btn-primary w-100 shadow-sm" @onclick="MostrarModalExamenAsync">
                                 <i class="bi bi-search me-1"></i> Buscar Examen
                             </button>
                         </div>
                     </div>
                 </div>
 
-                @if (examenSeleccionado != null)
+                @if (_examenSeleccionado != null)
                 {
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div>
-                            <button class="btn btn-success shadow-sm me-2" @onclick="MostrarModalReactivo">
+                            <button class="btn btn-success shadow-sm me-2" @onclick="MostrarModalReactivoAsync">
                                 <i class="bi bi-plus-circle me-1"></i> Agregar Reactivo
                             </button>
-                            <button class="btn btn-primary shadow-sm" @onclick="GuardarAsociaciones">
+                            <button class="btn btn-primary shadow-sm" @onclick="GuardarAsociacionesAsync">
                                 <i class="bi bi-save me-1"></i> Guardar Cambios
                             </button>
                         </div>
 
-                        @if (reactivosAsociados?.Count > 0)
+                        @if (_reactivosAsociados?.Count > 0)
                         {
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label mb-0 small">Registros por página:</label>
@@ -101,13 +101,13 @@
 
                                 <div class="d-flex align-items-center ms-2">
                                     <button class="btn btn-sm btn-outline-secondary me-1"
-                                            disabled="@(CurrentPage == 1)"
+                                            disabled="@(_currentPage == 1)"
                                             @onclick="PrevPagina">
                                         <i class="bi bi-chevron-left"></i>
                                     </button>
 
                                     <button class="btn btn-sm btn-outline-secondary"
-                                            disabled="@(CurrentPage >= TotalPages)"
+                                            disabled="@(_currentPage >= TotalPages)"
                                             @onclick="NextPagina">
                                         <i class="bi bi-chevron-right"></i>
                                     </button>
@@ -168,7 +168,7 @@
     </NotAuthorized>
 </AuthorizeView>
 
-@if (mostrarModalExamen)
+@if (_mostrarModalExamen)
 {
     <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -177,23 +177,23 @@
                     <h5 class="modal-title">
                         <i class="bi bi-search me-2"></i>Buscar Examen
                     </h5>
-                    <button class="btn-close btn-close-white" @onclick="CerrarModalExamen"></button>
+                    <button class="btn-close btn-close-white" @onclick="CerrarModalExamenAsync"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3 align-items-end mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Buscar por</label>
-                            <select class="form-select" @bind="criterioBusquedaExamen">
+                            <select class="form-select" @bind="_criterioBusquedaExamen">
                                 <option value="nombre">Nombre</option>
                                 <option value="estudio">Estudio</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusquedaExamen" placeholder="Ingrese valor a buscar" />
+                            <InputText class="form-control" @bind-Value="_valorBusquedaExamen" placeholder="Ingrese valor a buscar" />
                         </div>
                         <div class="col-md-2 text-end">
-                            <button class="btn btn-primary w-100" @onclick="BuscarExamenes">
+                            <button class="btn btn-primary w-100" @onclick="BuscarExamenesAsync">
                                 <i class="bi bi-search"></i>
                             </button>
                         </div>
@@ -209,13 +209,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var ex in examenesEncontrados)
+                                @foreach (var ex in _examenesEncontrados)
                                 {
                                     <tr>
                                         <td>@ex.NombreExamen</td>
                                         <td>@ex.Estudio</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-success" @onclick="@(() => SeleccionarExamen(ex))">
+                                            <button class="btn btn-sm btn-success" @onclick="@(() => SeleccionarExamenAsync(ex))">
                                                 <i class="bi bi-check-circle"></i> Seleccionar
                                             </button>
                                         </td>
@@ -226,7 +226,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CerrarModalExamen">
+                    <button class="btn btn-secondary" @onclick="CerrarModalExamenAsync">
                         <i class="bi bi-x-lg"></i> Cerrar
                     </button>
                 </div>
@@ -235,7 +235,7 @@
     </div>
 }
 
-@if (mostrarModalReactivo)
+@if (_mostrarModalReactivo)
 {
     <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -244,14 +244,14 @@
                     <h5 class="modal-title">
                         <i class="bi bi-vial me-2"></i>Buscar Reactivo
                     </h5>
-                    <button class="btn-close btn-close-white" @onclick="CerrarModalReactivo"></button>
+                    <button class="btn-close btn-close-white" @onclick="CerrarModalReactivoAsync"></button>
                 </div>
 
                 <div class="modal-body">
                     <div class="row g-3 align-items-end mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Buscar por</label>
-                            <select class="form-select" @bind="criterioBusquedaReactivo">
+                            <select class="form-select" @bind="_criterioBusquedaReactivo">
                                 <option value="nombre">Nombre</option>
                                 <option value="fabricante">Fabricante</option>
                                 <option value="unidad">Unidad</option>
@@ -259,10 +259,10 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusquedaReactivo" placeholder="Ingrese valor a buscar" />
+                            <InputText class="form-control" @bind-Value="_valorBusquedaReactivo" placeholder="Ingrese valor a buscar" />
                         </div>
                         <div class="col-md-2 text-end">
-                            <button class="btn btn-primary w-100" @onclick="BuscarReactivos">
+                            <button class="btn btn-primary w-100" @onclick="BuscarReactivosAsync">
                                 <i class="bi bi-search"></i>
                             </button>
                         </div>
@@ -279,14 +279,14 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var r in reactivosEncontrados)
+                                @foreach (var r in _reactivosEncontrados)
                                 {
                                     <tr>
                                         <td>@r.NombreReactivo</td>
                                         <td>@r.Fabricante</td>
                                         <td>@r.Unidad</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-success" @onclick="async () => await SeleccionarReactivo(r)">
+                                            <button class="btn btn-sm btn-success" @onclick="async () => await SeleccionarReactivoAsync(r)">
                                                 <i class="bi bi-check-circle"></i> Seleccionar
                                             </button>
                                         </td>
@@ -298,7 +298,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CerrarModalReactivo">
+                    <button class="btn btn-secondary" @onclick="CerrarModalReactivoAsync">
                         <i class="bi bi-x-lg"></i> Cerrar
                     </button>
                 </div>
@@ -308,23 +308,23 @@
 }
 
 @code {
-    [Parameter] public int? idExamen { get; set; }
-    private bool isRendered;
-    private ExamenDto? examenSeleccionado;
-    private List<AsociacionReactivoDto> reactivosAsociados = new();
-    private bool mostrarModalExamen;
-    private bool mostrarModalReactivo;
-    private string valorBusquedaExamen = "";
-    private string valorBusquedaReactivo = "";
-    private List<ExamenDto> examenesEncontrados = new();
-    private List<ReactivoDto> reactivosEncontrados = new();
-    private List<ExamenDto> todosLosExamenes = new();
-    private List<ReactivoDto> todosLosReactivos = new();
-    private string criterioBusquedaExamen = "nombre";
-    private string criterioBusquedaReactivo = "nombre";
-
-
+    [Parameter] public int? IdExamen { get; set; }
+    private bool _isRendered;
+    private ExamenDto? _examenSeleccionado;
+    private List<AsociacionReactivoDto> _reactivosAsociados = new();
+    private bool _mostrarModalExamen;
+    private bool _mostrarModalReactivo;
+    private string _valorBusquedaExamen = "";
+    private string _valorBusquedaReactivo = "";
+    private List<ExamenDto> _examenesEncontrados = new();
+    private List<ReactivoDto> _reactivosEncontrados = new();
+    private List<ExamenDto> _todosLosExamenes = new();
+    private List<ReactivoDto> _todosLosReactivos = new();
+    private string _criterioBusquedaExamen = "nombre";
+    private string _criterioBusquedaReactivo = "nombre";
     private bool _sesionVerificada = false;
+    private int _pageSize = 10;
+    private int _currentPage = 1;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -340,7 +340,7 @@
 
             if (!user.Identity?.IsAuthenticated ?? true)
             {
-                isRendered = true;
+                _isRendered = true;
                 StateHasChanged();
                 return;
             }
@@ -354,129 +354,129 @@
                 var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
                 var idParam = query.Get("idExamen");
                 if (!string.IsNullOrWhiteSpace(idParam) && int.TryParse(idParam, out var id))
-                    await SeleccionarExamenPorId(id);
-                else if (idExamen is not null)
-                    await SeleccionarExamenPorId(idExamen.Value);
+                    await SeleccionarExamenPorIdAsync(id);
+                else if (IdExamen is not null)
+                    await SeleccionarExamenPorIdAsync(IdExamen.Value);
             }
 
-            isRendered = true;
+            _isRendered = true;
             StateHasChanged();
         }
     }
 
-    private async Task SeleccionarExamenPorId(int id)
+    private async Task SeleccionarExamenPorIdAsync(int id)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        examenSeleccionado = await ExamenesApi.ObtenerDetalleExamenAsync(id);
-        reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(id) ?? new();
+        _examenSeleccionado = await ExamenesApi.ObtenerDetalleExamenAsync(id);
+        _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(id) ?? new();
     }
 
-    private async Task MostrarModalExamen()
+    private async Task MostrarModalExamenAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        examenesEncontrados = new();
-        valorBusquedaExamen = "";
-        mostrarModalExamen = true;
+        _examenesEncontrados = new();
+        _valorBusquedaExamen = "";
+        _mostrarModalExamen = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task CerrarModalExamen()
+    private async Task CerrarModalExamenAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModalExamen = false;
+        _mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
-    private async Task BuscarExamenes()
+    private async Task BuscarExamenesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (!todosLosExamenes.Any())
-            todosLosExamenes = await ExamenesApi.ListarExamenesAsync();
+        if (!_todosLosExamenes.Any())
+            _todosLosExamenes = await ExamenesApi.ListarExamenesAsync();
 
-        var val = valorBusquedaExamen.Trim().ToLower();
+        var val = _valorBusquedaExamen.Trim().ToLower();
 
         if (string.IsNullOrWhiteSpace(val))
         {
-            examenesEncontrados = todosLosExamenes;
+            _examenesEncontrados = _todosLosExamenes;
         }
         else
         {
-            examenesEncontrados = criterioBusquedaExamen switch
+            _examenesEncontrados = _criterioBusquedaExamen switch
             {
-                "estudio" => todosLosExamenes.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
-                _ => todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
+                "estudio" => _todosLosExamenes.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
+                _ => _todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
             };
         }
     }
 
-    private async Task SeleccionarExamen(ExamenDto examen)
+    private async Task SeleccionarExamenAsync(ExamenDto examen)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        examenSeleccionado = examen;
-        mostrarModalExamen = false;
+        _examenSeleccionado = examen;
+        _mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
-        reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(examen.IdExamen) ?? new();
-        CurrentPage = 1;
+        _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(examen.IdExamen) ?? new();
+        _currentPage = 1;
     }
 
-    private async Task MostrarModalReactivo()
+    private async Task MostrarModalReactivoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        reactivosEncontrados = new();
-        valorBusquedaReactivo = "";
-        mostrarModalReactivo = true;
+        _reactivosEncontrados = new();
+        _valorBusquedaReactivo = "";
+        _mostrarModalReactivo = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task CerrarModalReactivo()
+    private async Task CerrarModalReactivoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        mostrarModalReactivo = false;
+        _mostrarModalReactivo = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
-    private async Task BuscarReactivos()
+    private async Task BuscarReactivosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (!todosLosReactivos.Any())
-            todosLosReactivos = await ReactivosApi.ListarReactivosAsync();
+        if (!_todosLosReactivos.Any())
+            _todosLosReactivos = await ReactivosApi.ListarReactivosAsync();
 
-        var val = valorBusquedaReactivo.Trim().ToLower();
+        var val = _valorBusquedaReactivo.Trim().ToLower();
 
         if (string.IsNullOrWhiteSpace(val))
         {
-            reactivosEncontrados = todosLosReactivos;
+            _reactivosEncontrados = _todosLosReactivos;
         }
         else
         {
-            reactivosEncontrados = criterioBusquedaReactivo switch
+            _reactivosEncontrados = _criterioBusquedaReactivo switch
             {
-                "fabricante" => todosLosReactivos.Where(r => r.Fabricante?.ToLower().Contains(val) ?? false).ToList(),
-                "unidad" => todosLosReactivos.Where(r => r.Unidad?.ToLower().Contains(val) ?? false).ToList(),
-                _ => todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList()
+                "fabricante" => _todosLosReactivos.Where(r => r.Fabricante?.ToLower().Contains(val) ?? false).ToList(),
+                "unidad" => _todosLosReactivos.Where(r => r.Unidad?.ToLower().Contains(val) ?? false).ToList(),
+                _ => _todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList()
             };
         }
     }
 
-    private async Task SeleccionarReactivo(ReactivoDto reactivo)
+    private async Task SeleccionarReactivoAsync(ReactivoDto reactivo)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
+        if (_reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
         {
             await JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
             return;
         }
 
-        reactivosAsociados.Add(new AsociacionReactivoDto
+        _reactivosAsociados.Add(new AsociacionReactivoDto
         {
             IdReactivo = reactivo.IdReactivo,
             NombreReactivo = reactivo.NombreReactivo,
@@ -484,31 +484,30 @@
             CantidadUsada = 0
         });
 
-        mostrarModalReactivo = false;
+        _mostrarModalReactivo = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
         StateHasChanged();
     }
 
-    private void QuitarReactivo(AsociacionReactivoDto item) => reactivosAsociados.Remove(item);
+    private void QuitarReactivo(AsociacionReactivoDto item) => _reactivosAsociados.Remove(item);
 
-    private async Task GuardarAsociaciones()
+    private async Task GuardarAsociacionesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (examenSeleccionado == null)
+        if (_examenSeleccionado == null)
         {
             await JS.InvokeVoidAsync("alert", "Debe seleccionar un examen.");
             return;
         }
 
-        var exito = await AsociacionesApi.GuardarAsociacionesPorExamenAsync(examenSeleccionado.IdExamen, reactivosAsociados);
+        var exito = await AsociacionesApi.GuardarAsociacionesPorExamenAsync(_examenSeleccionado.IdExamen, _reactivosAsociados);
         if (exito)
             Navigation.NavigateTo("/asociaciones-reactivos", true);
         else
             await JS.InvokeVoidAsync("alert", "Error al guardar asociaciones.");
     }
 
-    private int _pageSize = 10;
     private int PageSize
     {
         get => _pageSize;
@@ -517,34 +516,32 @@
             if (_pageSize != value)
             {
                 _pageSize = value;
-                CurrentPage = 1;
+                _currentPage = 1;
                 StateHasChanged();
             }
         }
     }
 
-    private int CurrentPage = 1;
-    private int TotalPages => (int)Math.Ceiling(reactivosAsociados.Count / (double)PageSize);
+    private int TotalPages => (int)Math.Ceiling(_reactivosAsociados.Count / (double)PageSize);
     private IEnumerable<AsociacionReactivoDto> PaginatedReactivos =>
-        reactivosAsociados.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+        _reactivosAsociados.Skip((_currentPage - 1) * PageSize).Take(PageSize);
 
     private void PrevPagina()
     {
-        if (CurrentPage > 1)
-            CurrentPage--;
+        if (_currentPage > 1)
+            _currentPage--;
     }
 
     private void NextPagina()
     {
-        if (CurrentPage < TotalPages)
-            CurrentPage++;
+        if (_currentPage < TotalPages)
+            _currentPage++;
     }
 
     private void CambiarTamPagina()
     {
-        CurrentPage = 1;
+        _currentPage = 1;
     }
 
-
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

@@ -1,12 +1,14 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lab_APIRest.Infrastructure.EF.Models
 {
-    public partial class recuperacion_contrasenias
+    public partial class tokens_usuarios
     {
-        public long id_recuperacion { get; set; }
+        public long id_token { get; set; }
         public int id_usuario { get; set; }
         public byte[] token_hash { get; set; } = null!;
+        public string tipo_token { get; set; } = null!;
         public DateTime fecha_solicitud { get; set; }
         public DateTime fecha_expiracion { get; set; }
         public bool usado { get; set; }

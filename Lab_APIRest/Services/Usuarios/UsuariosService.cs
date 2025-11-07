@@ -2,7 +2,6 @@
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using Lab_APIRest.Infrastructure.Services;
 
 namespace Lab_APIRest.Services.Usuarios
@@ -11,7 +10,6 @@ namespace Lab_APIRest.Services.Usuarios
     {
         private readonly LabDbContext _context;
         private readonly EmailService _emailService;
-        private readonly PasswordHasher<object> _hasher = new();
 
         public UsuariosService(LabDbContext context, EmailService emailService)
         {
@@ -36,10 +34,8 @@ namespace Lab_APIRest.Services.Usuarios
                     CorreoUsuario = u.correo_usuario,
                     Rol = u.rol,
                     Activo = u.activo,
-                    EsContraseniaTemporal = u.es_contrasenia_temporal,
                     FechaCreacion = u.fecha_creacion,
-                    UltimoAcceso = u.ultimo_acceso,
-                    FechaExpiraTemporal = u.fecha_expira_temporal
+                    UltimoAcceso = u.ultimo_acceso
                 })
                 .ToListAsync(ct);
         }
@@ -55,36 +51,57 @@ namespace Lab_APIRest.Services.Usuarios
                 CorreoUsuario = entidad.correo_usuario,
                 Rol = entidad.rol,
                 Activo = entidad.activo,
-                EsContraseniaTemporal = entidad.es_contrasenia_temporal,
                 FechaCreacion = entidad.fecha_creacion,
-                UltimoAcceso = entidad.ultimo_acceso,
-                FechaExpiraTemporal = entidad.fecha_expira_temporal
+                UltimoAcceso = entidad.ultimo_acceso
             };
         }
 
         public async Task<int> GuardarUsuarioAsync(UsuarioCrearDto usuario, CancellationToken ct = default)
         {
-            var temporal = GenerarContraseniaTemporal();
             var entidad = new usuario
             {
                 nombre = usuario.NombreUsuario,
                 correo_usuario = usuario.CorreoUsuario,
                 rol = usuario.Rol,
-                activo = true,
-                es_contrasenia_temporal = true,
-                fecha_creacion = DateTime.UtcNow,
-                clave_usuario = _hasher.HashPassword(null!, temporal),
-                fecha_expira_temporal = DateTime.UtcNow.AddDays(3)
+                activo = false,
+                clave_usuario = null,
+                fecha_creacion = DateTime.UtcNow
             };
+
             _context.usuarios.Add(entidad);
             await _context.SaveChangesAsync(ct);
 
-            await _emailService.EnviarCorreoAsync(
-                entidad.correo_usuario,
-                entidad.nombre,
-                "Credenciales de acceso al la aplicación web",
-                $"<h2>Bienvenido(a) {entidad.nombre}</h2>\n<p>Tu usuario: <b>{entidad.correo_usuario}</b></p>\n<p>Contraseña temporal: <b>{temporal}</b></p>\n<p>Debes cambiar tu contraseña en el primer ingreso.</p>"
-            );
+            var randomBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+            var token = Convert.ToBase64String(randomBytes);
+            var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
+
+            var tokenRegistro = new tokens_usuarios
+            {
+                id_usuario = entidad.id_usuario,
+                token_hash = tokenHash,
+                tipo_token = "activacion",
+                fecha_solicitud = DateTime.UtcNow,
+                fecha_expiracion = DateTime.UtcNow.AddHours(24),
+                usado = false
+            };
+            _context.tokens_usuarios.Add(tokenRegistro);
+            await _context.SaveChangesAsync(ct);
+
+            var tokenUrl = Uri.EscapeDataString(token);
+            var dominio = "https://localhost:7283";//CAMBIAR PRODUCCION
+            var enlace = $"{dominio}/activar-cuenta?token={tokenUrl}";
+
+            var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
+            var cuerpo = $@"
+        <p>Hola <b>{entidad.nombre}</b>,</p>
+        <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
+        <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
+        <p><a href='{enlace}' target='_blank'>Activar mi cuenta</a></p>
+        <p>Este enlace estará disponible durante 24 horas.</p>
+        <br/>
+        <p>Si no solicitaste este registro, ignora este mensaje.</p>";
+
+            await _emailService.EnviarCorreoAsync(entidad.correo_usuario, entidad.nombre, asunto, cuerpo);
 
             return entidad.id_usuario;
         }
@@ -97,7 +114,6 @@ namespace Lab_APIRest.Services.Usuarios
             entidad.correo_usuario = usuario.CorreoUsuario;
             entidad.rol = usuario.Rol;
             entidad.activo = usuario.Activo;
-            entidad.es_contrasenia_temporal = usuario.EsContraseniaTemporal;
             await _context.SaveChangesAsync(ct);
             return true;
         }
@@ -112,31 +128,5 @@ namespace Lab_APIRest.Services.Usuarios
             await _context.SaveChangesAsync(ct);
             return true;
         }
-
-        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesUsuarioAsync(int idUsuario, CancellationToken ct = default)
-        {
-            var entidad = await _context.usuarios.FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol != "paciente", ct);
-            if (entidad == null) return null;
-            var nuevaTemporal = GenerarContraseniaTemporal();
-            entidad.clave_usuario = _hasher.HashPassword(null!, nuevaTemporal);
-            entidad.es_contrasenia_temporal = true;
-            entidad.fecha_expira_temporal = DateTime.UtcNow.AddDays(3);
-            await _context.SaveChangesAsync(ct);
-
-            await _emailService.EnviarCorreoAsync(
-                entidad.correo_usuario,
-                entidad.nombre,
-                "Nueva contraseña temporal",
-                $"<h2>Contraseña temporal generada</h2>\n<p>Tu usuario: <b>{entidad.correo_usuario}</b></p>\n<p>Nueva contraseña temporal: <b>{nuevaTemporal}</b></p>\n<p>Debes cambiarla en el primer acceso.</p>"
-            );
-
-            return new UsuarioReenviarDto
-            {
-                IdUsuario = entidad.id_usuario,
-                NuevaTemporal = nuevaTemporal
-            };
-        }
-
-        private string GenerarContraseniaTemporal() => Guid.NewGuid().ToString("N")[..10];
     }
 }

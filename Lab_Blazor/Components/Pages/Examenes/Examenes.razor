@@ -31,7 +31,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -42,7 +42,7 @@
         {
             <h3 class="mb-4 d-flex align-items-center text-uppercase justify-content-between fw-bold flex-wrap">
                 <span><i class="bi bi-clipboard2-pulse text-primary fs-4 me-2"></i>Gestión de Exámenes</span>
-                <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevo">
+                <button class="btn btn-success shadow-sm" @onclick="MostrarModalNuevoAsync">
                     <i class="bi bi-plus-circle me-1"></i>Nuevo Examen
                 </button>
             </h3>
@@ -51,7 +51,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="criterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="_criterioBusqueda" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="estudio">Estudio</option>
@@ -61,31 +61,31 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="valorBusqueda" placeholder="Ingrese valor a buscar"
-                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarExamenes(); })" />
+                        <InputText class="form-control" @bind-Value="_valorBusqueda" placeholder="Ingrese valor a buscar"
+                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsync(); })" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarExamenes"><i class="bi bi-search me-1"></i>Buscar</button>
-                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                        <button class="btn btn-primary" @onclick="BuscarAsync"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                     </div>
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(mensaje))
+            @if (!string.IsNullOrEmpty(_mensaje))
             {
-                <div class="alert alert-@tipoMensaje alert-dismissible fade show" role="alert">
-                    @mensaje
+                <div class="alert alert-@_tipoMensaje alert-dismissible fade show" role="alert">
+                    @_mensaje
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             }
 
-            @if (ListaExamenes == null)
+            @if (_listaExamenes == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                 </div>
             }
-            else if (ListaExamenes.Count == 0)
+            else if (_listaExamenes.Count == 0)
             {
                 <div class="alert alert-warning text-center shadow-sm">
                     <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron resultados.
@@ -95,18 +95,18 @@
             {
 
 
-                @if (ListaExamenes?.Count > 0)
+                @if (_listaExamenes?.Count > 0)
                 {
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="text-muted small">
-                            Mostrando @((paginaActual - 1) * tamPagina + 1)
-                            - @(Math.Min(paginaActual * tamPagina, ListaExamenes.Count))
-                            de @ListaExamenes.Count exámenes
+                            Mostrando @((_paginaActual - 1) * _tamPagina + 1)
+                            - @(Math.Min(_paginaActual * _tamPagina, _listaExamenes.Count))
+                            de @_listaExamenes.Count exámenes
                         </div>
 
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 small">Registros por página:</label>
-                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                            <select class="form-select form-select-sm w-auto" @bind="_tamPagina" @bind:after="CambiarTamPagina">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
                                 <option value="15">15</option>
@@ -115,13 +115,13 @@
 
                             <div class="d-flex align-items-center ms-2">
                                 <button class="btn btn-sm btn-outline-secondary me-1"
-                                        disabled="@(paginaActual == 1)"
+                                        disabled="@(_paginaActual == 1)"
                                         @onclick="PrevPagina">
                                     <i class="bi bi-chevron-left"></i>
                                 </button>
 
                                 <button class="btn btn-sm btn-outline-secondary"
-                                        disabled="@(paginaActual >= TotalPaginas)"
+                                        disabled="@(_paginaActual >= TotalPaginas)"
                                         @onclick="NextPagina">
                                     <i class="bi bi-chevron-right"></i>
                                 </button>
@@ -163,18 +163,18 @@
                                         <td data-label="Acciones">
                                             @if (puedeModificar)
                                             {
-                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarExamen(examen)">
+                                                <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarExamenAsync(examen)">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                                 @if (examen.Anulado)
                                                 {
-                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacion(examen)">
+                                                    <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacionAsync(examen)">
                                                         <i class="bi bi-check-circle-fill"></i>
                                                     </button>
                                                 }
                                                 else
                                                 {
-                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacion(examen.IdExamen)">
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmarAnulacionAsync(examen.IdExamen)">
                                                         <i class="bi bi-x-circle-fill"></i>
                                                     </button>
                                                 }
@@ -192,16 +192,16 @@
                 </div>
             }
 
-            <div class="modal fade @(ModalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+            <div class="modal fade @(_modalVisible ? "show d-block" : "")" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-xl modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
 
-                        <EditForm Model="@ExamenActual" OnValidSubmit="ValidarYGuardar">
+                        <EditForm Model="@_examenActual" OnValidSubmit="ValidarYGuardarAsync">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">
-                                    <i class="bi bi-clipboard2-data me-2"></i>@(ExamenActual.IdExamen == 0 ? "Nuevo Examen" : "Editar Examen")
+                                    <i class="bi bi-clipboard2-data me-2"></i>@(_examenActual.IdExamen == 0 ? "Nuevo Examen" : "Editar Examen")
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalAsync"></button>
                             </div>
 
                             <div class="modal-body">
@@ -210,16 +210,16 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Nombre</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="ExamenActual.NombreExamen"
-                                                   @oninput="(e => ExamenActual.NombreExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                        <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreExamen"
+                                                   @oninput="(e => _examenActual.NombreExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Estudio</label>
                                         <input list="listaEstudios" class="form-control text-uppercase"
-                                               @bind="ExamenActual.Estudio"
-                                               @oninput="ValidarEstudio" />
+                                               @bind="_examenActual.Estudio"
+                                               @oninput="ValidarEstudioAsync" />
                                         <datalist id="listaEstudios">
-                                            @foreach (var item in EstudiosDisponibles)
+                                            @foreach (var item in _estudiosDisponibles)
                                             {
                                                 <option value="@item"></option>
                                             }
@@ -229,10 +229,10 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Tipo de Muestra</label>
                                         <input list="listaMuestras" class="form-control text-uppercase"
-                                               @bind="ExamenActual.TipoMuestra"
-                                               @oninput="ValidarTipoMuestra" />
+                                               @bind="_examenActual.TipoMuestra"
+                                               @oninput="ValidarTipoMuestraAsync" />
                                         <datalist id="listaMuestras">
-                                            @foreach (var item in TiposMuestraDisponibles)
+                                            @foreach (var item in _tiposMuestraDisponibles)
                                             {
                                                 <option value="@item"></option>
                                             }
@@ -242,10 +242,10 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Tipo de Examen</label>
                                         <input list="listaTiposExamen" class="form-control text-uppercase"
-                                               @bind="ExamenActual.TipoExamen"
-                                               @oninput="ValidarTipoExamen" />
+                                               @bind="_examenActual.TipoExamen"
+                                               @oninput="ValidarTipoExamenAsync" />
                                         <datalist id="listaTiposExamen">
-                                            @foreach (var item in TiposExamenDisponibles)
+                                            @foreach (var item in _tiposExamenDisponibles)
                                             {
                                                 <option value="@item"></option>
                                             }
@@ -254,23 +254,23 @@
 
                                     <div class="col-md-6">
                                         <label class="form-label">Técnica</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="ExamenActual.Tecnica" />
+                                        <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Tecnica" />
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Valor Referencia</label>
-                                        <InputText class="form-control" @bind-Value="ExamenActual.ValorReferencia" />
+                                        <InputText class="form-control" @bind-Value="_examenActual.ValorReferencia" />
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">Unidad</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="ExamenActual.Unidad" />
+                                        <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Unidad" />
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">Precio</label>
-                                        <InputNumber class="form-control" @bind-Value="ExamenActual.Precio" />
+                                        <InputNumber class="form-control" @bind-Value="_examenActual.Precio" />
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">Tiempo de Entrega (días)</label>
-                                        <InputText class="form-control" @bind-Value="ExamenActual.TiempoEntrega" />
+                                        <InputText class="form-control" @bind-Value="_examenActual.TiempoEntrega" />
                                     </div>
                                 </div>
 
@@ -283,7 +283,7 @@
                                 </div>
 
                                 <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-                                    @if (HijosSeleccionados.Count == 0)
+                                    @if (_hijosSeleccionados.Count == 0)
                                     {
                                         <div class="text-muted text-center py-2">No se han agregado exámenes hijos.</div>
                                     }
@@ -298,7 +298,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var hijo in HijosSeleccionados)
+                                                @foreach (var hijo in _hijosSeleccionados)
                                                 {
                                                     <tr>
                                                         <td>@hijo.NombreExamen</td>
@@ -321,7 +321,7 @@
                                 <button type="submit" class="btn btn-primary px-3">
                                     <i class="bi bi-save me-1"></i>Guardar
                                 </button>
-                                <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                                <button type="button" class="btn btn-secondary" @onclick="CerrarModalAsync">
                                     <i class="bi bi-x-lg me-1"></i>Cancelar
                                 </button>
                             </div>
@@ -330,7 +330,7 @@
                 </div>
             </div>
 
-            @if (MostrarModalBusquedaHijo)
+            @if (_mostrarModalBusquedaHijo)
             {
                 <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
                     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -342,16 +342,16 @@
                             <div class="modal-body">
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-4">
-                                        <InputSelect class="form-select" @bind-Value="filtroBusquedaHijo">
+                                        <InputSelect class="form-select" @bind-Value="_filtroBusquedaHijo">
                                             <option value="nombre">Nombre</option>
                                             <option value="estudio">Estudio</option>
                                         </InputSelect>
                                     </div>
                                     <div class="col-md-6">
-                                        <InputText class="form-control" @bind-Value="valorBusquedaHijo" placeholder="Ingrese valor" />
+                                        <InputText class="form-control" @bind-Value="_valorBusquedaHijo" placeholder="Ingrese valor" />
                                     </div>
                                     <div class="col-md-2 d-grid">
-                                        <button class="btn btn-primary" @onclick="BuscarHijos">
+                                        <button class="btn btn-primary" @onclick="BuscarHijosAsync">
                                             <i class="bi bi-search"></i>
                                         </button>
                                     </div>
@@ -366,9 +366,9 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var hijo in ResultadosBusquedaHijos)
+                                            @foreach (var hijo in _resultadosBusquedaHijos)
                                             {
-                                                <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijo(hijo)">
+                                                <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijoAsync(hijo)">
                                                     <td>@hijo.NombreExamen</td>
                                                     <td>@hijo.Estudio</td>
                                                 </tr>
@@ -390,26 +390,25 @@
 </AuthorizeView>
 
 @code {
-    private List<ExamenDto>? ListaExamenes;
-    private ExamenDto ExamenActual = new();
-    private bool ModalVisible;
-    private string criterioBusqueda = "";
-    private string valorBusqueda = "";
-    private string mensaje = "";
-    private string tipoMensaje = "info";
-    private int paginaActual = 1;
-    private int tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((ListaExamenes?.Count ?? 1) / (double)tamPagina);
-    private IEnumerable<ExamenDto> ExamenesPaginados => ListaExamenes?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<ExamenDto>();
+    private List<ExamenDto>? _listaExamenes;
+    private ExamenDto _examenActual = new();
+    private bool _modalVisible;
+    private string _criterioBusqueda = "";
+    private string _valorBusqueda = "";
+    private string _mensaje = "";
+    private string _tipoMensaje = "info";
+    private int _paginaActual = 1;
+    private int _tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((_listaExamenes?.Count ?? 1) / (double)_tamPagina);
+    private IEnumerable<ExamenDto> ExamenesPaginados => _listaExamenes?.Skip((_paginaActual - 1) * _tamPagina).Take(_tamPagina) ?? new List<ExamenDto>();
 
-    private List<ExamenDto> HijosSeleccionados = new();
-    private bool MostrarModalBusquedaHijo = false;
-    private string filtroBusquedaHijo = "nombre";
-    private string valorBusquedaHijo = "";
-    private List<ExamenDto> ResultadosBusquedaHijos = new();
+    private List<ExamenDto> _hijosSeleccionados = new();
+    private bool _mostrarModalBusquedaHijo = false;
+    private string _filtroBusquedaHijo = "nombre";
+    private string _valorBusquedaHijo = "";
+    private List<ExamenDto> _resultadosBusquedaHijos = new();
 
-    private bool cargadoInicial = false;
-
+    private bool _cargadoInicial = false;
     private bool _sesionVerificada = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -421,24 +420,24 @@
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            await CargarListas();
-            cargadoInicial = true;
+            await CargarListasAsync();
+            _cargadoInicial = true;
             StateHasChanged();
         }
     }
 
-    private async Task BuscarExamenes()
+    private async Task BuscarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         var examenes = await ExamenesApiService.ListarExamenesAsync();
 
-        if (string.IsNullOrWhiteSpace(criterioBusqueda) || string.IsNullOrWhiteSpace(valorBusqueda))
-            ListaExamenes = examenes;
+        if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(_valorBusqueda))
+            _listaExamenes = examenes;
         else
         {
-            valorBusqueda = valorBusqueda.ToLower();
-            ListaExamenes = criterioBusqueda switch
+            var valorBusqueda = _valorBusqueda.ToLower();
+            _listaExamenes = _criterioBusqueda switch
             {
                 "nombre" => examenes.Where(x => x.NombreExamen.ToLower().Contains(valorBusqueda)).ToList(),
                 "estudio" => examenes.Where(x => x.Estudio?.ToLower().Contains(valorBusqueda) ?? false).ToList(),
@@ -448,29 +447,29 @@
             };
         }
 
-        paginaActual = 1;
+        _paginaActual = 1;
     }
 
-    private async Task MostrarModalNuevo()
+    private async Task MostrarModalNuevoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        ExamenActual = new ExamenDto();
-        HijosSeleccionados = new();
-        ModalVisible = true;
+        _examenActual = new ExamenDto();
+        _hijosSeleccionados = new();
+        _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task CerrarModal()
+    private async Task CerrarModalAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        ModalVisible = false;
+        _modalVisible = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
-        mensaje = string.Empty;
+        _mensaje = string.Empty;
     }
 
-    private async Task EditarExamen(ExamenDto examen)
+    private async Task EditarExamenAsync(ExamenDto examen)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -482,67 +481,67 @@
             return;
         }
 
-        ExamenActual = examen;
-        HijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
-        ModalVisible = true;
+        _examenActual = examen;
+        _hijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
+        _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task ValidarYGuardar()
+    private async Task ValidarYGuardarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         HttpResponseMessage result;
 
-        if (ExamenActual.IdExamen == 0)
+        if (_examenActual.IdExamen == 0)
         {
-            result = await ExamenesApiService.GuardarExamenAsync(ExamenActual);
+            result = await ExamenesApiService.GuardarExamenAsync(_examenActual);
             if (result.IsSuccessStatusCode)
             {
                 var nuevo = await result.Content.ReadFromJsonAsync<ExamenDto>();
-                ExamenActual.IdExamen = nuevo?.IdExamen ?? 0;
+                _examenActual.IdExamen = nuevo?.IdExamen ?? 0;
             }
         }
         else
         {
-            result = await ExamenesApiService.GuardarExamenAsync(ExamenActual.IdExamen, ExamenActual);
+            result = await ExamenesApiService.GuardarExamenAsync(_examenActual.IdExamen, _examenActual);
         }
 
         if (result.IsSuccessStatusCode)
         {
-            if (HijosSeleccionados.Any())
+            if (_hijosSeleccionados.Any())
             {
-                var hijosExistentes = await ExamenesApiService.ListarExamenesHijosAsync(ExamenActual.IdExamen);
+                var hijosExistentes = await ExamenesApiService.ListarExamenesHijosAsync(_examenActual.IdExamen);
                 foreach (var hijo in hijosExistentes)
                 {
-                    await ExamenComposicionApiService.EliminarComposicionAsync(ExamenActual.IdExamen, hijo.IdExamen);
+                    await ExamenComposicionApiService.EliminarComposicionAsync(_examenActual.IdExamen, hijo.IdExamen);
                 }
 
-                foreach (var hijo in HijosSeleccionados)
+                foreach (var hijo in _hijosSeleccionados)
                 {
                     await ExamenComposicionApiService.GuardarComposicionAsync(new ExamenComposicionDto
                     {
-                        IdExamenPadre = ExamenActual.IdExamen,
+                        IdExamenPadre = _examenActual.IdExamen,
                         IdExamenHijo = hijo.IdExamen
                     });
                 }
             }
-            mensaje = "Examen y composiciones guardadas correctamente.";
-            tipoMensaje = "success";
-            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
-            ModalVisible = false;
+            _mensaje = "Examen y composiciones guardadas correctamente.";
+            _tipoMensaje = "success";
+            await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
+            _modalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
-            await BuscarExamenes();
+            await BuscarAsync();
         }
         else
         {
-            mensaje = "Error al guardar examen.";
-            tipoMensaje = "danger";
-            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, tipoMensaje);
+            _mensaje = "Error al guardar examen.";
+            _tipoMensaje = "danger";
+            await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
         }
     }
 
-    private async Task ConfirmarAnulacion(int id)
+    private async Task ConfirmarAnulacionAsync(int id)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -551,26 +550,26 @@
             var result = await ExamenesApiService.AnularExamenAsync(id);
             if (result.IsSuccessStatusCode)
             {
-                mensaje = "Examen anulado correctamente.";
-                tipoMensaje = "success";
-                await BuscarExamenes();
+                _mensaje = "Examen anulado correctamente.";
+                _tipoMensaje = "success";
+                await BuscarAsync();
             }
         }
     }
 
-    private async Task BuscarHijos()
+    private async Task BuscarHijosAsync()
     {
         var todos = await ExamenesApiService.ListarExamenesAsync();
-        var val = valorBusquedaHijo.ToLower();
-        ResultadosBusquedaHijos = filtroBusquedaHijo switch
+        var valorBusquedaHijo = _valorBusquedaHijo.ToLower();
+        _resultadosBusquedaHijos = _filtroBusquedaHijo switch
         {
-            "nombre" => todos.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList(),
-            "estudio" => todos.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
+            "nombre" => todos.Where(e => e.NombreExamen.ToLower().Contains(valorBusquedaHijo)).ToList(),
+            "estudio" => todos.Where(e => e.Estudio?.ToLower().Contains(valorBusquedaHijo) ?? false).ToList(),
             _ => new()
         };
     }
 
-    private async Task ConfirmarReactivacion(ExamenDto examen)
+    private async Task ConfirmarReactivacionAsync(ExamenDto examen)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
@@ -581,7 +580,7 @@
             if (result.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
-                await BuscarExamenes();
+                await BuscarAsync();
             }
             else
             {
@@ -590,67 +589,66 @@
         }
     }
 
-
-    private async void SeleccionarHijo(ExamenDto examen)
+    private async void SeleccionarHijoAsync(ExamenDto examen)
     {
-        if (HijosSeleccionados.Any(x => x.IdExamen == examen.IdExamen))
+        if (_hijosSeleccionados.Any(x => x.IdExamen == examen.IdExamen))
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Este examen ya está agregado como hijo.", "warning");
             return;
         }
 
-        if (ExamenActual.IdExamen == examen.IdExamen)
+        if (_examenActual.IdExamen == examen.IdExamen)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "No puede agregarse a sí mismo como hijo.", "warning");
             return;
         }
 
-        HijosSeleccionados.Add(examen);
-        MostrarModalBusquedaHijo = false;
+        _hijosSeleccionados.Add(examen);
+        _mostrarModalBusquedaHijo = false;
     }
 
     private void QuitarHijo(int id) =>
-        HijosSeleccionados = HijosSeleccionados.Where(e => e.IdExamen != id).ToList();
+        _hijosSeleccionados = _hijosSeleccionados.Where(e => e.IdExamen != id).ToList();
 
     private void AbrirModalBusquedaHijo()
     {
-        valorBusquedaHijo = "";
-        ResultadosBusquedaHijos = new();
-        MostrarModalBusquedaHijo = true;
+        _valorBusquedaHijo = "";
+        _resultadosBusquedaHijos = new();
+        _mostrarModalBusquedaHijo = true;
     }
 
-    private void CerrarModalBusquedaHijo() => MostrarModalBusquedaHijo = false;
+    private void CerrarModalBusquedaHijo() => _mostrarModalBusquedaHijo = false;
 
-    private async Task LimpiarBusqueda()
+    private async Task LimpiarBusquedaAsync()
     {
-        criterioBusqueda = "";
-        valorBusqueda = "";
-        ListaExamenes = null;
+        _criterioBusqueda = "";
+        _valorBusqueda = "";
+        _listaExamenes = null;
     }
 
-    private List<string> EstudiosDisponibles = new();
-    private List<string> TiposMuestraDisponibles = new();
-    private List<string> TiposExamenDisponibles = new();
+    private List<string> _estudiosDisponibles = new();
+    private List<string> _tiposMuestraDisponibles = new();
+    private List<string> _tiposExamenDisponibles = new();
 
-    private async Task CargarListas()
+    private async Task CargarListasAsync()
     {
         var examenes = await ExamenesApiService.ListarExamenesAsync();
 
-        EstudiosDisponibles = examenes
+        _estudiosDisponibles = examenes
             .Select(e => e.Estudio?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .OrderBy(x => x)
             .ToList();
 
-        TiposMuestraDisponibles = examenes
+        _tiposMuestraDisponibles = examenes
             .Select(e => e.TipoMuestra?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .OrderBy(x => x)
             .ToList();
 
-        TiposExamenDisponibles = examenes
+        _tiposExamenDisponibles = examenes
             .Select(e => e.TipoExamen?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
@@ -658,30 +656,30 @@
             .ToList();
     }
 
-    private async Task ValidarEstudio(ChangeEventArgs e)
+    private async Task ValidarEstudioAsync(ChangeEventArgs e)
     {
         var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
-        if (EstudiosDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
+        if (_estudiosDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
             await JS.InvokeVoidAsync("alert", "Ya existe un estudio similar registrado.");
     }
 
-    private async Task ValidarTipoMuestra(ChangeEventArgs e)
+    private async Task ValidarTipoMuestraAsync(ChangeEventArgs e)
     {
         var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
-        if (TiposMuestraDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
+        if (_tiposMuestraDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
             await JS.InvokeVoidAsync("alert", "Ya existe un tipo de muestra similar registrado.");
     }
 
-    private async Task ValidarTipoExamen(ChangeEventArgs e)
+    private async Task ValidarTipoExamenAsync(ChangeEventArgs e)
     {
         var val = e.Value?.ToString()?.Trim()?.ToUpper();
         if (string.IsNullOrEmpty(val)) return;
 
-        if (TiposExamenDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
+        if (_tiposExamenDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
             await JS.InvokeVoidAsync("alert", "Ya existe un tipo de examen similar registrado.");
     }
 
@@ -696,21 +694,21 @@
         }
 
         paginas.AddRange(Enumerable.Range(1, 3));
-        if (paginaActual > 5) paginas.Add(-1);
+        if (_paginaActual > 5) paginas.Add(-1);
 
-        int inicio = Math.Max(4, paginaActual - 1);
-        int fin = Math.Min(TotalPaginas - 3, paginaActual + 1);
+        int inicio = Math.Max(4, _paginaActual - 1);
+        int fin = Math.Min(TotalPaginas - 3, _paginaActual + 1);
         for (int i = inicio; i <= fin; i++) paginas.Add(i);
 
-        if (paginaActual < TotalPaginas - 4) paginas.Add(-1);
+        if (_paginaActual < TotalPaginas - 4) paginas.Add(-1);
         paginas.AddRange(Enumerable.Range(TotalPaginas - 2, 3));
 
         return paginas.Distinct().Where(p => p >= 1 && p <= TotalPaginas).ToList();
     }
 
-    private void IrAPagina(int pagina) => paginaActual = pagina;
-    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
-    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
-    private void CambiarTamPagina() => paginaActual = 1;
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private void IrAPagina(int pagina) => _paginaActual = pagina;
+    private void PrevPagina() { if (_paginaActual > 1) _paginaActual--; }
+    private void NextPagina() { if (_paginaActual < TotalPaginas) _paginaActual++; }
+    private void CambiarTamPagina() => _paginaActual = 1;
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

@@ -14,19 +14,19 @@
                 <i class="bi bi-lock me-2"></i>Recuperar Contraseña
             </h5>
 
-            @if (!enviado)
+            @if (!_enviado)
             {
-                <EditForm Model="modelo" OnValidSubmit="EnviarSolicitud">
+                <EditForm Model="@_modelo" OnValidSubmit="EnviarSolicitudAsync">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Correo electrónico</label>
-                        <InputText @bind-Value="modelo.Correo" class="form-control" type="email" required />
+                        <InputText @bind-Value="_modelo.Correo" class="form-control" type="email" required />
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 shadow-sm" disabled="@procesando">
-                        @if (procesando)
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm" disabled="@_procesando">
+                        @if (_procesando)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span>
                             <span>Enviando...</span>
@@ -52,19 +52,19 @@
 </div>
 
 @code {
-    private OlvideContraseniaDto modelo = new();
-    private bool enviado = false;
-    private bool procesando = false;
+    private OlvideContraseniaDto _modelo = new();
+    private bool _enviado = false;
+    private bool _procesando = false;
 
-    private async Task EnviarSolicitud()
+    private async Task EnviarSolicitudAsync()
     {
-        procesando = true;
-        var resp = await RecuperacionApi.SolicitarRecuperacionContraseniaAsync(modelo);
-        procesando = false;
+        _procesando = true;
+        var resp = await RecuperacionApi.SolicitarRecuperacionContraseniaAsync(_modelo);
+        _procesando = false;
 
         if (resp.Exito)
         {
-            enviado = true;
+            _enviado = true;
         }
         else
         {

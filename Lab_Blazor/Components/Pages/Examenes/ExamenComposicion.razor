@@ -38,7 +38,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -49,17 +49,17 @@
         {
             <h4 class="mb-4 d-flex align-items-center text-uppercase fw-bold">
                 <i class="bi bi-diagram-3 text-primary fs-4 me-2"></i>
-                Composición de Examen: <span class="ms-2 text-dark">@NombreExamenPadre</span>
+                Composición de Examen: <span class="ms-2 text-dark">@_nombreExamenPadre</span>
             </h4>
 
-            @if (cargando)
+            @if (_cargando)
             {
                 <div class="d-flex justify-content-center align-items-center py-5 text-primary">
                     <div class="spinner-border me-2"></div>
                     <strong>Cargando información...</strong>
                 </div>
             }
-            else if (ExamenPadre == null)
+            else if (_examenPadre == null)
             {
                 <div class="alert alert-info shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Seleccione un examen para ver su composición.
@@ -71,16 +71,16 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Agregar examen hijo</label>
-                            <select class="form-select" @bind="IdExamenHijoSeleccionado">
+                            <select class="form-select" @bind="_idExamenHijoSeleccionado">
                                 <option value="">-- Seleccionar examen --</option>
-                                @foreach (var examen in ExamenesDisponibles)
+                                @foreach (var examen in _examenesDisponibles)
                                 {
                                     <option value="@examen.IdExamen">@examen.NombreExamen</option>
                                 }
                             </select>
                         </div>
                         <div class="col-md-4 text-end">
-                            <button class="btn btn-primary px-4" @onclick="AgregarComposicion">
+                            <button class="btn btn-primary px-4" @onclick="AgregarComposicionAsync">
                                 <i class="bi bi-plus-circle me-1"></i> Agregar
                             </button>
                         </div>
@@ -93,7 +93,7 @@
                             <i class="bi bi-list-check text-primary me-2"></i>Exámenes hijos asociados
                         </h5>
 
-                        @if (Composiciones == null || Composiciones.Count == 0)
+                        @if (_composiciones == null || _composiciones.Count == 0)
                         {
                             <div class="alert alert-warning shadow-sm">
                                 <i class="bi bi-exclamation-triangle me-2"></i>No hay exámenes hijos asociados.
@@ -110,12 +110,12 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var composicion in Composiciones)
+                                        @foreach (var composicion in _composiciones)
                                         {
                                             <tr>
                                                 <td>@composicion.NombreExamenHijo</td>
                                                 <td>
-                                                    <button class="btn btn-danger btn-sm shadow-sm" @onclick="() => EliminarComposicion(composicion)">
+                                                    <button class="btn btn-danger btn-sm shadow-sm" @onclick="() => EliminarComposicionAsync(composicion)">
                                                         <i class="bi bi-x-circle"></i> Quitar
                                                     </button>
                                                 </td>
@@ -149,25 +149,25 @@
 
 @code {
     [Parameter] public int? IdExamenPadre { get; set; }
-    private ExamenDto? ExamenPadre;
-    private string? NombreExamenPadre;
-    private List<ExamenComposicionDto> Composiciones = new();
-    private List<ExamenDto> ExamenesDisponibles = new();
-    private int? IdExamenHijoSeleccionado;
-    private bool cargando = true;
-    private bool datosCargados;
+    private ExamenDto? _examenPadre;
+    private string? _nombreExamenPadre;
+    private List<ExamenComposicionDto> _composiciones = new();
+    private List<ExamenDto> _examenesDisponibles = new();
+    private int? _idExamenHijoSeleccionado;
+    private bool _cargando = true;
+    private bool _datosCargados;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !datosCargados)
+        if (firstRender && !_datosCargados)
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
             if (!user.Identity?.IsAuthenticated ?? true)
             {
-                cargando = false;
-                datosCargados = true;
+                _cargando = false;
+                _datosCargados = true;
                 StateHasChanged();
                 return;
             }
@@ -177,79 +177,79 @@
 
             if (puedeVer && IdExamenPadre.HasValue)
             {
-                ExamenPadre = await ExamenesApiService.ObtenerDetalleExamenAsync(IdExamenPadre.Value);
-                NombreExamenPadre = ExamenPadre?.NombreExamen;
-                await CargarComposiciones();
-                await CargarExamenesDisponibles();
+                _examenPadre = await ExamenesApiService.ObtenerDetalleExamenAsync(IdExamenPadre.Value);
+                _nombreExamenPadre = _examenPadre?.NombreExamen;
+                await CargarComposicionesAsync();
+                await CargarExamenesDisponiblesAsync();
             }
 
-            cargando = false;
-            datosCargados = true;
+            _cargando = false;
+            _datosCargados = true;
             StateHasChanged();
         }
     }
 
-    private async Task CargarComposiciones()
+    private async Task CargarComposicionesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         if (IdExamenPadre.HasValue)
-            Composiciones = await ExamenComposicionApiService.ListarComposicionesPorPadreAsync(IdExamenPadre.Value);
+            _composiciones = await ExamenComposicionApiService.ListarComposicionesPorPadreAsync(IdExamenPadre.Value);
     }
 
-    private async Task CargarExamenesDisponibles()
+    private async Task CargarExamenesDisponiblesAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         var todos = await ExamenesApiService.ListarExamenesAsync();
-        ExamenesDisponibles = todos
-            .Where(x => x.IdExamen != IdExamenPadre && !Composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
+        _examenesDisponibles = todos
+            .Where(x => x.IdExamen != IdExamenPadre && !_composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
             .OrderBy(x => x.NombreExamen)
             .ToList();
     }
 
-    private async Task AgregarComposicion()
+    private async Task AgregarComposicionAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (!IdExamenHijoSeleccionado.HasValue)
+        if (!_idExamenHijoSeleccionado.HasValue)
         {
             await JS.InvokeVoidAsync("alert", "Seleccione un examen hijo.");
             return;
         }
 
-        var Dto = new ExamenComposicionDto
+        var dto = new ExamenComposicionDto
         {
             IdExamenPadre = IdExamenPadre!.Value,
-            IdExamenHijo = IdExamenHijoSeleccionado.Value
+            IdExamenHijo = _idExamenHijoSeleccionado.Value
         };
 
-        var Response = await ExamenComposicionApiService.GuardarComposicionAsync(Dto);
-        if (Response.IsSuccessStatusCode)
+        var response = await ExamenComposicionApiService.GuardarComposicionAsync(dto);
+        if (response.IsSuccessStatusCode)
         {
-            await CargarComposiciones();
-            await CargarExamenesDisponibles();
-            IdExamenHijoSeleccionado = null;
+            await CargarComposicionesAsync();
+            await CargarExamenesDisponiblesAsync();
+            _idExamenHijoSeleccionado = null;
         }
         else
         {
-            var Msg = await Response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al agregar: {Msg}");
+            var msg = await response.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("alert", $"Error al agregar: {msg}");
         }
     }
 
-    private async Task EliminarComposicion(ExamenComposicionDto Composicion)
+    private async Task EliminarComposicionAsync(ExamenComposicionDto composicion)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var Confirmado = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {Composicion.NombreExamenHijo}?");
-        if (!Confirmado) return;
+        var confirmado = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
+        if (!confirmado) return;
 
-        var Response = await ExamenComposicionApiService.EliminarComposicionAsync(Composicion.IdExamenPadre, Composicion.IdExamenHijo);
-        if (Response.IsSuccessStatusCode)
+        var response = await ExamenComposicionApiService.EliminarComposicionAsync(composicion.IdExamenPadre, composicion.IdExamenHijo);
+        if (response.IsSuccessStatusCode)
         {
-            await CargarComposiciones();
-            await CargarExamenesDisponibles();
+            await CargarComposicionesAsync();
+            await CargarExamenesDisponiblesAsync();
         }
         else
         {
@@ -257,5 +257,5 @@
         }
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

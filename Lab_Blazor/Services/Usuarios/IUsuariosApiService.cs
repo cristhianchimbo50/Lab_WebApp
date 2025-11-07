@@ -9,6 +9,5 @@ namespace Lab_Blazor.Services.Usuarios
         Task<int> GuardarUsuarioAsync(UsuarioCrearDto usuario);
         Task<bool> GuardarUsuarioAsync(UsuarioEditarDto usuario);
         Task<bool> CambiarEstadoUsuarioAsync(int idUsuario, bool activo);
-        Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesUsuarioAsync(int idUsuario);
     }
 }

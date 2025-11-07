@@ -1,130 +1,82 @@
 ﻿using Lab_Contracts.Auth;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace Lab_Blazor.Services.Auth
 {
-    public class AuthApiService : IAuthApiService
+    public class AuthApiService : BaseApiService, IAuthApiService
     {
-        private readonly HttpClient _clienteHttp;
-        private readonly IJSRuntime _jsRuntime;
-
-        public AuthApiService(IHttpClientFactory factoryHttp, IJSRuntime jsRuntime)
-        {
-            _clienteHttp = factoryHttp.CreateClient("Api");
-            _jsRuntime = jsRuntime;
-        }
+        public AuthApiService(IHttpClientFactory factory, ProtectedSessionStorage session, IJSRuntime js)
+            : base(factory, session, js) { }
 
         public async Task<(bool Exito, string Mensaje, LoginResponseDto? Usuario, bool RequiereCambioClave)> IniciarSesionAsync(LoginRequestDto solicitud, CancellationToken ct = default)
         {
-            var respuesta = await _clienteHttp.PostAsJsonAsync("api/auth/login", solicitud, ct);
-
-            if (respuesta.IsSuccessStatusCode)
-            {
-                var respuestaLogin = await respuesta.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
-                if (respuestaLogin is not null)
-                {
-                    if (respuestaLogin.EsContraseniaTemporal && string.IsNullOrEmpty(respuestaLogin.AccessToken))
-                        return (true, "Debe cambiar su contraseña antes de continuar.", respuestaLogin, true);
-
-                    return (true, respuestaLogin.Mensaje ?? "Inicio de sesión exitoso.", respuestaLogin, false);
-                }
-            }
-
-            string mensajeError = "Error desconocido.";
-            try
-            {
-                var contenido = await respuesta.Content.ReadAsStringAsync(ct);
-                if (!string.IsNullOrWhiteSpace(contenido))
-                {
-                    var documentoJson = JsonDocument.Parse(contenido);
-                    string? mensajeServidor = null;
-                    string? expiracion = null;
-
-                    foreach (var propiedad in documentoJson.RootElement.EnumerateObject())
-                    {
-                        if (propiedad.Name.Equals("mensaje", StringComparison.OrdinalIgnoreCase))
-                            mensajeServidor = propiedad.Value.GetString();
-                        else if (propiedad.Name.Equals("expiracion", StringComparison.OrdinalIgnoreCase))
-                            expiracion = propiedad.Value.GetString();
-                    }
-
-                    mensajeError = mensajeServidor ?? mensajeError;
-                    if (!string.IsNullOrEmpty(expiracion))
-                        mensajeError += $" (Expiró el {expiracion})";
-                }
-            }
-            catch (Exception ex)
-            {
-                mensajeError = $"Error al leer la respuesta del servidor: {ex.Message}";
-            }
-
-            return (false, mensajeError, null, false);
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/login") { Content = JsonContent.Create(solicitud) };
+            var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return (false, "Credenciales inválidas o la cuenta está bloqueada.", null, false);
+            var usuario = await resp.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
+            return (true, "Inicio de sesión exitoso.", usuario, false);
         }
 
-        public async Task LogoutAsync(CancellationToken ct = default)
+        public Task LogoutAsync(CancellationToken ct = default)
         {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "jwt");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "usuario");
+            return Task.CompletedTask;
         }
 
         public async Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto solicitud, CancellationToken ct = default)
         {
-            var respuesta = await _clienteHttp.PostAsJsonAsync("api/auth/cambiar-contrasenia", solicitud, ct);
-            if (respuesta.IsSuccessStatusCode)
-            {
-                var respuestaCambio = await respuesta.Content.ReadFromJsonAsync<CambiarContraseniaResponseDto>(cancellationToken: ct);
-                return (respuestaCambio?.Exito ?? true, respuestaCambio?.Mensaje ?? "Contraseña actualizada correctamente.");
-            }
-
-            var errorRespuesta = await respuesta.Content.ReadAsStringAsync(ct);
-            return (false, string.IsNullOrWhiteSpace(errorRespuesta) ? "No se pudo cambiar la contraseña." : errorRespuesta);
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/cambiar-contrasenia") { Content = JsonContent.Create(solicitud) };
+            var resp = await _http.SendAsync(req, ct);
+            var resultado = await resp.Content.ReadFromJsonAsync<CambiarContraseniaResponseDto>(cancellationToken: ct);
+            return resultado != null ? (resultado.Exito, resultado.Mensaje) : (false, "Error de red");
         }
+
+        public Task<bool> RegistrarUsuarioAsync(RegisterRequestDto solicitud, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<RespuestaMensajeDto> ActivarCuentaAsync(RestablecerContraseniaDto solicitud, CancellationToken ct = default)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/activar-cuenta")
+            {
+                Content = JsonContent.Create(solicitud)
+            };
+
+            var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+                return new RespuestaMensajeDto { Exito = false, Mensaje = "Error al activar la cuenta." };
+
+            var resultado = await resp.Content.ReadFromJsonAsync<RespuestaMensajeDto>(cancellationToken: ct);
+            return resultado ?? new RespuestaMensajeDto { Exito = false, Mensaje = "Respuesta inválida del servidor." };
+        }
+
 
         public async Task<bool> VerificarSesionAsync(CancellationToken ct = default)
         {
-            try
-            {
-                var tokenJwt = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "jwt");
-                if (string.IsNullOrWhiteSpace(tokenJwt))
-                    return false;
-
-                _clienteHttp.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenJwt);
-
-                var respuesta = await _clienteHttp.GetAsync("api/auth/verificar-sesion", ct);
-                return respuesta.IsSuccessStatusCode;
-            }
-            catch
-            {
-                return false;
-            }
+            if (!await SetAuthHeaderAsync()) return false;
+            var req = new HttpRequestMessage(HttpMethod.Get, "api/auth/verificar-sesion");
+            AddTokenHeader(req);
+            var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return false;
+            var resultado = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: ct);
+            if (resultado.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
+            if (resultado.TryGetProperty("Activa", out var activaProp) && activaProp.ValueKind == System.Text.Json.JsonValueKind.True)
+                return true;
+            return false;
         }
 
-        public async Task<string?> ObtenerTokenAsync()
+        public Task<string?> ObtenerTokenAsync()
         {
-            return await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "jwt");
+            throw new NotImplementedException();
         }
 
-        public async Task<LoginResponseDto?> ObtenerUsuarioAsync()
+        public Task<LoginResponseDto?> ObtenerUsuarioAsync()
         {
-            var datosUsuario = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "usuario");
-            return string.IsNullOrWhiteSpace(datosUsuario)
-                ? null
-                : JsonSerializer.Deserialize<LoginResponseDto>(datosUsuario);
+            throw new NotImplementedException();
         }
 
-        public async Task<bool> RegistrarUsuarioAsync(RegisterRequestDto solicitud, CancellationToken ct = default)
-        {
-            var respuesta = await _clienteHttp.PostAsJsonAsync("api/auth/register", solicitud, ct);
-            return respuesta.IsSuccessStatusCode;
-        }
 
-        public async Task<bool> ActivarCuentaAsync(ActivateAccountDto solicitud, CancellationToken ct = default)
-        {
-            var respuesta = await _clienteHttp.PostAsJsonAsync("api/auth/activate", solicitud, ct);
-            return respuesta.IsSuccessStatusCode;
-        }
     }
 }

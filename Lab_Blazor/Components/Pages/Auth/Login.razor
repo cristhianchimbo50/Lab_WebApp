@@ -33,39 +33,39 @@ else
                     <i class="bi bi-person-circle me-2"></i>Iniciar Sesión
                 </h3>
 
-                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                <EditForm Model="@_loginModel" OnValidSubmit="HandleLoginAsync">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
                     <div class="mb-3">
                         <label for="correo" class="form-label">Correo electrónico</label>
-                        <InputText id="correo" class="form-control" @bind-Value="loginModel.CorreoUsuario" placeholder="ejemplo@correo.com" />
-                        <ValidationMessage For="@(() => loginModel.CorreoUsuario)" />
+                        <InputText id="correo" class="form-control" @bind-Value="_loginModel.CorreoUsuario" placeholder="ejemplo@correo.com" />
+                        <ValidationMessage For="@(() => _loginModel.CorreoUsuario)" />
                     </div>
 
                     <div class="mb-3 position-relative">
                         <label for="clave" class="form-label">Contraseña</label>
                         <div class="input-group">
-                            <InputText id="clave" class="form-control" @bind-Value="loginModel.Clave" type="@passwordInputType" placeholder="Ingrese su contraseña" />
+                            <InputText id="clave" class="form-control" @bind-Value="_loginModel.Clave" type="@_passwordInputType" placeholder="Ingrese su contraseña" />
                             <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility" title="Mostrar/Ocultar contraseña">
-                                <i class="@passwordIcon"></i>
+                                <i class="@_passwordIcon"></i>
                             </button>
                         </div>
-                        <ValidationMessage For="@(() => loginModel.Clave)" />
+                        <ValidationMessage For="@(() => _loginModel.Clave)" />
                     </div>
 
-                    @if (!string.IsNullOrEmpty(error))
+                    @if (!string.IsNullOrEmpty(_error))
                     {
                         <div class="alert alert-danger d-flex align-items-start mt-2" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
                             <div>
                                 <strong>Atención:</strong><br />
-                                @error
+                                @_error
                             </div>
                         </div>
                     }
 
-                    <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@loginBloqueado">
+                    <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@_loginBloqueado">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
                     </button>
 
@@ -80,15 +80,15 @@ else
 }
 
 @code {
-    private LoginRequestDto loginModel = new();
-    private string? error;
-    private bool loginBloqueado = false;
+    private LoginRequestDto _loginModel = new();
+    private string? _error;
+    private bool _loginBloqueado = false;
     private bool _checkedAuth = false;
-    private string passwordInputType = "password";
-    private string passwordIcon = "bi bi-eye-slash";
-    private string? redirectUrl;
-    private Timer? temporizador;
-    private int segundosEspera = 30;
+    private string _passwordInputType = "password";
+    private string _passwordIcon = "bi bi-eye-slash";
+    private string? _redirectUrl;
+    private Timer? _temporizador;
+    private int _segundosEspera = 30;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -109,23 +109,23 @@ else
 
             var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            redirectUrl = query["returnUrl"];            
+            _redirectUrl = query["returnUrl"];
         }
     }
 
-    private async Task HandleLogin()
+    private async Task HandleLoginAsync()
     {
-        error = null;
-        loginBloqueado = true;
+        _error = null;
+        _loginBloqueado = true;
 
         try
         {
-            var (exito, mensaje, usuario, requiereCambio) = await AuthApi.IniciarSesionAsync(loginModel);
+            var (exito, mensaje, usuario, requiereCambio) = await AuthApi.IniciarSesionAsync(_loginModel);
 
             if (!exito || usuario is null)
             {
-                error = mensaje;
-                loginBloqueado = false;
+                _error = mensaje;
+                _loginBloqueado = false;
                 return;
             }
 
@@ -147,44 +147,44 @@ else
                     return;
                 }
 
-                if (!string.IsNullOrWhiteSpace(redirectUrl))
-                    Navigation.NavigateTo(redirectUrl!, true);
+                if (!string.IsNullOrWhiteSpace(_redirectUrl))
+                    Navigation.NavigateTo(_redirectUrl!, true);
                 else
                     Navigation.NavigateTo("/home", true);
             }
         }
         catch (Exception ex)
         {
-            error = $"Error: {ex.Message}";
+            _error = $"Error: {ex.Message}";
         }
         finally
         {
-            loginBloqueado = false;
+            _loginBloqueado = false;
         }
     }
 
     private void TogglePasswordVisibility()
     {
-        if (passwordInputType == "password")
+        if (_passwordInputType == "password")
         {
-            passwordInputType = "text";
-            passwordIcon = "bi bi-eye";
+            _passwordInputType = "text";
+            _passwordIcon = "bi bi-eye";
         }
         else
         {
-            passwordInputType = "password";
-            passwordIcon = "bi bi-eye-slash";
+            _passwordInputType = "password";
+            _passwordIcon = "bi bi-eye-slash";
         }
     }
 
     private void IniciarTemporizadorDesbloqueo()
     {
-        temporizador?.Dispose();
-        temporizador = new Timer(async _ =>
+        _temporizador?.Dispose();
+        _temporizador = new Timer(async _ =>
         {
-            loginBloqueado = false;
-            error = null;
+            _loginBloqueado = false;
+            _error = null;
             await InvokeAsync(StateHasChanged);
-        }, null, segundosEspera * 1000, Timeout.Infinite);
+        }, null, _segundosEspera * 1000, Timeout.Infinite);
     }
 }

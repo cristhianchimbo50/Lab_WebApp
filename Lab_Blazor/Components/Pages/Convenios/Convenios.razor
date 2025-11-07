@@ -18,20 +18,20 @@
 <PageTitle>Gestión de Convenios</PageTitle>
 
 <AuthorizeView>
-    <Authorized Context="EstadoAutenticacion">
+    <Authorized Context="estadoAutenticacion">
         @{
-            var Usuario = EstadoAutenticacion.User;
-            var Rol = (Usuario.FindFirst(ClaimTypes.Role)?.Value
-            ?? Usuario.FindFirst("role")?.Value
-            ?? Usuario.FindFirst("roles")?.Value
+            var usuario = estadoAutenticacion.User;
+            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value
+            ?? usuario.FindFirst("role")?.Value
+            ?? usuario.FindFirst("roles")?.Value
             ?? "");
 
-            bool EsPaciente = Rol == "paciente";
-            bool PuedeVer = Rol is "administrador" or "recepcionista";
-            bool PuedeAnular = Rol is "administrador";
+            bool esPaciente = rol == "paciente";
+            bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeAnular = rol is "administrador";
         }
 
-        @if (!PuedeVer)
+        @if (!puedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -39,7 +39,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -60,7 +60,7 @@
                 </button>
             </h3>
 
-            @if (!EstaRenderizado)
+            @if (!_estaRenderizado)
             {
                 <div class="text-center py-5 text-primary">
                     <div class="spinner-border me-2"></div>
@@ -73,7 +73,7 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect @bind-Value="Filtro.CriterioBusqueda" class="form-select">
+                            <InputSelect @bind-Value="_filtro.CriterioBusqueda" class="form-select">
                                 <option value="">-- Seleccione --</option>
                                 <option value="numero">Número Convenio</option>
                                 <option value="medico">Nombre Médico</option>
@@ -81,19 +81,19 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="Filtro.ValorBusqueda" placeholder="Ingrese valor a buscar" @onkeypress="@(e => { if (e.Key == "Enter") BuscarConvenios(); })" />
+                            <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda" placeholder="Ingrese valor a buscar" @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsync(); })" />
                         </div>
                         <div class="col-md-2">
                             <label class="form-label fw-semibold">Desde</label>
-                            <InputDate class="form-control" @bind-Value="Filtro.FechaDesde" />
+                            <InputDate class="form-control" @bind-Value="_filtro.FechaDesde" />
                         </div>
                         <div class="col-md-2">
                             <label class="form-label fw-semibold">Hasta</label>
-                            <InputDate class="form-control" @bind-Value="Filtro.FechaHasta" />
+                            <InputDate class="form-control" @bind-Value="_filtro.FechaHasta" />
                         </div>
                         <div class="col-md-12 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button class="btn btn-primary" @onclick="BuscarConvenios" disabled="@Buscando"><i class="bi bi-search me-1"></i>Buscar</button>
-                            <button class="btn btn-outline-secondary" @onclick="LimpiarBusqueda" disabled="@Buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                            <button class="btn btn-primary" @onclick="BuscarAsync" disabled="@_buscando"><i class="bi bi-search me-1"></i>Buscar</button>
+                            <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
                         </div>
                     </div>
                 </div>
@@ -101,11 +101,11 @@
                 <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body row g-3">
                         <div class="col-md-3 d-flex align-items-center">
-                            <InputCheckbox @bind-Value="Filtro.IncluirAnuladas" class="form-check-input me-2" />
+                            <InputCheckbox @bind-Value="_filtro.IncluirAnuladas" class="form-check-input me-2" />
                             <label class="form-check-label">Anulado</label>
                         </div>
                         <div class="col-md-3 d-flex align-items-center">
-                            <InputCheckbox @bind-Value="Filtro.IncluirVigentes" class="form-check-input me-2" />
+                            <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
                             <label class="form-check-label">Vigente</label>
                         </div>
                     </div>
@@ -113,14 +113,14 @@
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
                     <div class="text-muted small">
-                        @if (Resultado != null)
+                        @if (_resultado != null)
                         {
-                            <span>Mostrando página @Resultado.PageNumber de @TotalPaginas (Total: @Resultado.TotalCount)</span>
+                            <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
                         }
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <label class="form-label mb-0 small">Registros por página:</label>
-                        <select class="form-select form-select-sm w-auto" @bind="Filtro.PageSize" @bind:after="(() => { Filtro.PageNumber = 1; BuscarConvenios(); })">
+                        <select class="form-select form-select-sm w-auto" @bind="_filtro.PageSize" @bind:after="(() => { _filtro.PageNumber = 1; BuscarAsync(); })">
                             <option value="5">5</option>
                             <option value="10">10</option>
                             <option value="15">15</option>
@@ -130,12 +130,12 @@
 
                         <div class="d-flex align-items-center ms-2">
                             <button class="btn btn-sm btn-outline-secondary me-1"
-                                    disabled="@(Resultado == null || Resultado.PageNumber == 1)"
+                                    disabled="@(_resultado == null || _resultado.PageNumber == 1)"
                                     @onclick="(() => CambiarPagina(-1))">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary"
-                                    disabled="@(Resultado == null || Resultado.PageNumber >= TotalPaginas)"
+                                    disabled="@(_resultado == null || _resultado.PageNumber >= TotalPaginas)"
                                     @onclick="(() => CambiarPagina(1))">
                                 <i class="bi bi-chevron-right"></i>
                             </button>
@@ -143,13 +143,13 @@
                     </div>
                 </div>
 
-                @if (Resultado == null || Resultado.Items == null)
+                @if (_resultado == null || _resultado.Items == null)
                 {
                     <div class="alert alert-info text-center shadow-sm">
                         <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los convenios.
                     </div>
                 }
-                else if (!Resultado.Items.Any())
+                else if (!_resultado.Items.Any())
                 {
                     <div class="alert alert-warning text-center shadow-sm">
                         <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron convenios.
@@ -173,32 +173,32 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var Convenio in Resultado.Items)
+                                    @foreach (var convenio in _resultado.Items)
                                     {
-                                        var TotalMedico = Math.Round(Convenio.MontoTotal * Convenio.PorcentajeComision / 100, 2);
+                                        var totalMedico = Math.Round(convenio.MontoTotal * convenio.PorcentajeComision / 100, 2);
                                         <tr>
-                                            <td data-label="Número">@Convenio.IdConvenio</td>
-                                            <td data-label="Médico" class="text-truncate">@Convenio.NombreMedico</td>
-                                            <td data-label="Fecha">@Convenio.FechaConvenio.ToString("dd/MM/yyyy")</td>
-                                            <td data-label="Total Órdenes">@Convenio.MontoTotal.ToString("C")</td>
-                                            <td data-label="% Comisión">@Convenio.PorcentajeComision.ToString("0.##")%</td>
-                                            <td data-label="Total Médico">@TotalMedico.ToString("C")</td>
+                                            <td data-label="Número">@convenio.IdConvenio</td>
+                                            <td data-label="Médico" class="text-truncate">@convenio.NombreMedico</td>
+                                            <td data-label="Fecha">@convenio.FechaConvenio.ToString("dd/MM/yyyy")</td>
+                                            <td data-label="Total Órdenes">@convenio.MontoTotal.ToString("C")</td>
+                                            <td data-label="% Comisión">@convenio.PorcentajeComision.ToString("0.##")%</td>
+                                            <td data-label="Total Médico">@totalMedico.ToString("C")</td>
                                             <td data-label="Estado">
-                                                <span class="badge bg-@(Convenio.Anulado == true ? "danger" : "success")">
-                                                    @(Convenio.Anulado == true ? "Anulado" : "Activo")
+                                                <span class="badge bg-@(convenio.Anulado == true ? "danger" : "success")">
+                                                    @(convenio.Anulado == true ? "Anulado" : "Activo")
                                                 </span>
                                             </td>
                                             <td data-label="Acciones">
-                                                <button class="btn btn-primary btn-sm me-1" @onclick="() => VerDetalle(Convenio.IdConvenio)">
+                                                <button class="btn btn-primary btn-sm me-1" @onclick="() => AbrirModalDetalleAsync(convenio.IdConvenio)">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                @if (PuedeAnular && Convenio.Anulado == false)
+                                                @if (puedeAnular && convenio.Anulado == false)
                                                 {
-                                                    <button class="btn btn-danger btn-sm" @onclick="() => AnularConvenio(Convenio.IdConvenio)">
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => AnularConvenioAsync(convenio.IdConvenio)">
                                                         <i class="bi bi-x-circle-fill"></i>
                                                     </button>
                                                 }
-                                                else if (!PuedeAnular)
+                                                else if (!puedeAnular)
                                                 {
                                                     <span class="text-muted small">Sin permisos</span>
                                                 }
@@ -212,28 +212,28 @@
                 }
             }
 
-            @if (MostrarModal && ConvenioDetalle != null)
+            @if (_mostrarModal && _convenioDetalle != null)
             {
-                var TotalMedico = Math.Round(ConvenioDetalle.MontoTotal * ConvenioDetalle.PorcentajeComision / 100, 2);
+                var totalMedico = Math.Round(_convenioDetalle.MontoTotal * _convenioDetalle.PorcentajeComision / 100, 2);
                 <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
                     <div class="modal-dialog modal-lg modal-dialog-centered">
                         <div class="modal-content shadow-lg">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">
-                                    <i class="bi bi-info-circle me-2"></i>Detalle Convenio #@ConvenioDetalle.IdConvenio
+                                    <i class="bi bi-info-circle me-2"></i>Detalle Convenio #@_convenioDetalle.IdConvenio
                                 </h5>
-                                <button class="btn-close" @onclick="CerrarModal"></button>
+                                <button class="btn-close" @onclick="CerrarModalAsync"></button>
                             </div>
                             <div class="modal-body">
                                 <div class="row mb-3">
-                                    <div class="col-md-4"><strong>Médico:</strong> @ConvenioDetalle.NombreMedico</div>
-                                    <div class="col-md-4"><strong>Fecha:</strong> @ConvenioDetalle.FechaConvenio.ToString("dd/MM/yyyy")</div>
-                                    <div class="col-md-4"><strong>Órdenes:</strong> @ConvenioDetalle.Ordenes.Count</div>
+                                    <div class="col-md-4"><strong>Médico:</strong> @_convenioDetalle.NombreMedico</div>
+                                    <div class="col-md-4"><strong>Fecha:</strong> @_convenioDetalle.FechaConvenio.ToString("dd/MM/yyyy")</div>
+                                    <div class="col-md-4"><strong>Órdenes:</strong> @_convenioDetalle.Ordenes.Count</div>
                                 </div>
                                 <div class="row mb-3">
-                                    <div class="col-md-4"><strong>Total Órdenes:</strong> @ConvenioDetalle.MontoTotal.ToString("C")</div>
-                                    <div class="col-md-4"><strong>% Comisión:</strong> @ConvenioDetalle.PorcentajeComision.ToString("0.##")%</div>
-                                    <div class="col-md-4"><strong>Total Médico:</strong> @TotalMedico.ToString("C")</div>
+                                    <div class="col-md-4"><strong>Total Órdenes:</strong> @_convenioDetalle.MontoTotal.ToString("C")</div>
+                                    <div class="col-md-4"><strong>% Comisión:</strong> @_convenioDetalle.PorcentajeComision.ToString("0.##")%</div>
+                                    <div class="col-md-4"><strong>Total Médico:</strong> @totalMedico.ToString("C")</div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered align-middle text-center">
@@ -246,13 +246,13 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var Orden in ConvenioDetalle.Ordenes)
+                                            @foreach (var orden in _convenioDetalle.Ordenes)
                                             {
                                                 <tr>
-                                                    <td>@Orden.NumeroOrden</td>
-                                                    <td>@Orden.Paciente</td>
-                                                    <td>@Orden.FechaOrden?.ToString("dd/MM/yyyy")</td>
-                                                    <td>@Orden.Subtotal.ToString("C")</td>
+                                                    <td>@orden.NumeroOrden</td>
+                                                    <td>@orden.Paciente</td>
+                                                    <td>@orden.FechaOrden?.ToString("dd/MM/yyyy")</td>
+                                                    <td>@orden.Subtotal.ToString("C")</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -260,7 +260,7 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
+                                <button class="btn btn-secondary" @onclick="CerrarModalAsync">Cerrar</button>
                             </div>
                         </div>
                     </div>
@@ -286,8 +286,8 @@
 </AuthorizeView>
 
 @code {
-    private ResultadoPaginadoDto<ConvenioDto>? Resultado;
-    private ConvenioFiltroDto Filtro = new()
+    private ResultadoPaginadoDto<ConvenioDto>? _resultado;
+    private ConvenioFiltroDto _filtro = new()
     {
         FechaHasta = DateOnly.FromDateTime(DateTime.Today),
         FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15)),
@@ -299,70 +299,70 @@
         IncluirVigentes = true
     };
 
-    private ConvenioDetalleDto? ConvenioDetalle;
-    private bool EstaRenderizado;
-    private bool MostrarModal;
-    private bool SesionVerificada = false;
-    private bool Buscando = false;
+    private ConvenioDetalleDto? _convenioDetalle;
+    private bool _estaRenderizado;
+    private bool _mostrarModal;
+    private bool _sesionVerificada = false;
+    private bool _buscando = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !SesionVerificada)
+        if (firstRender && !_sesionVerificada)
         {
-            SesionVerificada = true;
+            _sesionVerificada = true;
 
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            EstaRenderizado = true;
+            _estaRenderizado = true;
             StateHasChanged();
 
-            await BuscarConvenios();
+            await BuscarAsync();
         }
     }
 
-    private int TotalPaginas => Resultado == null || Resultado.PageSize == 0
+    private int TotalPaginas => _resultado == null || _resultado.PageSize == 0
         ? 1
-        : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
+        : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
     private MarkupString OrdenIcono(string columna)
     {
-        if (Filtro.SortBy != columna) return (MarkupString)string.Empty;
-        var icon = Filtro.SortAsc ? "&uarr;" : "&darr;";
+        if (_filtro.SortBy != columna) return (MarkupString)string.Empty;
+        var icon = _filtro.SortAsc ? "&uarr;" : "&darr;";
         return (MarkupString)$"<span class=\"ms-1\">{icon}</span>";
     }
 
     private void OrdenarPor(string columna)
     {
-        if (Filtro.SortBy == columna)
-            Filtro.SortAsc = !Filtro.SortAsc;
+        if (_filtro.SortBy == columna)
+            _filtro.SortAsc = !_filtro.SortAsc;
         else
         {
-            Filtro.SortBy = columna;
-            Filtro.SortAsc = true;
+            _filtro.SortBy = columna;
+            _filtro.SortAsc = true;
         }
-        Filtro.PageNumber = 1;
-        _ = BuscarConvenios();
+        _filtro.PageNumber = 1;
+        _ = BuscarAsync();
     }
 
     private async Task CambiarPagina(int delta)
     {
-        if (Resultado == null) return;
-        var nueva = Math.Max(1, Math.Min(TotalPaginas, Resultado.PageNumber + delta));
-        if (nueva == Resultado.PageNumber) return;
-        Filtro.PageNumber = nueva;
-        await BuscarConvenios();
+        if (_resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, _resultado.PageNumber + delta));
+        if (nueva == _resultado.PageNumber) return;
+        _filtro.PageNumber = nueva;
+        await BuscarAsync();
     }
 
-    private async Task BuscarConvenios()
+    private async Task BuscarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (Buscando) return;
+        if (_buscando) return;
 
         try
         {
-            Buscando = true;
-            Resultado = await ConveniosApi.ListarConveniosPaginadosAsync(Filtro);
+            _buscando = true;
+            _resultado = await ConveniosApi.ListarConveniosPaginadosAsync(_filtro);
         }
         catch
         {
@@ -370,24 +370,24 @@
         }
         finally
         {
-            Buscando = false;
+            _buscando = false;
         }
     }
 
-    private async Task VerDetalle(int IdConvenio)
+    private async Task AbrirModalDetalleAsync(int idConvenio)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        ConvenioDetalle = await ConveniosApi.ObtenerDetalleConvenioAsync(IdConvenio);
-        MostrarModal = ConvenioDetalle != null;
+        _convenioDetalle = await ConveniosApi.ObtenerDetalleConvenioAsync(idConvenio);
+        _mostrarModal = _convenioDetalle != null;
 
         await JS.InvokeVoidAsync("marcarModalAbierto");
         StateHasChanged();
     }
 
-    private async Task LimpiarBusqueda()
+    private async Task LimpiarBusquedaAsync()
     {
-        Filtro = new ConvenioFiltroDto
+        _filtro = new ConvenioFiltroDto
         {
             FechaHasta = DateOnly.FromDateTime(DateTime.Today),
             FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15)),
@@ -398,28 +398,28 @@
             IncluirAnuladas = true,
             IncluirVigentes = true
         };
-        await BuscarConvenios();
+        await BuscarAsync();
     }
 
-    private async Task CerrarModal()
+    private async Task CerrarModalAsync()
     {
-        MostrarModal = false;
-        ConvenioDetalle = null;
+        _mostrarModal = false;
+        _convenioDetalle = null;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
-    private async Task AnularConvenio(int IdConvenio)
+    private async Task AnularConvenioAsync(int idConvenio)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        bool Confirmar = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este convenio?");
-        if (!Confirmar) return;
+        bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este convenio?");
+        if (!confirmar) return;
 
-        var ResultadoAnular = await ConveniosApi.AnularConvenioAsync(IdConvenio);
-        if (ResultadoAnular)
+        var resultadoAnular = await ConveniosApi.AnularConvenioAsync(idConvenio);
+        if (resultadoAnular)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio anulado correctamente.", "success");
-            await BuscarConvenios();
+            await BuscarAsync();
         }
         else
         {
@@ -429,5 +429,5 @@
 
     private void IrARegistrarConvenio() => Navigation.NavigateTo("/convenios/nuevo");
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

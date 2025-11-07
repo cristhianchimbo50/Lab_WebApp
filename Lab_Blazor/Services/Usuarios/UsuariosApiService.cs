@@ -63,13 +63,5 @@ namespace Lab_Blazor.Services.Usuarios
             catch { }
             throw new Exception("Error al cambiar estado del usuario.");
         }
-
-        public async Task<UsuarioReenviarDto?> ReenviarCredencialesTemporalesUsuarioAsync(int idUsuario)
-        {
-            if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
-            var req = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{idUsuario}/reenviar"); AddTokenHeader(req);
-            var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
-            return await resp.Content.ReadFromJsonAsync<UsuarioReenviarDto>();
-        }
     }
 }

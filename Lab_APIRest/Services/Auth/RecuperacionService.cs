@@ -3,7 +3,6 @@ using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
-using Lab_Contracts.Shared;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -34,7 +33,7 @@ namespace Lab_APIRest.Services.Auth
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             var tokenHash = CalcularHash(token);
 
-            var registro = new recuperacion_contrasenias
+            var registro = new tokens_usuarios
             {
                 id_usuario = usuario.id_usuario,
                 token_hash = tokenHash,
@@ -42,7 +41,7 @@ namespace Lab_APIRest.Services.Auth
                 usado = false
             };
 
-            _db.recuperacion_contrasenias.Add(registro);
+            _db.tokens_usuarios.Add(registro);
             await _db.SaveChangesAsync(ct);
 
             var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; //Debo cambiar para produccionojoooooooooo
@@ -67,7 +66,7 @@ namespace Lab_APIRest.Services.Auth
 
             var tokenHash = CalcularHash(dto.Token);
 
-            var registro = await _db.recuperacion_contrasenias
+            var registro = await _db.tokens_usuarios
                 .Include(r => r.Usuario)
                 .FirstOrDefaultAsync(r => r.token_hash == tokenHash && !r.usado, ct);
 
@@ -79,8 +78,6 @@ namespace Lab_APIRest.Services.Auth
 
             var usuario = registro.Usuario;
             usuario.clave_usuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
-            usuario.es_contrasenia_temporal = false;
-            usuario.fecha_expira_temporal = null;
 
             registro.usado = true;
             registro.usado_en = DateTime.UtcNow;

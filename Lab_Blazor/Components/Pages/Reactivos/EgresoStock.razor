@@ -32,7 +32,7 @@
                         <p class="text-muted mb-3">
                             No tienes permisos suficientes para registrar egresos de reactivos.
                         </p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -45,7 +45,7 @@
                 <i class="bi bi-box-arrow-up text-danger fs-5 me-2"></i> Egreso de Stock de Reactivos
             </h3>
 
-            @if (!cargado)
+            @if (!_cargado)
             {
                 <div class="d-flex align-items-center text-primary">
                     <div class="spinner-border me-2" role="status"></div>
@@ -57,7 +57,7 @@
                     <div class="card-body row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="criterioBusqueda">
+                            <InputSelect class="form-select" @bind-Value="_criterioBusqueda">
                                 <option value="">-- Seleccione --</option>
                                 <option value="nombre">Nombre</option>
                                 <option value="fabricante">Fabricante</option>
@@ -66,28 +66,28 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="valorBusqueda"
+                            <InputText class="form-control" @bind-Value="_valorBusqueda"
                                        placeholder="Ingrese valor a buscar"
-                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarReactivos(); })" />
+                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarReactivosAsync(); })" />
                         </div>
                         <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button type="button" class="btn btn-primary" @onclick="BuscarReactivos">
+                            <button type="button" class="btn btn-primary" @onclick="BuscarReactivosAsync">
                                 <i class="bi bi-search me-1"></i>Buscar
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusqueda">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync">
                                 <i class="bi bi-eraser me-1"></i>Limpiar
                             </button>
                         </div>
                     </div>
                 </div>
 
-                @if (Reactivos == null)
+                @if (_reactivos == null)
                 {
                     <div class="alert alert-info text-center shadow-sm">
                         <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                     </div>
                 }
-                else if (!Reactivos.Any())
+                else if (!_reactivos.Any())
                 {
                     <div class="alert alert-warning text-center shadow-sm">
                         <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron reactivos.
@@ -110,13 +110,13 @@
                                 <div class="card-body p-2">
                                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
                                         <div class="text-muted small">
-                                            Mostrando @((paginaActual - 1) * tamPagina + 1)
-                                            - @(Math.Min(paginaActual * tamPagina, Reactivos.Count))
-                                            de @Reactivos.Count reactivos
+                                            Mostrando @((_paginaActual - 1) * _tamPagina + 1)
+                                            - @(Math.Min(_paginaActual * _tamPagina, _reactivos.Count))
+                                            de @_reactivos.Count reactivos
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <label class="form-label mb-0 small">Registros por página:</label>
-                                            <select class="form-select form-select-sm w-auto" @bind="tamPagina" @bind:after="CambiarTamPagina">
+                                            <select class="form-select form-select-sm w-auto" @bind="_tamPagina" @bind:after="CambiarTamPagina">
                                                 <option value="5">5</option>
                                                 <option value="10">10</option>
                                                 <option value="15">15</option>
@@ -124,12 +124,12 @@
                                             </select>
                                             <div class="d-flex align-items-center ms-2">
                                                 <button class="btn btn-sm btn-outline-secondary me-1"
-                                                        disabled="@(paginaActual == 1)"
+                                                        disabled="@(_paginaActual == 1)"
                                                         @onclick="PrevPagina">
                                                     <i class="bi bi-chevron-left"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-secondary"
-                                                        disabled="@(paginaActual >= TotalPaginas)"
+                                                        disabled="@(_paginaActual >= TotalPaginas)"
                                                         @onclick="NextPagina">
                                                     <i class="bi bi-chevron-right"></i>
                                                 </button>
@@ -184,25 +184,25 @@
                                 <div class="card-body p-2">
                                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
                                         <div class="text-muted small">
-                                            Mostrando @((paginaActualSel - 1) * tamPaginaSel + 1)
-                                            - @(Math.Min(paginaActualSel * tamPaginaSel, reactivosSeleccionados.Count))
-                                            de @reactivosSeleccionados.Count seleccionados
+                                            Mostrando @((_paginaActualSel - 1) * _tamPaginaSel + 1)
+                                            - @(Math.Min(_paginaActualSel * _tamPaginaSel, ReactivosSeleccionados.Count))
+                                            de @ReactivosSeleccionados.Count seleccionados
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <label class="form-label mb-0 small">Registros por página:</label>
-                                            <select class="form-select form-select-sm w-auto" @bind="tamPaginaSel" @bind:after="CambiarTamPaginaSel">
+                                            <select class="form-select form-select-sm w-auto" @bind="_tamPaginaSel" @bind:after="CambiarTamPaginaSel">
                                                 <option value="5">5</option>
                                                 <option value="10">10</option>
                                                 <option value="15">15</option>
                                             </select>
                                             <div class="d-flex align-items-center ms-2">
                                                 <button class="btn btn-sm btn-outline-secondary me-1"
-                                                        disabled="@(paginaActualSel == 1)"
+                                                        disabled="@(_paginaActualSel == 1)"
                                                         @onclick="PrevPaginaSel">
                                                     <i class="bi bi-chevron-left"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-secondary"
-                                                        disabled="@(paginaActualSel >= TotalPaginasSel)"
+                                                        disabled="@(_paginaActualSel >= TotalPaginasSel)"
                                                         @onclick="NextPaginaSel">
                                                     <i class="bi bi-chevron-right"></i>
                                                 </button>
@@ -243,7 +243,7 @@
                                         </div>
                                     </div>
 
-                                    @if (!reactivosSeleccionados.Any())
+                                    @if (!ReactivosSeleccionados.Any())
                                     {
                                         <div class="alert alert-info text-center mt-3">
                                             <i class="bi bi-info-circle me-1"></i> No hay reactivos seleccionados.
@@ -254,7 +254,7 @@
                                         <div class="text-end mt-3">
                                             <button class="btn btn-danger shadow-sm"
                                                     @onclick="GuardarEgresosAsync"
-                                                    disabled="@(!reactivosSeleccionados.Any())">
+                                                    disabled="@(!ReactivosSeleccionados.Any())">
                                                 <i class="bi bi-save me-1"></i> Registrar Egresos
                                             </button>
                                         </div>
@@ -287,10 +287,10 @@
 </AuthorizeView>
 
 @code {
-    private bool cargado;
-    private string? criterioBusqueda = null;
-    private string valorBusqueda = string.Empty;
-    private DateTime fechaEgreso = DateTime.Now;
+    private bool _cargado;
+    private string? _criterioBusqueda = null;
+    private string _valorBusqueda = string.Empty;
+    private DateTime _fechaEgreso = DateTime.Now;
 
     public class ReactivoExtendido : ReactivoDto
     {
@@ -299,24 +299,24 @@
         public string Observacion { get; set; } = "Egreso de stock";
     }
 
-    private List<ReactivoExtendido>? Reactivos;
-    private int paginaActual = 1;
-    private int tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((Reactivos?.Count ?? 1) / (double)tamPagina);
+    private List<ReactivoExtendido>? _reactivos;
+    private int _paginaActual = 1;
+    private int _tamPagina = 10;
+    private int TotalPaginas => (int)Math.Ceiling((_reactivos?.Count ?? 1) / (double)_tamPagina);
     private IEnumerable<ReactivoExtendido> ReactivosPaginados =>
-        Reactivos?.Skip((paginaActual - 1) * tamPagina).Take(tamPagina) ?? new List<ReactivoExtendido>();
+        _reactivos?.Skip((_paginaActual - 1) * _tamPagina).Take(_tamPagina) ?? new List<ReactivoExtendido>();
 
-    private List<ReactivoExtendido> reactivosSeleccionados =>
-        Reactivos?.Where(r => r.Seleccionado).ToList() ?? new();
+    private List<ReactivoExtendido> ReactivosSeleccionados =>
+        _reactivos?.Where(r => r.Seleccionado).ToList() ?? new();
 
-    private int paginaActualSel = 1;
-    private int tamPaginaSel = 5;
-    private int TotalPaginasSel => (int)Math.Ceiling((reactivosSeleccionados.Count == 0 ? 1 : reactivosSeleccionados.Count) / (double)tamPaginaSel);
+    private int _paginaActualSel = 1;
+    private int _tamPaginaSel = 5;
+    private int TotalPaginasSel => (int)Math.Ceiling((ReactivosSeleccionados.Count == 0 ? 1 : ReactivosSeleccionados.Count) / (double)_tamPaginaSel);
     private IEnumerable<ReactivoExtendido> ReactivosSeleccionadosPaginados =>
-        reactivosSeleccionados.Skip((paginaActualSel - 1) * tamPaginaSel).Take(tamPaginaSel);
-    private void PrevPaginaSel() { if (paginaActualSel > 1) paginaActualSel--; }
-    private void NextPaginaSel() { if (paginaActualSel < TotalPaginasSel) paginaActualSel++; }
-    private void CambiarTamPaginaSel() => paginaActualSel = 1;
+        ReactivosSeleccionados.Skip((_paginaActualSel - 1) * _tamPaginaSel).Take(_tamPaginaSel);
+    private void PrevPaginaSel() { if (_paginaActualSel > 1) _paginaActualSel--; }
+    private void NextPaginaSel() { if (_paginaActualSel < TotalPaginasSel) _paginaActualSel++; }
+    private void CambiarTamPaginaSel() => _paginaActualSel = 1;
 
     private bool _sesionVerificada = false;
 
@@ -329,25 +329,24 @@
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            cargado = true;
-            Reactivos = null;
+            _cargado = true;
+            _reactivos = null;
             StateHasChanged();
         }
     }
 
-
-    private async Task BuscarReactivos()
+    private async Task BuscarReactivosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         try
         {
-            cargado = false;
+            _cargado = false;
             var lista = await ReactivosApi.ListarReactivosAsync();
 
-            if (string.IsNullOrWhiteSpace(criterioBusqueda) && string.IsNullOrWhiteSpace(valorBusqueda))
+            if (string.IsNullOrWhiteSpace(_criterioBusqueda) && string.IsNullOrWhiteSpace(_valorBusqueda))
             {
-                Reactivos = lista
+                _reactivos = lista
                     .OrderBy(r => r.NombreReactivo)
                     .Select(r => new ReactivoExtendido
                     {
@@ -361,20 +360,20 @@
             else
             {
                 var filtrados = lista.AsQueryable();
-                switch (criterioBusqueda)
+                switch (_criterioBusqueda)
                 {
                     case "nombre":
-                        filtrados = filtrados.Where(r => r.NombreReactivo.Contains(valorBusqueda, StringComparison.OrdinalIgnoreCase));
+                        filtrados = filtrados.Where(r => r.NombreReactivo.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
                         break;
                     case "fabricante":
-                        filtrados = filtrados.Where(r => r.Fabricante.Contains(valorBusqueda, StringComparison.OrdinalIgnoreCase));
+                        filtrados = filtrados.Where(r => r.Fabricante.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
                         break;
                     case "unidad":
-                        filtrados = filtrados.Where(r => r.Unidad.Contains(valorBusqueda, StringComparison.OrdinalIgnoreCase));
+                        filtrados = filtrados.Where(r => r.Unidad.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
                         break;
                 }
 
-                Reactivos = filtrados
+                _reactivos = filtrados
                     .OrderBy(r => r.NombreReactivo)
                     .Select(r => new ReactivoExtendido
                     {
@@ -386,7 +385,7 @@
                     }).ToList();
             }
 
-            paginaActual = 1;
+            _paginaActual = 1;
             await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivos cargados correctamente.", "success");
         }
         catch
@@ -395,31 +394,31 @@
         }
         finally
         {
-            cargado = true;
+            _cargado = true;
             StateHasChanged();
         }
     }
     
-    private async Task LimpiarBusqueda()
+    private async Task LimpiarBusquedaAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        criterioBusqueda = null;
-        valorBusqueda = string.Empty;
-        Reactivos = null;
-        paginaActual = 1;
+        _criterioBusqueda = null;
+        _valorBusqueda = string.Empty;
+        _reactivos = null;
+        _paginaActual = 1;
         StateHasChanged();
     }
 
-    private void PrevPagina() { if (paginaActual > 1) paginaActual--; }
-    private void NextPagina() { if (paginaActual < TotalPaginas) paginaActual++; }
-    private void CambiarTamPagina() => paginaActual = 1;
+    private void PrevPagina() { if (_paginaActual > 1) _paginaActual--; }
+    private void NextPagina() { if (_paginaActual < TotalPaginas) _paginaActual++; }
+    private void CambiarTamPagina() => _paginaActual = 1;
 
     private async Task GuardarEgresosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        var seleccionados = reactivosSeleccionados
+        var seleccionados = ReactivosSeleccionados
             .Where(r => r.Cantidad > 0)
             .Select(r => new MovimientoReactivoEgresoDto
             {
@@ -428,7 +427,7 @@
                 Unidad = r.Unidad,
                 Cantidad = r.Cantidad,
                 Observacion = r.Observacion,
-                FechaMovimiento = fechaEgreso
+                FechaMovimiento = _fechaEgreso
             }).ToList();
 
         if (!seleccionados.Any())
@@ -441,7 +440,7 @@
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Egresos registrados correctamente.", "success");
-            Reactivos?.ForEach(r => { r.Seleccionado = false; r.Cantidad = 0; });
+            _reactivos?.ForEach(r => { r.Seleccionado = false; r.Cantidad = 0; });
             StateHasChanged();
 
             await Task.Delay(1500);
@@ -453,5 +452,5 @@
         }
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

@@ -16,7 +16,5 @@ namespace Lab_Blazor.Services.Pacientes
         Task<HttpResponseMessage> GuardarPacienteAsync(int idPaciente, PacienteDto paciente);
         Task<HttpResponseMessage> AnularPacienteAsync(int idPaciente);
         Task<PacienteDto?> ObtenerPacientePorCedulaAsync(string cedula);
-
-        Task<(bool Exito, string Mensaje)> ReenviarCredencialesTemporalesAsync(int idPaciente);
     }
 }

@@ -37,7 +37,7 @@
                         <i class="bi bi-shield-lock text-primary fs-1 mb-3"></i>
                         <h5 class="fw-bold mb-2">Acceso no autorizado</h5>
                         <p class="text-muted mb-3">No tienes permisos suficientes para acceder a esta sección.</p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -54,19 +54,19 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Número de Orden</label>
-                        <InputText class="form-control" @bind-Value="filtro.NumeroOrden" placeholder="ORD-00001" />
+                        <InputText class="form-control" @bind-Value="_filtro.NumeroOrden" placeholder="ORD-00001" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Cédula</label>
-                        <InputText class="form-control" @bind-Value="filtro.Cedula" placeholder="Cédula del paciente" />
+                        <InputText class="form-control" @bind-Value="_filtro.Cedula" placeholder="Cédula del paciente" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Nombre</label>
-                        <InputText class="form-control" @bind-Value="filtro.NombrePaciente" placeholder="Nombre del paciente" />
+                        <InputText class="form-control" @bind-Value="_filtro.NombrePaciente" placeholder="Nombre del paciente" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Estado de Pago</label>
-                        <select class="form-select" @bind="filtro.EstadoPago">
+                        <select class="form-select" @bind="_filtro.EstadoPago">
                             <option value="">Todos</option>
                             <option value="PENDIENTE">Pendiente</option>
                             <option value="PAGADO">Pagado</option>
@@ -79,18 +79,18 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Desde</label>
-                        <InputDate class="form-control" @bind-Value="filtro.FechaInicio" />
+                        <InputDate class="form-control" @bind-Value="_filtro.FechaInicio" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Hasta</label>
-                        <InputDate class="form-control" @bind-Value="filtro.FechaFin" />
+                        <InputDate class="form-control" @bind-Value="_filtro.FechaFin" />
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-4">
-                        <InputCheckbox @bind-Value="verAnulados" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_verAnulados" class="form-check-input me-2" />
                         <label class="form-check-label">Anulado</label>
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-4">
-                        <InputCheckbox @bind-Value="verNoAnulados" class="form-check-input me-2" />
+                        <InputCheckbox @bind-Value="_verNoAnulados" class="form-check-input me-2" />
                         <label class="form-check-label">No Anulado</label>
                     </div>
                 </div>
@@ -100,18 +100,18 @@
                 <button class="btn btn-primary me-2 shadow-sm" @onclick="BuscarAsync">
                     <i class="bi bi-search me-1"></i>Buscar
                 </button>
-                <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarFiltros">
+                <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarFiltrosAsync">
                     <i class="bi bi-eraser me-1"></i>Limpiar
                 </button>
             </div>
 
-            @if (Resultado == null || Resultado.Items == null)
+            @if (_resultado == null || _resultado.Items == null)
             {
                 <div class="alert alert-info text-center shadow-sm">
                     <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
                 </div>
             }
-            else if (!Resultado.Items.Any())
+            else if (!_resultado.Items.Any())
             {
                 <div class="alert alert-warning text-center shadow-sm">
                     <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron registros.
@@ -122,8 +122,8 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div class="text-muted small">
                         Mostrando @((CurrentPage - 1) * PageSize + 1)
-                        - @(Math.Min(CurrentPage * PageSize, Resultado.TotalCount))
-                        de @Resultado.TotalCount registros
+                        - @(Math.Min(CurrentPage * PageSize, _resultado.TotalCount))
+                        de @_resultado.TotalCount registros
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
@@ -138,12 +138,12 @@
                         <div class="d-flex align-items-center ms-2">
                             <button class="btn btn-sm btn-outline-secondary me-1"
                                     disabled="@(CurrentPage == 1)"
-                                    @onclick="(() => CambiarPagina(-1))">
+                                    @onclick="(() => CambiarPaginaAsync(-1))">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary"
                                     disabled="@(CurrentPage >= TotalPages)"
-                                    @onclick="(() => CambiarPagina(1))">
+                                    @onclick="(() => CambiarPaginaAsync(1))">
                                 <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -167,7 +167,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var o in Resultado.Items)
+                                @foreach (var o in _resultado.Items)
                                 {
                                     <tr>
                                         <td>@o.NumeroOrden</td>
@@ -212,20 +212,20 @@
 </AuthorizeView>
 
 @code {
-    private ResultadoPaginadoDto<OrdenDto> Resultado = new ResultadoPaginadoDto<OrdenDto>();
-    private PagoFiltroDto filtro = new();
-    private bool verAnulados = true;
-    private bool verNoAnulados = true;
+    private ResultadoPaginadoDto<OrdenDto> _resultado = new ResultadoPaginadoDto<OrdenDto>();
+    private PagoFiltroDto _filtro = new();
+    private bool _verAnulados = true;
+    private bool _verNoAnulados = true;
     private int _pageSize = 10;
     private int PageSize { get => _pageSize; set { if (_pageSize != value) { _pageSize = value; CurrentPage = 1; } } }
     private int CurrentPage = 1;
-    private int TotalPages => Resultado == null || Resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(Resultado.TotalCount / (double)Resultado.PageSize);
+    private int TotalPages => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
     protected override async void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            Resultado = new ResultadoPaginadoDto<OrdenDto>();
+            _resultado = new ResultadoPaginadoDto<OrdenDto>();
             StateHasChanged();
         }
     }
@@ -234,45 +234,45 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (string.IsNullOrWhiteSpace(filtro.NumeroOrden) &&
-            string.IsNullOrWhiteSpace(filtro.Cedula) &&
-            string.IsNullOrWhiteSpace(filtro.NombrePaciente) &&
-            string.IsNullOrWhiteSpace(filtro.EstadoPago) &&
-            !filtro.FechaInicio.HasValue && !filtro.FechaFin.HasValue &&
-            !verAnulados && !verNoAnulados)
+        if (string.IsNullOrWhiteSpace(_filtro.NumeroOrden) &&
+            string.IsNullOrWhiteSpace(_filtro.Cedula) &&
+            string.IsNullOrWhiteSpace(_filtro.NombrePaciente) &&
+            string.IsNullOrWhiteSpace(_filtro.EstadoPago) &&
+            !_filtro.FechaInicio.HasValue && !_filtro.FechaFin.HasValue &&
+            !_verAnulados && !_verNoAnulados)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Presione Buscar para cargar los datos.", "info");
-            Resultado = new ResultadoPaginadoDto<OrdenDto>();
+            _resultado = new ResultadoPaginadoDto<OrdenDto>();
             return;
         }
 
-        if (verAnulados && !verNoAnulados)
-            filtro.IncluirAnulados = true;
-        else if (!verAnulados && verNoAnulados)
-            filtro.IncluirAnulados = false;
+        if (_verAnulados && !_verNoAnulados)
+            _filtro.IncluirAnulados = true;
+        else if (!_verAnulados && _verNoAnulados)
+            _filtro.IncluirAnulados = false;
         else
-            filtro.IncluirAnulados = null;
+            _filtro.IncluirAnulados = null;
 
-        filtro.PageNumber = CurrentPage;
-        filtro.PageSize = PageSize;
+        _filtro.PageNumber = CurrentPage;
+        _filtro.PageSize = PageSize;
 
-        Resultado = await PagosApi.ListarCuentasPorCobrarPaginadoAsync(filtro);
+        _resultado = await PagosApi.ListarCuentasPorCobrarPaginadoAsync(_filtro);
 
         await JS.InvokeVoidAsync("mostrarToastAsync", "Datos cargados correctamente.", "success");
     }
 
-    private async Task LimpiarFiltros()
+    private async Task LimpiarFiltrosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        filtro = new();
-        verAnulados = true;
-        verNoAnulados = true;
-        Resultado = new ResultadoPaginadoDto<OrdenDto>();
+        _filtro = new();
+        _verAnulados = true;
+        _verNoAnulados = true;
+        _resultado = new ResultadoPaginadoDto<OrdenDto>();
         await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
 
-    private async Task CambiarPagina(int cambio)
+    private async Task CambiarPaginaAsync(int cambio)
     {
         var nueva = Math.Max(1, Math.Min(TotalPages, CurrentPage + cambio));
         if (nueva == CurrentPage) return;
@@ -287,5 +287,5 @@
             Navigation.NavigateTo($"/cobros/{cedula}");
     }
 
-    private async Task VolverAtras() => await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

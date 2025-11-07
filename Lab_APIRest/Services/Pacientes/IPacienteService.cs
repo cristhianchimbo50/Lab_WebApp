@@ -12,6 +12,5 @@ namespace Lab_APIRest.Services.Pacientes
         Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto dto);
         Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto);
         Task<bool> AnularPacienteAsync(int idPaciente);
-        Task<(bool Exito, string Mensaje, string? NuevaTemporal)> ReenviarCredencialesTemporalesPacienteAsync(int idPaciente);
     }
 }

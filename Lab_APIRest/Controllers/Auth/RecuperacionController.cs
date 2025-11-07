@@ -1,5 +1,4 @@
 ﻿using Lab_Contracts.Auth;
-using Lab_Contracts.Shared;
 using Lab_APIRest.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
 

@@ -30,26 +30,6 @@ namespace Lab_APIRest.Controllers.Auth
                 if (Resultado == null)
                     return Unauthorized(new { Mensaje = "Credenciales inválidas o la cuenta está bloqueada." });
 
-                if (Resultado.EsContraseniaTemporal && string.IsNullOrEmpty(Resultado.AccessToken))
-                {
-                    if (Resultado.ExpiresAtUtc != null && Resultado.ExpiresAtUtc < DateTime.UtcNow)
-                        return BadRequest(new
-                        {
-                            Mensaje = "La contraseña temporal ha expirado. Solicite una nueva en recepción.",
-                            Expiracion = Resultado.ExpiresAtUtc
-                        });
-
-                    return Ok(new
-                    {
-                        Mensaje = "Debe cambiar su contraseña temporal antes de continuar.",
-                        Resultado.CorreoUsuario,
-                        Resultado.Nombre,
-                        Resultado.Rol,
-                        Resultado.EsContraseniaTemporal,
-                        Resultado.ExpiresAtUtc
-                    });
-                }
-
                 return Ok(Resultado);
             }
             catch (InvalidOperationException Ex)
@@ -113,6 +93,25 @@ namespace Lab_APIRest.Controllers.Auth
             catch
             {
                 return Unauthorized(new { Activa = false, Mensaje = "Sesión inválida o expirada." });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("activar-cuenta")]
+        public async Task<ActionResult<RespuestaMensajeDto>> ActivarCuenta([FromBody] RestablecerContraseniaDto dto, CancellationToken Ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new RespuestaMensajeDto { Exito = false, Mensaje = "Datos inválidos." });
+
+            try
+            {
+                var resultado = await AuthService.ActivarCuentaAsync(dto, Ct);
+                return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+            }
+            catch (Exception Ex)
+            {
+                Logger.LogError(Ex, "Error al activar cuenta con token.");
+                return StatusCode(500, new RespuestaMensajeDto { Exito = false, Mensaje = "Error interno del servidor." });
             }
         }
     }

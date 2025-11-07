@@ -11,14 +11,14 @@
 <PageTitle>Seguridad de la Cuenta</PageTitle>
 
 <AuthorizeView>
-    <Authorized Context="EstadoAutenticacion">
+    <Authorized Context="estadoAutenticacion">
         @{
-            var Usuario = EstadoAutenticacion.User;
-            var Rol = Usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool PuedeVer = Rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+            var usuario = estadoAutenticacion.User;
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
         }
 
-        @if (!PuedeVer)
+        @if (!puedeVer)
         {
             <div class="d-flex justify-content-center align-items-center vh-100">
                 <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -28,7 +28,7 @@
                         <p class="text-muted mb-3">
                             No tienes permisos suficientes para acceder a esta sección del sistema.
                         </p>
-                        <button class="btn btn-outline-primary" @onclick="VolverAtras">
+                        <button class="btn btn-outline-primary" @onclick="VolverAtrasAsync">
                             <i class="bi bi-arrow-left"></i> Regresar
                         </button>
                     </div>
@@ -46,37 +46,37 @@
                                     <i class="bi bi-shield-lock me-2"></i> Cambiar Contraseña
                                 </h4>
                                 <p class="text-muted mb-4">Actualiza tu contraseña de acceso para mayor seguridad.</p>
-                                <EditForm Model="@Cambio" OnValidSubmit="GuardarNuevaContrasenia">
+                                <EditForm Model="@_cambio" OnValidSubmit="GuardarNuevaContraseniaAsync">
                                     <DataAnnotationsValidator />
                                     <ValidationSummary />
                                     <div class="mb-3">
                                         <label class="form-label">Correo Electrónico</label>
-                                        <InputText class="form-control" @bind-Value="Cambio.CorreoUsuario" readonly />
+                                        <InputText class="form-control" @bind-Value="_cambio.CorreoUsuario" readonly />
                                     </div>
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Contraseña Actual</label>
                                         <div class="input-group">
-                                            <InputText class="form-control" @bind-Value="Cambio.ContraseniaActual" type="@TipoEntradaContraseniaActual" placeholder="Ingrese su contraseña actual" />
+                                            <InputText class="form-control" @bind-Value="_cambio.ContraseniaActual" type="@_tipoEntradaContraseniaActual" placeholder="Ingrese su contraseña actual" />
                                             <button type="button" class="btn btn-outline-secondary" @onclick="AlternarContraseniaActual">
-                                                <i class="@IconoContraseniaActual"></i>
+                                                <i class="@_iconoContraseniaActual"></i>
                                             </button>
                                         </div>
-                                        <ValidationMessage For="@(() => Cambio.ContraseniaActual)" />
+                                        <ValidationMessage For="@(() => _cambio.ContraseniaActual)" />
                                     </div>
                                     <div class="mb-3 position-relative">
                                         <label class="form-label">Nueva Contraseña</label>
                                         <div class="input-group">
-                                            <InputText class="form-control" @bind-Value="Cambio.NuevaContrasenia" type="@TipoEntradaContraseniaNueva" placeholder="Ingrese la nueva contraseña" />
+                                            <InputText class="form-control" @bind-Value="_cambio.NuevaContrasenia" type="@_tipoEntradaContraseniaNueva" placeholder="Ingrese la nueva contraseña" />
                                             <button type="button" class="btn btn-outline-secondary" @onclick="AlternarContraseniaNueva">
-                                                <i class="@IconoContraseniaNueva"></i>
+                                                <i class="@_iconoContraseniaNueva"></i>
                                             </button>
                                         </div>
-                                        <ValidationMessage For="@(() => Cambio.NuevaContrasenia)" />
+                                        <ValidationMessage For="@(() => _cambio.NuevaContrasenia)" />
                                     </div>
-                                    @if (!string.IsNullOrEmpty(Mensaje))
+                                    @if (!string.IsNullOrEmpty(_mensaje))
                                     {
-                                        <div class="alert alert-@(Exito ? "success" : "danger") mt-2" role="alert">
-                                            <i class="bi @(Exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@Mensaje
+                                        <div class="alert alert-@(_exito ? "success" : "danger") mt-2" role="alert">
+                                            <i class="bi @(_exito ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-2"></i>@_mensaje
                                         </div>
                                     }
                                     <button type="submit" class="btn btn-primary w-100 mt-3">
@@ -110,21 +110,21 @@
 </AuthorizeView>
 
 @code {
-    private CambiarContraseniaDto Cambio = new();
-    private string Mensaje = string.Empty;
-    private bool Exito;
-    private string TipoEntradaContraseniaActual = "password";
-    private string IconoContraseniaActual = "bi bi-eye-slash";
-    private string TipoEntradaContraseniaNueva = "password";
-    private string IconoContraseniaNueva = "bi bi-eye-slash";
+    private CambiarContraseniaDto _cambio = new();
+    private string _mensaje = string.Empty;
+    private bool _exito;
+    private string _tipoEntradaContraseniaActual = "password";
+    private string _iconoContraseniaActual = "bi bi-eye-slash";
+    private string _tipoEntradaContraseniaNueva = "password";
+    private string _iconoContraseniaNueva = "bi bi-eye-slash";
 
     protected override async Task OnInitializedAsync()
     {
-        var EstadoAutenticacion = await ProveedorAutenticacion.GetAuthenticationStateAsync();
-        var Usuario = EstadoAutenticacion.User;
-        if (Usuario.Identity?.IsAuthenticated ?? false)
+        var estadoAutenticacion = await ProveedorAutenticacion.GetAuthenticationStateAsync();
+        var usuario = estadoAutenticacion.User;
+        if (usuario.Identity?.IsAuthenticated ?? false)
         {
-            Cambio.CorreoUsuario = Usuario.FindFirst("email")?.Value ?? Usuario.FindFirst(ClaimTypes.Email)?.Value ?? Usuario.Identity?.Name ?? string.Empty;
+            _cambio.CorreoUsuario = usuario.FindFirst("email")?.Value ?? usuario.FindFirst(ClaimTypes.Email)?.Value ?? usuario.Identity?.Name ?? string.Empty;
         }
         else
         {
@@ -132,17 +132,17 @@
         }
     }
 
-    private async Task GuardarNuevaContrasenia()
+    private async Task GuardarNuevaContraseniaAsync()
     {
-        Mensaje = string.Empty;
-        Exito = false;
-        var (Resultado, MensajeRespuesta) = await AuthService.CambiarContraseniaAsync(Cambio);
-        Mensaje = MensajeRespuesta;
-        Exito = Resultado;
-        if (Resultado)
+        _mensaje = string.Empty;
+        _exito = false;
+        var (resultado, mensajeRespuesta) = await AuthService.CambiarContraseniaAsync(_cambio);
+        _mensaje = mensajeRespuesta;
+        _exito = resultado;
+        if (resultado)
         {
-            if (ProveedorAutenticacion is CustomAuthenticationStateProvider AutenticacionPersonalizada)
-                await AutenticacionPersonalizada.CerrarSesionAsync();
+            if (ProveedorAutenticacion is CustomAuthenticationStateProvider autenticacionPersonalizada)
+                await autenticacionPersonalizada.CerrarSesionAsync();
             await JsRuntime.InvokeVoidAsync("alert", "Contraseña actualizada correctamente. Inicie sesión nuevamente.");
             Navegacion.NavigateTo("/login", true);
         }
@@ -150,31 +150,31 @@
 
     private void AlternarContraseniaActual()
     {
-        if (TipoEntradaContraseniaActual == "password")
+        if (_tipoEntradaContraseniaActual == "password")
         {
-            TipoEntradaContraseniaActual = "text";
-            IconoContraseniaActual = "bi bi-eye";
+            _tipoEntradaContraseniaActual = "text";
+            _iconoContraseniaActual = "bi bi-eye";
         }
         else
         {
-            TipoEntradaContraseniaActual = "password";
-            IconoContraseniaActual = "bi bi-eye-slash";
+            _tipoEntradaContraseniaActual = "password";
+            _iconoContraseniaActual = "bi bi-eye-slash";
         }
     }
 
     private void AlternarContraseniaNueva()
     {
-        if (TipoEntradaContraseniaNueva == "password")
+        if (_tipoEntradaContraseniaNueva == "password")
         {
-            TipoEntradaContraseniaNueva = "text";
-            IconoContraseniaNueva = "bi bi-eye";
+            _tipoEntradaContraseniaNueva = "text";
+            _iconoContraseniaNueva = "bi bi-eye";
         }
         else
         {
-            TipoEntradaContraseniaNueva = "password";
-            IconoContraseniaNueva = "bi bi-eye-slash";
+            _tipoEntradaContraseniaNueva = "password";
+            _iconoContraseniaNueva = "bi bi-eye-slash";
         }
     }
 
-    private async Task VolverAtras() => await JsRuntime.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JsRuntime.InvokeVoidAsync("history.back");
 }

@@ -1,5 +1,4 @@
 ﻿using Lab_Contracts.Auth;
-using Lab_Contracts.Shared;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;

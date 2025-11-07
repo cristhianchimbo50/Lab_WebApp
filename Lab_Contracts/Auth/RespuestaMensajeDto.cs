@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab_Contracts.Shared
+namespace Lab_Contracts.Auth
 {
     public class RespuestaMensajeDto
     {

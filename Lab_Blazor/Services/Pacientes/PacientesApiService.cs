@@ -66,7 +66,6 @@ namespace Lab_Blazor.Services.Pacientes
                     if (contenido.TryGetProperty("idPaciente", out var Id)) dto.IdPaciente = Id.GetInt32();
                     if (contenido.TryGetProperty("nombrePaciente", out var Nombre)) dto.NombrePaciente = Nombre.GetString() ?? "";
                     if (contenido.TryGetProperty("correoElectronicoPaciente", out var Correo)) dto.CorreoElectronicoPaciente = Correo.GetString() ?? "";
-                    if (contenido.TryGetProperty("contraseniaTemporal", out var Temporal)) dto.ContraseniaTemporal = Temporal.GetString();
                     string mensaje = contenido.TryGetProperty("mensaje", out var Msg) ? Msg.GetString() ?? "Paciente registrado correctamente." : "Paciente registrado correctamente.";
                     return (true, mensaje, dto);
                 }
@@ -101,17 +100,6 @@ namespace Lab_Blazor.Services.Pacientes
             var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
             var lista = await resp.Content.ReadFromJsonAsync<List<PacienteDto>>();
             return lista?.FirstOrDefault();
-        }
-
-        public async Task<(bool Exito, string Mensaje)> ReenviarCredencialesTemporalesAsync(int idPaciente)
-        {
-            if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
-            var req = new HttpRequestMessage(HttpMethod.Post, $"api/pacientes/{idPaciente}/reenviar-temporal");
-            AddTokenHeader(req);
-            var resp = await _http.SendAsync(req);
-            if (resp.IsSuccessStatusCode) return (true, "Se envió una nueva contraseña temporal al correo del paciente.");
-            var err = await resp.Content.ReadAsStringAsync();
-            return (false, string.IsNullOrWhiteSpace(err) ? "No se pudo reenviar la contraseña temporal." : err);
         }
     }
 }
