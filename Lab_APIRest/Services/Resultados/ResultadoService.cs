@@ -32,7 +32,6 @@ namespace Lab_APIRest.Services.Resultados
                 var entidadResultado = new resultado
                 {
                     numero_resultado = numeroGenerado,
-                    id_paciente = resultado.IdPaciente,
                     fecha_resultado = (DateTime)resultado.FechaResultado!,
                     observaciones = resultado.ObservacionesGenerales,
                     id_orden = resultado.IdOrden,
@@ -120,7 +119,7 @@ namespace Lab_APIRest.Services.Resultados
             catch (Exception ex)
             {
                 await transaccion.RollbackAsync();
-                _logger.LogError(ex, $"Error guardando resultados de orden {resultado.IdOrden} - paciente {resultado.IdPaciente}");
+                _logger.LogError(ex, $"Error guardando resultados de orden {resultado.IdOrden}");
                 return false;
             }
         }
@@ -128,8 +127,8 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro)
         {
             var consulta = _context.resultados
-                .Include(r => r.id_pacienteNavigation)
                 .Include(r => r.id_ordenNavigation)
+                .ThenInclude(o => o.id_pacienteNavigation)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
@@ -137,9 +136,9 @@ namespace Lab_APIRest.Services.Resultados
             if (!string.IsNullOrWhiteSpace(filtro.NumeroOrden))
                 consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.numero_orden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrWhiteSpace(filtro.Cedula))
-                consulta = consulta.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
+                consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
             if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                consulta = consulta.Where(r => r.id_pacienteNavigation.nombre_paciente.Contains(filtro.Nombre));
+                consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.id_pacienteNavigation.nombre_paciente.Contains(filtro.Nombre));
             if (filtro.FechaDesde != null)
                 consulta = consulta.Where(r => r.fecha_resultado >= filtro.FechaDesde);
             if (filtro.FechaHasta != null)
@@ -153,11 +152,11 @@ namespace Lab_APIRest.Services.Resultados
                     IdResultado = r.id_resultado,
                     NumeroResultado = r.numero_resultado,
                     NumeroOrden = r.id_ordenNavigation!.numero_orden,
-                    CedulaPaciente = r.id_pacienteNavigation.cedula_paciente,
-                    NombrePaciente = r.id_pacienteNavigation.nombre_paciente,
+                    CedulaPaciente = r.id_ordenNavigation!.id_pacienteNavigation.cedula_paciente,
+                    NombrePaciente = r.id_ordenNavigation!.id_pacienteNavigation.nombre_paciente,
                     FechaResultado = r.fecha_resultado,
                     Anulado = r.anulado ?? false,
-                    IdPaciente = (int)r.id_paciente,
+                    IdPaciente = r.id_ordenNavigation!.id_pacienteNavigation.id_paciente,
                     Observaciones = r.observaciones
                 })
                 .ToListAsync();
@@ -166,21 +165,21 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoPaginadoDto<ResultadoListadoDto>> ListarResultadosPaginadosAsync(ResultadoFiltroDto filtro)
         {
             var consulta = _context.resultados
-                .Include(r => r.id_pacienteNavigation)
                 .Include(r => r.id_ordenNavigation)
+                .ThenInclude(o => o.id_pacienteNavigation)
                 .AsNoTracking()
                 .AsQueryable();
 
             if (filtro.IdPaciente.HasValue)
-                consulta = consulta.Where(r => r.id_paciente == filtro.IdPaciente.Value);
+                consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.id_paciente == filtro.IdPaciente.Value);
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
                 consulta = consulta.Where(r => r.numero_resultado.Contains(filtro.NumeroResultado));
             if (!string.IsNullOrWhiteSpace(filtro.NumeroOrden))
                 consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.numero_orden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrWhiteSpace(filtro.Cedula))
-                consulta = consulta.Where(r => r.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
+                consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
             if (!string.IsNullOrWhiteSpace(filtro.Nombre))
-                consulta = consulta.Where(r => r.id_pacienteNavigation.nombre_paciente.Contains(filtro.Nombre));
+                consulta = consulta.Where(r => r.id_ordenNavigation != null && r.id_ordenNavigation.id_pacienteNavigation.nombre_paciente.Contains(filtro.Nombre));
             if (filtro.FechaDesde.HasValue)
                 consulta = consulta.Where(r => r.fecha_resultado >= filtro.FechaDesde);
             if (filtro.FechaHasta.HasValue)
@@ -195,8 +194,8 @@ namespace Lab_APIRest.Services.Resultados
             {
                 nameof(ResultadoListadoDto.NumeroResultado) => asc ? consulta.OrderBy(r => r.numero_resultado) : consulta.OrderByDescending(r => r.numero_resultado),
                 nameof(ResultadoListadoDto.NumeroOrden) => asc ? consulta.OrderBy(r => r.id_ordenNavigation!.numero_orden) : consulta.OrderByDescending(r => r.id_ordenNavigation!.numero_orden),
-                nameof(ResultadoListadoDto.CedulaPaciente) => asc ? consulta.OrderBy(r => r.id_pacienteNavigation!.cedula_paciente) : consulta.OrderByDescending(r => r.id_pacienteNavigation!.cedula_paciente),
-                nameof(ResultadoListadoDto.NombrePaciente) => asc ? consulta.OrderBy(r => r.id_pacienteNavigation!.nombre_paciente) : consulta.OrderByDescending(r => r.id_pacienteNavigation!.nombre_paciente),
+                nameof(ResultadoListadoDto.CedulaPaciente) => asc ? consulta.OrderBy(r => r.id_ordenNavigation!.id_pacienteNavigation.cedula_paciente) : consulta.OrderByDescending(r => r.id_ordenNavigation!.id_pacienteNavigation.cedula_paciente),
+                nameof(ResultadoListadoDto.NombrePaciente) => asc ? consulta.OrderBy(r => r.id_ordenNavigation!.id_pacienteNavigation.nombre_paciente) : consulta.OrderByDescending(r => r.id_ordenNavigation!.id_pacienteNavigation.nombre_paciente),
                 _ => asc ? consulta.OrderBy(r => r.fecha_resultado) : consulta.OrderByDescending(r => r.fecha_resultado)
             };
 
@@ -210,11 +209,11 @@ namespace Lab_APIRest.Services.Resultados
                     IdResultado = r.id_resultado,
                     NumeroResultado = r.numero_resultado,
                     NumeroOrden = r.id_ordenNavigation!.numero_orden,
-                    CedulaPaciente = r.id_pacienteNavigation!.cedula_paciente,
-                    NombrePaciente = r.id_pacienteNavigation!.nombre_paciente,
+                    CedulaPaciente = r.id_ordenNavigation!.id_pacienteNavigation.cedula_paciente,
+                    NombrePaciente = r.id_ordenNavigation!.id_pacienteNavigation.nombre_paciente,
                     FechaResultado = r.fecha_resultado,
                     Anulado = r.anulado ?? false,
-                    IdPaciente = (int)r.id_paciente,
+                    IdPaciente = r.id_ordenNavigation!.id_pacienteNavigation.id_paciente,
                     Observaciones = r.observaciones
                 })
                 .ToListAsync();
@@ -231,8 +230,8 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado)
         {
             var entidad = await _context.resultados
-                .Include(r => r.id_pacienteNavigation)
                 .Include(r => r.id_ordenNavigation)
+                .ThenInclude(o => o.id_pacienteNavigation)
                 .Include(r => r.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
                 .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
 
@@ -242,10 +241,10 @@ namespace Lab_APIRest.Services.Resultados
             {
                 IdResultado = entidad.id_resultado,
                 NumeroResultado = entidad.numero_resultado,
-                CedulaPaciente = entidad.id_pacienteNavigation?.cedula_paciente ?? "",
-                NombrePaciente = entidad.id_pacienteNavigation?.nombre_paciente ?? "",
+                CedulaPaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.cedula_paciente ?? "",
+                NombrePaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.nombre_paciente ?? "",
                 FechaResultado = entidad.fecha_resultado,
-                IdPaciente = entidad.id_paciente ?? 0,
+                IdPaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.id_paciente ?? 0,
                 Observaciones = entidad.observaciones,
                 NumeroOrden = entidad.id_ordenNavigation?.numero_orden ?? "(Sin orden)",
                 EstadoPago = entidad.id_ordenNavigation?.estado_pago ?? "DESCONOCIDO",
@@ -266,7 +265,7 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int idResultado)
         {
             var entidad = await _context.resultados
-                .Include(r => r.id_pacienteNavigation)
+                .Include(r => r.id_ordenNavigation).ThenInclude(o => o.id_pacienteNavigation)
                 .Include(r => r.id_ordenNavigation).ThenInclude(o => o.id_medicoNavigation)
                 .Include(r => r.detalle_resultados).ThenInclude(d => d.id_examenNavigation)
                 .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
@@ -278,9 +277,9 @@ namespace Lab_APIRest.Services.Resultados
                 NumeroOrden = entidad.id_ordenNavigation?.numero_orden ?? "",
                 NumeroResultado = entidad.numero_resultado,
                 FechaResultado = entidad.fecha_resultado,
-                NombrePaciente = entidad.id_pacienteNavigation?.nombre_paciente ?? "",
-                CedulaPaciente = entidad.id_pacienteNavigation?.cedula_paciente ?? "",
-                EdadPaciente = CalcularEdad(entidad.id_pacienteNavigation?.fecha_nac_paciente),
+                NombrePaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.nombre_paciente ?? "",
+                CedulaPaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.cedula_paciente ?? "",
+                EdadPaciente = CalcularEdad(entidad.id_ordenNavigation?.id_pacienteNavigation?.fecha_nac_paciente),
                 MedicoSolicitante = entidad.id_ordenNavigation?.id_medicoNavigation?.nombre_medico ?? "",
                 Detalles = new List<ResultadoDetalleDto>
                 {
@@ -288,8 +287,8 @@ namespace Lab_APIRest.Services.Resultados
                     {
                         IdResultado = entidad.id_resultado,
                         NumeroResultado = entidad.numero_resultado,
-                        CedulaPaciente = entidad.id_pacienteNavigation?.cedula_paciente ?? "",
-                        NombrePaciente = entidad.id_pacienteNavigation?.nombre_paciente ?? "",
+                        CedulaPaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.cedula_paciente ?? "",
+                        NombrePaciente = entidad.id_ordenNavigation?.id_pacienteNavigation?.nombre_paciente ?? "",
                         FechaResultado = entidad.fecha_resultado,
                         Observaciones = entidad.observaciones,
                         Anulado = entidad.anulado ?? false,

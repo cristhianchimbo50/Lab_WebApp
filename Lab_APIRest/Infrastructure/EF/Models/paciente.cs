@@ -29,5 +29,4 @@ public partial class paciente
 
     public virtual ICollection<orden> ordens { get; set; } = new List<orden>();
 
-    public virtual ICollection<resultado> resultados { get; set; } = new List<resultado>();
 }

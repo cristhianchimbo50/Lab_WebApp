@@ -3,6 +3,7 @@
 <PageTitle>Ingreso de Stock</PageTitle>
 
 @using Lab_Contracts.Reactivos
+@using Lab_Contracts.Common
 @using Lab_Blazor.Services.Reactivos
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -45,223 +46,180 @@
                 <i class="bi bi-box-arrow-in-down text-primary fs-5 me-2"></i> Ingreso de Stock de Reactivos
             </h3>
 
-            @if (!_cargado)
+            <div class="card shadow-sm mb-3 border-0">
+                <div class="card-body row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Buscar por</label>
+                        <InputSelect class="form-select" @bind-Value="_filtro.CriterioBusqueda">
+                            <option value="">-- Seleccione --</option>
+                            <option value="nombre">Nombre</option>
+                            <option value="fabricante">Fabricante</option>
+                            <option value="unidad">Unidad</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Valor</label>
+                        <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda"
+                                   placeholder="Ingrese valor a buscar"
+                                   @onkeypress="OnBuscarKeyPress" />
+                    </div>
+                    <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                        <button type="button" class="btn btn-primary" @onclick="BuscarReactivosAsync" disabled="@_buscando">
+                            @if (_buscando){<span class="spinner-border spinner-border-sm me-1"></span>}
+                            <i class="bi bi-search me-1"></i>Buscar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando">
+                            <i class="bi bi-eraser me-1"></i>Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div class="text-muted small">
+                    @if (_resultado != null)
+                    {
+                        <span>@RangoMostrado</span>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small">Registros por página:</label>
+                    <select class="form-select form-select-sm w-auto" @bind="_filtro.PageSize" @bind:after="async () => { _filtro.PageNumber = 1; await BuscarReactivosAsync(); }">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <div class="d-flex align-items-center ms-2">
+                        <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(_resultado == null || _resultado.PageNumber == 1)" @onclick="(() => CambiarPaginaAsync(-1))"><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(_resultado == null || _resultado.PageNumber >= TotalPaginas)" @onclick="(() => CambiarPaginaAsync(1))"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            @if (_resultado == null)
             {
-                <div class="d-flex align-items-center text-primary">
-                    <div class="spinner-border me-2" role="status"></div>
+                <div class="alert alert-info text-center shadow-sm">
+                    <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
+                </div>
+            }
+            else if (_resultado.TotalCount == 0)
+            {
+                <div class="alert alert-warning text-center shadow-sm">
+                    <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron reactivos.
                 </div>
             }
             else
             {
-                <div class="card shadow-sm mb-3 border-0">
-                    <div class="card-body row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="_criterioBusqueda">
-                                <option value="">-- Seleccione --</option>
-                                <option value="nombre">Nombre</option>
-                                <option value="fabricante">Fabricante</option>
-                                <option value="unidad">Unidad</option>
-                            </InputSelect>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100 border-0">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <div class="fw-semibold">
+                                    <i class="bi bi-list-check me-2"></i> Reactivos Disponibles
+                                </div>
+                                <small class="text-muted">
+                                    Seleccione los reactivos que desea ingresar al stock
+                                </small>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="tabla-fija shadow-sm rounded border">
+                                    <div class="tabla-body">
+                                        <table class="table align-middle tabla-reactivos">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width:25%;">Nombre</th>
+                                                    <th style="width:20%;">Fabricante</th>
+                                                    <th style="width:10%;">Unidad</th>
+                                                    <th style="width:15%;">Stock</th>
+                                                    <th style="width:10%;">✔</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var r in _reactivosExtendidos)
+                                                {
+                                                    <tr>
+                                                        <td data-label="Nombre">@r.NombreReactivo</td>
+                                                        <td data-label="Fabricante">@r.Fabricante</td>
+                                                        <td data-label="Unidad">@r.Unidad</td>
+                                                        <td data-label="Stock" class="text-end">@r.CantidadDisponible.ToString("N2")</td>
+                                                        <td data-label="Seleccionar">
+                                                            <input type="checkbox" class="form-check-input" @bind="r.Seleccionado" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="_valorBusqueda"
-                                       placeholder="Ingrese valor a buscar"
-                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarReactivosAsync(); })" />
-                        </div>
-                        <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button type="button" class="btn btn-primary" @onclick="BuscarReactivosAsync">
-                                <i class="bi bi-search me-1"></i>Buscar
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync">
-                                <i class="bi bi-eraser me-1"></i>Limpiar
-                            </button>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100 border-0">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <div class="fw-semibold">
+                                    <i class="bi bi-list-check me-2"></i> Reactivos Seleccionados
+                                </div>
+                                <small class="text-muted">
+                                    Estos reactivos serán ingresados al stock
+                                </small>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="tabla-fija shadow-sm rounded border">
+                                    <div class="tabla-body">
+                                        <table class="table align-middle tabla-reactivos">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width:25%">Reactivo</th>
+                                                    <th style="width:15%">Cantidad</th>
+                                                    <th style="width:10%">Unidad</th>
+                                                    <th style="width:30%">Observación</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var r in ReactivosSeleccionados)
+                                                {
+                                                    <tr>
+                                                        <td data-label="Reactivo">@r.NombreReactivo</td>
+                                                        <td data-label="Cantidad">
+                                                            <InputNumber @bind-Value="r.Cantidad"
+                                                                         class="form-control form-control-sm text-end"
+                                                                         Min="0.01" Step="0.01" />
+                                                        </td>
+                                                        <td data-label="Unidad">@r.Unidad</td>
+                                                        <td data-label="Observación">
+                                                            <InputText @bind-Value="r.Observacion"
+                                                                       class="form-control form-control-sm" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                @if (!ReactivosSeleccionados.Any())
+                                {
+                                    <div class="alert alert-info text-center mt-3">
+                                        <i class="bi bi-info-circle me-1"></i> No hay reactivos seleccionados.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-end mt-3">
+                                        <button class="btn btn-danger shadow-sm"
+                                                @onclick="GuardarIngresosAsync"
+                                                disabled="@(!ReactivosSeleccionados.Any())">
+                                            <i class="bi bi-save me-1"></i> Registrar Ingresos
+                                        </button>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                @if (_reactivos == null)
-                {
-                    <div class="alert alert-info text-center shadow-sm">
-                        <i class="bi bi-info-circle me-2"></i>Presione <strong>Buscar</strong> para cargar los datos.
-                    </div>
-                }
-                else if (!_reactivos.Any())
-                {
-                    <div class="alert alert-warning text-center shadow-sm">
-                        <i class="bi bi-exclamation-triangle me-2"></i>No se encontraron reactivos.
-                    </div>
-                }
-                else
-                {
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <div class="card shadow-sm h-100 border-0">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <div class="fw-semibold">
-                                        <i class="bi bi-list-check me-2"></i> Reactivos Disponibles
-                                    </div>
-                                    <small class="text-muted">
-                                        Seleccione los reactivos que desea ingresar al stock
-                                    </small>
-                                </div>
-                                <div class="card-body p-2">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
-                                        <div class="text-muted small">
-                                            Mostrando @((_paginaActual - 1) * _tamPagina + 1)
-                                            - @(Math.Min(_paginaActual * _tamPagina, _reactivos.Count))
-                                            de @_reactivos.Count reactivos
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <label class="form-label mb-0 small">Registros por página:</label>
-                                            <select class="form-select form-select-sm w-auto" @bind="_tamPagina" @bind:after="CambiarTamPagina">
-                                                <option value="5">5</option>
-                                                <option value="10">10</option>
-                                                <option value="15">15</option>
-                                                <option value="20">20</option>
-                                            </select>
-                                            <div class="d-flex align-items-center ms-2">
-                                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                                        disabled="@(_paginaActual == 1)"
-                                                        @onclick="PrevPagina">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-secondary"
-                                                        disabled="@(_paginaActual >= TotalPaginas)"
-                                                        @onclick="NextPagina">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="tabla-fija shadow-sm rounded border">
-                                        <div class="tabla-body">
-                                            <table class="table align-middle tabla-reactivos">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th style="width:25%;">Nombre</th>
-                                                        <th style="width:20%;">Fabricante</th>
-                                                        <th style="width:10%;">Unidad</th>
-                                                        <th style="width:15%;">Stock</th>
-                                                        <th style="width:10%;">✔</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var r in ReactivosPaginados)
-                                                    {
-                                                        <tr>
-                                                            <td data-label="Nombre">@r.NombreReactivo</td>
-                                                            <td data-label="Fabricante">@r.Fabricante</td>
-                                                            <td data-label="Unidad">@r.Unidad</td>
-                                                            <td data-label="Stock" class="text-end">@r.CantidadDisponible.ToString("N2")</td>
-                                                            <td data-label="Seleccionar">
-                                                                <input type="checkbox" class="form-check-input" @bind="@r.Seleccionado" />
-                                                            </td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="card shadow-sm h-100 border-0">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <div class="fw-semibold">
-                                        <i class="bi bi-list-check me-2"></i> Reactivos Seleccionados
-                                    </div>
-                                    <small class="text-muted">
-                                        Estos reactivos serán ingresados al stock
-                                    </small>
-                                </div>
-                                <div class="card-body p-2">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
-                                        <div class="text-muted small">
-                                            Mostrando @((_paginaActualSel - 1) * _tamPaginaSel + 1)
-                                            - @(Math.Min(_paginaActualSel * _tamPaginaSel, ReactivosSeleccionados.Count))
-                                            de @ReactivosSeleccionados.Count seleccionados
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <label class="form-label mb-0 small">Registros por página:</label>
-                                            <select class="form-select form-select-sm w-auto" @bind="_tamPaginaSel" @bind:after="CambiarTamPaginaSel">
-                                                <option value="5">5</option>
-                                                <option value="10">10</option>
-                                                <option value="15">15</option>
-                                            </select>
-                                            <div class="d-flex align-items-center ms-2">
-                                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                                        disabled="@(_paginaActualSel == 1)"
-                                                        @onclick="PrevPaginaSel">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-secondary"
-                                                        disabled="@(_paginaActualSel >= TotalPaginasSel)"
-                                                        @onclick="NextPaginaSel">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="tabla-fija shadow-sm rounded border">
-                                        <div class="tabla-body">
-                                            <table class="table align-middle tabla-reactivos">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th style="width:25%">Reactivo</th>
-                                                        <th style="width:15%">Cantidad</th>
-                                                        <th style="width:10%">Unidad</th>
-                                                        <th style="width:30%">Observación</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var r in ReactivosSeleccionadosPaginados)
-                                                    {
-                                                        <tr>
-                                                            <td data-label="Reactivo">@r.NombreReactivo</td>
-                                                            <td data-label="Cantidad">
-                                                                <InputNumber @bind-Value="r.Cantidad"
-                                                                             class="form-control form-control-sm text-end"
-                                                                             Min="0.01" Step="0.01" />
-                                                            </td>
-                                                            <td data-label="Unidad">@r.Unidad</td>
-                                                            <td data-label="Observación">
-                                                                <InputText @bind-Value="r.Observacion"
-                                                                           class="form-control form-control-sm" />
-                                                            </td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    @if (!ReactivosSeleccionados.Any())
-                                    {
-                                        <div class="alert alert-info text-center mt-3">
-                                            <i class="bi bi-info-circle me-1"></i> No hay reactivos seleccionados.
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-end mt-3">
-                                            <button class="btn btn-danger shadow-sm"
-                                                    @onclick="GuardarIngresosAsync"
-                                                    disabled="@(!ReactivosSeleccionados.Any())">
-                                                <i class="bi bi-save me-1"></i> Registrar Ingresos
-                                            </button>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
             }
         }
     </Authorized>
@@ -285,110 +243,53 @@
 </AuthorizeView>
 
 @code {
-    private bool _cargado;
-    private string? _criterioBusqueda = null;
-    private string _valorBusqueda = string.Empty;
+    private ReactivoFiltroDto _filtro = new()
+    {
+        PageNumber = 1,
+        PageSize = 10,
+        SortBy = nameof(ReactivoDto.NombreReactivo),
+        SortAsc = true,
+        IncluirAnulados = true,
+        IncluirVigentes = true
+    };
+    private ResultadoPaginadoDto<ReactivoDto>? _resultado;
+    private List<ReactivoExtendido> _reactivosExtendidos = new();
+    private bool _buscando = false;
     private DateTime _fechaIngreso = DateTime.Now;
-
     public class ReactivoExtendido : ReactivoDto
     {
         public bool Seleccionado { get; set; }
         public decimal Cantidad { get; set; }
         public string Observacion { get; set; } = "Ingreso de stock";
     }
-
-    private List<ReactivoExtendido>? _reactivos;
-    private int _paginaActual = 1;
-    private int _tamPagina = 10;
-    private int TotalPaginas => (int)Math.Ceiling((_reactivos?.Count ?? 1) / (double)_tamPagina);
-    private IEnumerable<ReactivoExtendido> ReactivosPaginados =>
-        _reactivos?.Skip((_paginaActual - 1) * _tamPagina).Take(_tamPagina) ?? new List<ReactivoExtendido>();
-
-    private List<ReactivoExtendido> ReactivosSeleccionados =>
-        _reactivos?.Where(r => r.Seleccionado).ToList() ?? new();
-
-    private int _paginaActualSel = 1;
-    private int _tamPaginaSel = 5;
-    private int TotalPaginasSel => (int)Math.Ceiling((ReactivosSeleccionados.Count == 0 ? 1 : ReactivosSeleccionados.Count) / (double)_tamPaginaSel);
-    private IEnumerable<ReactivoExtendido> ReactivosSeleccionadosPaginados =>
-        ReactivosSeleccionados.Skip((_paginaActualSel - 1) * _tamPaginaSel).Take(_tamPaginaSel);
-
-    private void PrevPagina() { if (_paginaActual > 1) _paginaActual--; }
-    private void NextPagina() { if (_paginaActual < TotalPaginas) _paginaActual++; }
-    private void CambiarTamPagina() => _paginaActual = 1;
-
-    private void PrevPaginaSel() { if (_paginaActualSel > 1) _paginaActualSel--; }
-    private void NextPaginaSel() { if (_paginaActualSel < TotalPaginasSel) _paginaActualSel++; }
-    private void CambiarTamPaginaSel() => _paginaActualSel = 1;
-
-    private bool _sesionVerificada = false;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private IEnumerable<ReactivoExtendido> ReactivosSeleccionados => _reactivosExtendidos.Where(r => r.Seleccionado);
+    private string RangoMostrado
     {
-        if (firstRender && !_sesionVerificada)
+        get
         {
-            _sesionVerificada = true;
-
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            _cargado = true;
-            _reactivos = null;
-            StateHasChanged();
+            if (_resultado == null || _resultado.TotalCount == 0) return "";
+            int desde = ((_resultado.PageNumber - 1) * _resultado.PageSize) + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} reactivos";
         }
     }
-
+    private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
     private async Task BuscarReactivosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
+        if (_buscando) return;
         try
         {
-            _cargado = false;
-            var lista = await ReactivosApi.ListarReactivosAsync();
-
-            if (string.IsNullOrWhiteSpace(_criterioBusqueda) && string.IsNullOrWhiteSpace(_valorBusqueda))
+            _buscando = true;
+            _resultado = await ReactivosApi.ListarReactivosPaginadosAsync(_filtro);
+            _reactivosExtendidos = _resultado.Items.Select(r => new ReactivoExtendido
             {
-                _reactivos = lista
-                    .OrderBy(r => r.NombreReactivo)
-                    .Select(r => new ReactivoExtendido
-                    {
-                        IdReactivo = r.IdReactivo,
-                        NombreReactivo = r.NombreReactivo,
-                        Fabricante = r.Fabricante,
-                        Unidad = r.Unidad,
-                        CantidadDisponible = r.CantidadDisponible
-                    }).ToList();
-            }
-            else
-            {
-                var filtrados = lista.AsQueryable();
-                switch (_criterioBusqueda)
-                {
-                    case "nombre":
-                        filtrados = filtrados.Where(r => r.NombreReactivo.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
-                        break;
-                    case "fabricante":
-                        filtrados = filtrados.Where(r => r.Fabricante.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
-                        break;
-                    case "unidad":
-                        filtrados = filtrados.Where(r => r.Unidad.Contains(_valorBusqueda, StringComparison.OrdinalIgnoreCase));
-                        break;
-                }
-
-                _reactivos = filtrados
-                    .OrderBy(r => r.NombreReactivo)
-                    .Select(r => new ReactivoExtendido
-                    {
-                        IdReactivo = r.IdReactivo,
-                        NombreReactivo = r.NombreReactivo,
-                        Fabricante = r.Fabricante,
-                        Unidad = r.Unidad,
-                        CantidadDisponible = r.CantidadDisponible
-                    }).ToList();
-            }
-
-            _paginaActual = 1;
+                IdReactivo = r.IdReactivo,
+                NombreReactivo = r.NombreReactivo,
+                Fabricante = r.Fabricante,
+                Unidad = r.Unidad,
+                CantidadDisponible = r.CantidadDisponible
+            }).ToList();
             await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivos cargados correctamente.", "success");
         }
         catch
@@ -397,26 +298,35 @@
         }
         finally
         {
-            _cargado = true;
-            StateHasChanged();
+            _buscando = false;
         }
     }
-
     private async Task LimpiarBusquedaAsync()
     {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _criterioBusqueda = null;
-        _valorBusqueda = string.Empty;
-        _reactivos = null;
-        _paginaActual = 1;
-        StateHasChanged();
+        _filtro = new ReactivoFiltroDto
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            SortBy = nameof(ReactivoDto.NombreReactivo),
+            SortAsc = true,
+            IncluirAnulados = true,
+            IncluirVigentes = true
+        };
+        _resultado = null;
+        _reactivosExtendidos = new();
+        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
-
+    private async Task CambiarPaginaAsync(int delta)
+    {
+        if (_resultado == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginas, _resultado.PageNumber + delta));
+        if (nueva == _resultado.PageNumber) return;
+        _filtro.PageNumber = nueva;
+        await BuscarReactivosAsync();
+    }
     private async Task GuardarIngresosAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         var seleccionados = ReactivosSeleccionados
             .Where(r => r.Cantidad > 0)
             .Select(r => new MovimientoReactivoIngresoDto
@@ -428,21 +338,16 @@
                 Observacion = r.Observacion,
                 FechaMovimiento = _fechaIngreso
             }).ToList();
-
         if (!seleccionados.Any())
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Debe seleccionar al menos un reactivo con cantidad válida.", "warning");
             return;
         }
-
         var response = await ReactivosApi.RegistrarIngresosReactivosAsync(seleccionados);
-
         if (response.IsSuccessStatusCode)
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Stock ingresado correctamente.", "success");
-            _reactivos?.ForEach(r => { r.Seleccionado = false; r.Cantidad = 0; });
-            StateHasChanged();
-
+            _reactivosExtendidos.ForEach(r => { r.Seleccionado = false; r.Cantidad = 0; });
             await Task.Delay(1500);
             Navigation.NavigateTo("/movimientos", forceLoad: true);
         }
@@ -451,6 +356,10 @@
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar los ingresos.", "danger");
         }
     }
-
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+    private async Task OnBuscarKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await BuscarReactivosAsync();
+    }
 }

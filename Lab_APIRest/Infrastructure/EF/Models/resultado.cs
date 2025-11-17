@@ -9,7 +9,6 @@ public partial class resultado
 
     public string numero_resultado { get; set; } = null!;
 
-    public int? id_paciente { get; set; }
 
     public DateTime fecha_resultado { get; set; }
 
@@ -25,5 +24,4 @@ public partial class resultado
 
     public virtual orden? id_ordenNavigation { get; set; }
 
-    public virtual paciente? id_pacienteNavigation { get; set; }
 }

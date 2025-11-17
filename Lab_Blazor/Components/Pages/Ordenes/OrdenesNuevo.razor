@@ -1,6 +1,8 @@
 ﻿@page "/nueva-orden"
 @rendermode InteractiveServer
 
+@using System.Security.Claims
+@using Lab_Blazor.Services.Auth
 @using Lab_Blazor.Services.Examenes
 @using Lab_Blazor.Services.Medicos
 @using Lab_Blazor.Services.Ordenes
@@ -11,10 +13,9 @@
 @using Lab_Contracts.Medicos
 @using Lab_Contracts.Examenes
 @using Lab_Contracts.Pagos
+@using Lab_Contracts.Common
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-@using System.Linq
-@using Lab_Blazor.Services.Auth
+
 @inject SesionVerificacionService SesionService
 @inject IOrdenesApiService OrdenesApi
 @inject NavigationManager Navigation
@@ -30,12 +31,10 @@
 <AuthorizeView>
     <Authorized Context="EstadoAutenticacion">
         @{
-            var usuario = EstadoAutenticacion.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value
-            ?? usuario.FindFirst("role")?.Value
-            ?? usuario.FindFirst("roles")?.Value
-            ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista";
+        var usuario = EstadoAutenticacion.User;
+        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ??
+        usuario.FindFirst("role")?.Value ?? usuario.FindFirst("roles")?.Value ?? "";
+        bool puedeVer = rol is "administrador" or "recepcionista";
         }
 
         @if (!puedeVer)
@@ -58,7 +57,6 @@
             <h3 class="mb-4 d-flex align-items-center text-uppercase fw-bold flex-wrap">
                 <i class="bi bi-file-earmark-medical text-primary fs-4 me-2"></i> Registrar Nueva Orden
             </h3>
-
             @if (!_contenidoCargado)
             {
                 <div class="d-flex align-items-center text-primary">
@@ -74,7 +72,6 @@
                                 <label class="form-label fw-semibold">Fecha de la Orden</label>
                                 <InputDate class="form-control" @bind-Value="_fechaOrden" TValue="DateOnly" disabled />
                             </div>
-
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Cédula del Paciente</label>
                                 <div class="input-group">
@@ -82,11 +79,9 @@
                                     <button type="button" class="btn btn-outline-primary" @onclick="BuscarPorCedulaAsync">
                                         <i class="bi bi-search"></i>
                                     </button>
-
                                 </div>
                             </div>
                         </div>
-
                         @if (_pacienteSeleccionado is not null)
                         {
                             <div class="card border-0 shadow-sm mt-3">
@@ -120,7 +115,6 @@
                             </div>
                         }
                     </div>
-
                     <div class="card shadow-sm mb-4">
                         <div class="card-body">
                             <label class="form-label fw-semibold">Médico</label>
@@ -138,21 +132,17 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="mb-3">
                         <button class="btn btn-success" type="button" @onclick="() => _mostrarModalExamen = true">
                             <i class="bi bi-plus-circle me-1"></i> Agregar Examen
                         </button>
                     </div>
-
-
                     <div class="text-end mb-4">
                         <button class="btn btn-primary px-4" type="submit">
                             <i class="bi bi-save me-1"></i> Guardar Orden
                         </button>
                     </div>
                 </EditForm>
-
                 @if (_mostrarModalRegistrarPaciente)
                 {
                     <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
@@ -177,7 +167,6 @@
                                                            @bind-Value="_pacienteNuevo.NombrePaciente"
                                                            @oninput="(e => _pacienteNuevo.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
-
                                             <div class="col-md-6">
                                                 <label class="form-label">Fecha Nacimiento</label>
                                                 <InputDate class="form-control" @bind-Value="_pacienteNuevo.FechaNacPaciente" TValue="DateTime" />
@@ -196,7 +185,6 @@
                                                            @bind-Value="_pacienteNuevo.DireccionPaciente"
                                                            @oninput="(e => _pacienteNuevo.DireccionPaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
-
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -224,38 +212,57 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="row g-2 mb-3">
-                                        <div class="col-md-4">
-                                            <InputSelect class="form-select" @bind-Value="_filtroBusquedaPaciente">
+                                        <div class="col-md-3">
+                                            <InputSelect class="form-select" @bind-Value="_filtroPaciente.CriterioBusqueda">
                                                 <option value="nombre">Nombre</option>
                                                 <option value="cedula">Cédula</option>
+                                                <option value="correo">Correo</option>
                                             </InputSelect>
                                         </div>
-                                        <div class="col-md-6">
-                                            <InputText class="form-control" @bind-Value="_valorBusquedaPaciente" placeholder="Ingrese valor a buscar" />
+                                        <div class="col-md-5">
+                                            <InputText class="form-control" @bind-Value="_filtroPaciente.ValorBusqueda" placeholder="Ingrese valor a buscar" />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select form-select-sm" @bind="_filtroPaciente.PageSize" @bind:after="async () => { _filtroPaciente.PageNumber = 1; await BuscarPacientesModalAsync(); }">
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="15">15</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-2 d-grid">
                                             <button class="btn btn-primary" @onclick="BuscarPacientesModalAsync"><i class="bi bi-search"></i></button>
                                         </div>
                                     </div>
-
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-muted small">
+                                            @if (_resultadoPacientes != null)
+                                            {
+                                                <span>@RangoMostradoPacientes</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(_resultadoPacientes == null || _resultadoPacientes.PageNumber == 1)" @onclick="(() => CambiarPaginaPacienteAsync(-1))"><i class="bi bi-chevron-left"></i></button>
+                                            <button class="btn btn-sm btn-outline-secondary" disabled="@(_resultadoPacientes == null || _resultadoPacientes.PageNumber >= TotalPaginasPacientes)" @onclick="(() => CambiarPaginaPacienteAsync(1))"><i class="bi bi-chevron-right"></i></button>
+                                        </div>
+                                    </div>
                                     <div style="max-height: 300px; overflow-y: auto;" class="border rounded">
                                         <table class="table table-sm table-hover align-middle mb-0">
                                             <thead class="table-light">
                                                 <tr><th>Cédula</th><th>Nombre</th><th>Correo</th><th></th></tr>
                                             </thead>
                                             <tbody>
-                                                @if (_pacientesEncontrados.Any())
+                                                @if (_resultadoPacientes?.Items.Any() == true)
                                                 {
-                                                    @foreach (var paciente in _pacientesEncontrados)
+                                                    @foreach (var paciente in _resultadoPacientes.Items)
                                                     {
                                                         <tr>
                                                             <td>@paciente.CedulaPaciente</td>
                                                             <td>@paciente.NombrePaciente</td>
                                                             <td>@paciente.CorreoElectronicoPaciente</td>
                                                             <td>
-                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPacienteAsync(paciente)">
-                                                                    <i class="bi bi-check-lg"></i>
-                                                                </button>
+                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPacienteAsync(paciente)"><i class="bi bi-check-lg"></i></button>
                                                             </td>
                                                         </tr>
                                                     }
@@ -329,17 +336,44 @@
                                     <h5 class="modal-title"><i class="bi bi-flask me-2"></i>Seleccionar Examen</h5>
                                     <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalExamenAsync"></button>
                                 </div>
-
                                 <div class="modal-body">
                                     <div class="row g-2 mb-3">
-                                        <div class="col-md-10">
-                                            <InputText class="form-control" @bind-Value="_textoBuscarExamen" placeholder="Buscar examen por nombre o estudio..." />
+                                        <div class="col-md-3">
+                                            <InputSelect class="form-select" @bind-Value="_filtroExamen.CriterioBusqueda">
+                                                <option value="nombre">Nombre</option>
+                                                <option value="estudio">Estudio</option>
+                                                <option value="tipo">Tipo de Examen</option>
+                                                <option value="tecnica">Técnica</option>
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <InputText class="form-control" @bind-Value="_filtroExamen.ValorBusqueda" placeholder="Buscar examen..." />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select form-select-sm" @bind="_filtroExamen.PageSize" @bind:after="async () => { _filtroExamen.PageNumber = 1; await BuscarExamenesModalAsync(); }">
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="15">15</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-2 d-grid">
-                                            <button class="btn btn-primary" @onclick="BuscarExamenesAsync"><i class="bi bi-search"></i></button>
+                                            <button class="btn btn-primary" @onclick="BuscarExamenesModalAsync"><i class="bi bi-search"></i></button>
                                         </div>
                                     </div>
-
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-muted small">
+                                            @if (_resultadoExamenes != null)
+                                            {
+                                                <span>@RangoMostradoExamenes</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-outline-secondary me-1" disabled="@(_resultadoExamenes == null || _resultadoExamenes.PageNumber == 1)" @onclick="(() => CambiarPaginaExamenAsync(-1))"><i class="bi bi-chevron-left"></i></button>
+                                            <button class="btn btn-sm btn-outline-secondary" disabled="@(_resultadoExamenes == null || _resultadoExamenes.PageNumber >= TotalPaginasExamenes)" @onclick="(() => CambiarPaginaExamenAsync(1))"><i class="bi bi-chevron-right"></i></button>
+                                        </div>
+                                    </div>
                                     <div style="max-height: 400px; overflow-y: auto;" class="border rounded">
                                         <table class="table table-sm table-hover align-middle mb-0">
                                             <thead class="table-light text-center">
@@ -351,18 +385,16 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @if (_examenesDisponibles.Any())
+                                                @if (_resultadoExamenes?.Items.Any() == true)
                                                 {
-                                                    @foreach (var examen in _examenesDisponibles)
+                                                    @foreach (var examen in _resultadoExamenes.Items)
                                                     {
                                                         <tr class="text-center">
                                                             <td>@examen.NombreExamen</td>
                                                             <td>@examen.Estudio</td>
                                                             <td>@examen.Precio.ToString("C")</td>
                                                             <td>
-                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarExamen(examen)">
-                                                                    <i class="bi bi-check-lg"></i>
-                                                                </button>
+                                                                <button class="btn btn-success btn-sm" @onclick="() => SeleccionarExamen(examen)"><i class="bi bi-check-lg"></i></button>
                                                             </td>
                                                         </tr>
                                                     }
@@ -377,7 +409,6 @@
                                         </table>
                                     </div>
                                 </div>
-
                                 <div class="modal-footer">
                                     <button class="btn btn-secondary" type="button" @onclick="CerrarModalExamenAsync">
                                         <i class="bi bi-x-lg me-1"></i> Cerrar
@@ -387,7 +418,6 @@
                         </div>
                     </div>
                 }
-
                 @if (!_examenesSeleccionados.Any())
                 {
                     <div class="alert alert-warning text-center mt-3">
@@ -418,9 +448,7 @@
                                             <td>@examen.Estudio</td>
                                             <td>@examen.Precio.ToString("C")</td>
                                             <td>
-                                                <button class="btn btn-outline-danger btn-sm" title="Quitar examen" @onclick="() => QuitarExamen(examen)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" title="Quitar examen" @onclick="() => QuitarExamen(examen)"><i class="bi bi-trash"></i></button>
                                             </td>
                                         </tr>
                                     }
@@ -436,7 +464,6 @@
                         </div>
                     </div>
                 }
-
                 @if (_mostrarModalPago)
                 {
                     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
@@ -460,7 +487,6 @@
                                             <label>Transferencia</label>
                                             <InputNumber class="form-control" @bind-Value="_montoTransferencia" />
                                         </div>
-
                                         @if (ObtenerCambio() > 0)
                                         {
                                             <div class="mb-2">
@@ -482,13 +508,11 @@
                                                 <input class="form-control" value="0,00" disabled />
                                             </div>
                                         }
-
                                         <div class="mb-2">
                                             <label>Observación</label>
                                             <InputTextArea class="form-control" @bind-Value="_pagoActual.Observacion" />
                                         </div>
                                     </div>
-
                                     <div class="modal-footer">
                                         <button class="btn btn-success" type="submit">Confirmar</button>
                                         <button class="btn btn-secondary" type="button" @onclick="CerrarModalPagoAsync">Cancelar</button>
@@ -498,12 +522,9 @@
                         </div>
                     </div>
                 }
-
-
             }
         }
     </Authorized>
-
     <NotAuthorized>
         <div class="d-flex justify-content-center align-items-center vh-100">
             <div class="card shadow-lg text-center border-0" style="max-width: 450px;">
@@ -526,11 +547,9 @@
     private DateOnly _fechaOrden = DateOnly.FromDateTime(DateTime.Now);
     private PacienteDto? _pacienteSeleccionado;
     private PacienteDto _pacienteNuevo = new();
-    private List<PacienteDto> _pacientesEncontrados = new();
     private List<MedicoDto> _listaMedicos = new();
     private MedicoDto? _medicoSeleccionado;
     private MedicoDto _medicoNuevo = new();
-    private List<ExamenDto> _examenesDisponibles = new();
     private List<ExamenDto> _examenesSeleccionados = new();
     private OrdenDto _ordenActual = new();
     private PagoDto _pagoActual = new();
@@ -541,48 +560,34 @@
     private bool _mostrarModalMedico;
     private bool _mostrarModalExamen;
     private bool _mostrarModalPago;
-    private string _filtroBusquedaPaciente = "nombre";
-    private string _valorBusquedaPaciente = "";
-    private string _textoBuscarExamen = "";
-
-    private int? MedicoIdSeleccionado
-    {
-        get => _medicoSeleccionado?.IdMedico;
-        set => _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.IdMedico == value);
-    }
-
+    private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+    private ResultadoPaginadoDto<PacienteDto>? _resultadoPacientes;
+    private ExamenFiltroDto _filtroExamen = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+    private ResultadoPaginadoDto<ExamenDto>? _resultadoExamenes;
+    private int? MedicoIdSeleccionado { get => _medicoSeleccionado?.IdMedico; set => _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.IdMedico == value); }
     private bool _sesionVerificada = false;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
+            if (!await SesionService.VerificarOSalirAsync()) return;
             _listaMedicos = await MedicosApi.ListarMedicosAsync();
             _contenidoCargado = true;
             StateHasChanged();
         }
     }
-
     private async Task BuscarPorCedulaAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         if (string.IsNullOrWhiteSpace(_cedulaPaciente))
         {
             _mostrarModalBuscarPaciente = true;
-            _valorBusquedaPaciente = "";
-            _pacientesEncontrados = new();
+            _resultadoPacientes = null;
             await JS.InvokeVoidAsync("marcarModalAbierto");
             return;
         }
-
         var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(_cedulaPaciente);
-
         if (paciente != null)
         {
             _pacienteSeleccionado = paciente;
@@ -591,49 +596,40 @@
         {
             var deseaRegistrar = await JS.InvokeAsync<bool>("confirm", "No se encontró paciente con esa cédula. ¿Desea registrarlo?");
             if (!deseaRegistrar) return;
-
             if (!ValidarCedula(_cedulaPaciente))
             {
                 await JS.InvokeVoidAsync("alert", "La cédula ingresada no es válida.");
                 return;
             }
-
-            _pacienteNuevo = new PacienteDto
-            {
-                CedulaPaciente = _cedulaPaciente,
-                FechaNacPaciente = DateTime.Today.AddYears(-20)
-            };
+            _pacienteNuevo = new PacienteDto { CedulaPaciente = _cedulaPaciente, FechaNacPaciente = DateTime.Today.AddYears(-20) };
             _mostrarModalRegistrarPaciente = true;
             await JS.InvokeVoidAsync("marcarModalAbierto");
         }
     }
-
     private async Task BuscarPacientesModalAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _pacientesEncontrados = string.IsNullOrWhiteSpace(_valorBusquedaPaciente)
-            ? await PacientesApi.ListarPacientesAsync()
-            : await PacientesApi.ListarPacientesAsync(_filtroBusquedaPaciente, _valorBusquedaPaciente);
+        _resultadoPacientes = await PacientesApi.ListarPacientesPaginadosAsync(_filtroPaciente);
     }
-
-    private async Task RegistrarNuevoPacienteAsync()
+    private async Task CambiarPaginaPacienteAsync(int delta)
     {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var (exito, mensaje, paciente) = await PacientesApi.GuardarPacienteAsync(_pacienteNuevo);
-        await JS.InvokeVoidAsync("alert", mensaje);
-
-        if (exito && paciente != null)
+        if (_resultadoPacientes == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginasPacientes, _resultadoPacientes.PageNumber + delta));
+        if (nueva == _resultadoPacientes.PageNumber) return;
+        _filtroPaciente.PageNumber = nueva;
+        await BuscarPacientesModalAsync();
+    }
+    private int TotalPaginasPacientes => _resultadoPacientes == null || _resultadoPacientes.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultadoPacientes.TotalCount / (double)_resultadoPacientes.PageSize);
+    private string RangoMostradoPacientes
+    {
+        get
         {
-            _pacienteSeleccionado = paciente;
-            _cedulaPaciente = paciente.CedulaPaciente;
-            _mostrarModalRegistrarPaciente = false;
-            await JS.InvokeVoidAsync("marcarModalCerrado");
-            StateHasChanged();
+            if (_resultadoPacientes == null || _resultadoPacientes.TotalCount == 0) return "";
+            int desde = ((_resultadoPacientes.PageNumber - 1) * _resultadoPacientes.PageSize) + 1;
+            int hasta = Math.Min(_resultadoPacientes.PageNumber * _resultadoPacientes.PageSize, _resultadoPacientes.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultadoPacientes.TotalCount} pacientes";
         }
     }
-
     private async Task SeleccionarPacienteAsync(PacienteDto paciente)
     {
         _pacienteSeleccionado = paciente;
@@ -641,18 +637,46 @@
         _mostrarModalBuscarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
+    private async Task BuscarExamenesModalAsync()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        _resultadoExamenes = await ExamenesApi.ListarExamenesPaginadosAsync(_filtroExamen);
+    }
+    private async Task CambiarPaginaExamenAsync(int delta)
+    {
+        if (_resultadoExamenes == null) return;
+        var nueva = Math.Max(1, Math.Min(TotalPaginasExamenes, _resultadoExamenes.PageNumber + delta));
+        if (nueva == _resultadoExamenes.PageNumber) return;
+        _filtroExamen.PageNumber = nueva;
+        await BuscarExamenesModalAsync();
+    }
+    private int TotalPaginasExamenes => _resultadoExamenes == null || _resultadoExamenes.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultadoExamenes.TotalCount / (double)_resultadoExamenes.PageSize);
+    private string RangoMostradoExamenes
+    {
+        get
+        {
+            if (_resultadoExamenes == null || _resultadoExamenes.TotalCount == 0) return "";
+            int desde = ((_resultadoExamenes.PageNumber - 1) * _resultadoExamenes.PageSize) + 1;
+            int hasta = Math.Min(_resultadoExamenes.PageNumber * _resultadoExamenes.PageSize, _resultadoExamenes.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultadoExamenes.TotalCount} exámenes";
+        }
+    }
+    private void SeleccionarExamen(ExamenDto examen)
+    {
+        if (!_examenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
+            _examenesSeleccionados.Add(examen);
+        _mostrarModalExamen = false;
+    }
+    private void QuitarExamen(ExamenDto examen) => _examenesSeleccionados.Remove(examen);
     private async Task AbrirModalNuevoMedicoAsync()
     {
         _medicoNuevo = new MedicoDto();
         _mostrarModalMedico = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
-
     private async Task GuardarNuevoMedicoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         var respuesta = await MedicosApi.GuardarMedicoAsync(_medicoNuevo);
         if (respuesta.IsSuccessStatusCode)
         {
@@ -667,24 +691,6 @@
             await JS.InvokeVoidAsync("alert", $"Error al crear médico: {mensaje}");
         }
     }
-
-    private async Task BuscarExamenesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _examenesDisponibles = await ExamenesApi.ListarExamenesAsync(_textoBuscarExamen);
-    }
-
-    private void SeleccionarExamen(ExamenDto examen)
-    {
-        if (!_examenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
-            _examenesSeleccionados.Add(examen);
-        _mostrarModalExamen = false;
-    }
-
-    private void QuitarExamen(ExamenDto examen) =>
-        _examenesSeleccionados.Remove(examen);
-
     private void AbrirModalPago()
     {
         if (_pacienteSeleccionado == null || _medicoSeleccionado == null || !_examenesSeleccionados.Any())
@@ -692,30 +698,20 @@
             JS.InvokeVoidAsync("alert", "Debe seleccionar paciente, médico y al menos un examen.");
             return;
         }
-
         _montoEfectivo = 0;
         _montoTransferencia = 0;
         _pagoActual = new PagoDto();
         _mostrarModalPago = true;
         StateHasChanged();
     }
-
-    private decimal CalcularTotal() =>
-        _examenesSeleccionados.Sum(e => e.Precio);
-
-    private decimal ObtenerSaldoPendiente() =>
-        Math.Max(0, CalcularTotal() - (_montoEfectivo + _montoTransferencia));
-
-    private decimal ObtenerCambio() =>
-        Math.Max(0, (_montoEfectivo + _montoTransferencia) - CalcularTotal());
-
+    private decimal CalcularTotal() => _examenesSeleccionados.Sum(e => e.Precio);
+    private decimal ObtenerSaldoPendiente() => Math.Max(0, CalcularTotal() - (_montoEfectivo + _montoTransferencia));
+    private decimal ObtenerCambio() => Math.Max(0, (_montoEfectivo + _montoTransferencia) - CalcularTotal());
     private async Task GuardarPagoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-
         var totalPagado = _montoEfectivo + _montoTransferencia;
         var saldoPendiente = ObtenerSaldoPendiente();
-
         _ordenActual.IdPaciente = _pacienteSeleccionado!.IdPaciente;
         _ordenActual.IdMedico = _medicoSeleccionado!.IdMedico;
         _ordenActual.FechaOrden = _fechaOrden;
@@ -727,27 +723,15 @@
         _ordenActual.LiquidadoConvenio = false;
         _ordenActual.NumeroOrden = "";
         _ordenActual.Observacion = "";
-        _ordenActual.Detalles = _examenesSeleccionados
-            .Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio })
-            .ToList();
-
-        var dtoOrdenCompleta = new OrdenCompletaDto
-        {
-            Orden = _ordenActual,
-            IdsExamenes = _examenesSeleccionados.Select(e => e.IdExamen).ToList()
-        };
-
+        _ordenActual.Detalles = _examenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
+        var dtoOrdenCompleta = new OrdenCompletaDto { Orden = _ordenActual, IdsExamenes = _examenesSeleccionados.Select(e => e.IdExamen).ToList() };
         var respuestaOrden = await OrdenesApi.GuardarOrdenHttpAsync(dtoOrdenCompleta);
-
         if (respuestaOrden.IsSuccessStatusCode)
         {
             var respuestaContenido = await respuestaOrden.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
             if (respuestaContenido != null && respuestaContenido.IdOrden > 0)
             {
-                var observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion)
-                    ? "PAGO DESDE ORDEN"
-                    : _pagoActual.Observacion;
-
+                var observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion) ? "PAGO DESDE ORDEN" : _pagoActual.Observacion;
                 var pago = new PagoDto
                 {
                     IdOrden = respuestaContenido.IdOrden,
@@ -760,7 +744,6 @@
                     new() { TipoPago = "TRANSFERENCIA", Monto = _montoTransferencia }
                 }
                 };
-
                 await PagosApi.GuardarPagoAsync(pago);
                 Navigation.NavigateTo("/ordenes");
             }
@@ -772,12 +755,9 @@
             await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {msg}");
         }
     }
-
     private bool ValidarCedula(string cedula)
     {
-        if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit))
-            return false;
-
+        if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit)) return false;
         int suma = 0;
         for (int i = 0; i < 9; i++)
         {
@@ -786,42 +766,50 @@
             int producto = digito * coef;
             suma += (producto >= 10) ? (producto - 9) : producto;
         }
-
         int ultimoDigito = int.Parse(cedula[9].ToString());
         int digitoCalculado = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
         return ultimoDigito == digitoCalculado;
     }
-
     private async Task CerrarModalRegistrarPacienteAsync()
     {
         _mostrarModalRegistrarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
     private async Task CerrarModalBuscarPacienteAsync()
     {
         _mostrarModalBuscarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
     private async Task CerrarModalMedicoAsync()
     {
         _mostrarModalMedico = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
     private async Task CerrarModalExamenAsync()
     {
         _mostrarModalExamen = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
     private async Task CerrarModalPagoAsync()
     {
         _mostrarModalPago = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-
-    private async Task VolverAtrasAsync() =>
-        await JS.InvokeVoidAsync("history.back");
+    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+    private async Task RegistrarNuevoPacienteAsync()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        var resultado = await PacientesApi.GuardarPacienteAsync(_pacienteNuevo);
+        if (resultado.Exito && resultado.Paciente != null)
+        {
+            _pacienteSeleccionado = resultado.Paciente;
+            _cedulaPaciente = resultado.Paciente.CedulaPaciente;
+            _mostrarModalRegistrarPaciente = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", $"Error al registrar paciente: {resultado.Mensaje}");
+        }
+    }
 }

@@ -380,9 +380,6 @@ public partial class LabDbContext : DbContext
                 .HasForeignKey(d => d.id_orden)
                 .HasConstraintName("FK__resultado__id_or__7C4F7684");
 
-            entity.HasOne(d => d.id_pacienteNavigation).WithMany(p => p.resultados)
-                .HasForeignKey(d => d.id_paciente)
-                .HasConstraintName("FK__resultado__id_pa__7A672E12");
         });
 
         modelBuilder.Entity<usuario>(entity =>
