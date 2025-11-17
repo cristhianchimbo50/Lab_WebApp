@@ -3,21 +3,23 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class pago
+public partial class Pago
 {
-    public int id_pago { get; set; }
+    public int IdPago { get; set; }
 
-    public int? id_orden { get; set; }
+    public int? IdOrden { get; set; }
 
-    public DateTime? fecha_pago { get; set; }
+    public DateTime? FechaPago { get; set; }
 
-    public decimal? monto_pagado { get; set; }
+    public decimal? MontoPagado { get; set; }
 
-    public string? observacion { get; set; }
+    public string? Observacion { get; set; }
 
-    public bool? anulado { get; set; }
+    public DateTime? FechaFin { get; set; }
 
-    public virtual ICollection<detalle_pago> detalle_pagos { get; set; } = new List<detalle_pago>();
+    public bool Activo { get; set; }
 
-    public virtual orden? id_ordenNavigation { get; set; }
+    public virtual ICollection<DetallePago> DetallePago { get; set; } = new List<DetallePago>();
+
+    public virtual Orden? IdOrdenNavigation { get; set; }
 }

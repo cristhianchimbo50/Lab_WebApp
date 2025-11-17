@@ -3,21 +3,27 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class reactivo
+public partial class Reactivo
 {
-    public int id_reactivo { get; set; }
+    public int IdReactivo { get; set; }
 
-    public string nombre_reactivo { get; set; } = null!;
+    public string NombreReactivo { get; set; } = null!;
 
-    public string? fabricante { get; set; }
+    public string? Fabricante { get; set; }
 
-    public string? unidad { get; set; }
+    public string? Unidad { get; set; }
 
-    public bool? anulado { get; set; }
+    public decimal? CantidadDisponible { get; set; }
 
-    public decimal? cantidad_disponible { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
-    public virtual ICollection<examen_reactivo> examen_reactivos { get; set; } = new List<examen_reactivo>();
+    public DateTime? FechaActualizacion { get; set; }
 
-    public virtual ICollection<movimiento_reactivo> movimiento_reactivos { get; set; } = new List<movimiento_reactivo>();
+    public DateTime? FechaFin { get; set; }
+
+    public bool Activo { get; set; }
+
+    public virtual ICollection<ExamenReactivo> ExamenReactivo { get; set; } = new List<ExamenReactivo>();
+
+    public virtual ICollection<MovimientoReactivo> MovimientoReactivo { get; set; } = new List<MovimientoReactivo>();
 }

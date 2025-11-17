@@ -24,37 +24,32 @@ namespace Lab_APIRest.Services.Auth
 
         public async Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto dto, CancellationToken ct)
         {
-            var correo = dto.Correo.Trim().ToLowerInvariant();
+            var correo = (dto.Correo ?? string.Empty).Trim().ToLowerInvariant();
 
-            var usuario = await _db.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo && u.activo, ct);
+            var usuario = await _db.Usuario.FirstOrDefaultAsync(u => u.CorreoUsuario.ToLower() == correo && u.Activo == true, ct);
             if (usuario == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El correo no está registrado o el usuario está inactivo." };
 
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             var tokenHash = CalcularHash(token);
 
-            var registro = new tokens_usuarios
+            var registro = new TokensUsuarios
             {
-                id_usuario = usuario.id_usuario,
-                token_hash = tokenHash,
-                fecha_expiracion = DateTime.UtcNow.AddMinutes(15),
-                usado = false
+                IdUsuario = usuario.IdUsuario,
+                TokenHash = tokenHash,
+                FechaExpiracion = DateTime.UtcNow.AddMinutes(15),
+                Usado = false,
+                TipoToken = "recuperacion"
             };
 
-            _db.tokens_usuarios.Add(registro);
+            _db.TokensUsuarios.Add(registro);
             await _db.SaveChangesAsync(ct);
 
-            var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; //Debo cambiar para produccionojoooooooooo
-            var asunto = "Recuperación de Contraseña - Laboratorio Clínico <strong>'La Inmaculada'</strong>";
-            var cuerpoHtml = $@"
-                <p>Hola <b>{usuario.nombre}</b>,</p>
-                <p>Recibimos una solicitud para restablecer tu contraseña.</p>
-                <p>Puedes hacerlo desde el siguiente enlace (válido por 15 minutos):</p>
-                <p><a href='{link}' style='color:#0d6efd'>Restablecer contraseña</a></p>
-                <p>Si no solicitaste este cambio, ignora este mensaje.</p>
-                <br/><p>Saludos,<br/><b>Laboratorio Clínico <strong>'La Inmaculada'</strong></b></p>";
+            var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
+            var asunto = "Recuperación de Contraseña - Laboratorio Clínico 'La Inmaculada'";
+            var cuerpoHtml = $@"\n                <p>Hola <b>{usuario.Nombre}</b>,</p>\n                <p>Recibimos una solicitud para restablecer tu contraseña.</p>\n                <p>Puedes hacerlo desde el siguiente enlace (válido por 15 minutos):</p>\n                <p><a href='{link}' style='color:#0d6efd'>Restablecer contraseña</a></p>\n                <p>Si no solicitaste este cambio, ignora este mensaje.</p>\n                <br/><p>Saludos,<br/><b>Laboratorio Clínico 'La Inmaculada'</b></p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpoHtml);
+            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Se ha enviado un enlace de recuperación a tu correo electrónico." };
         }
@@ -66,32 +61,28 @@ namespace Lab_APIRest.Services.Auth
 
             var tokenHash = CalcularHash(dto.Token);
 
-            var registro = await _db.tokens_usuarios
-                .Include(r => r.Usuario)
-                .FirstOrDefaultAsync(r => r.token_hash == tokenHash && !r.usado, ct);
+            var registro = await _db.TokensUsuarios
+                .Include(r => r.IdUsuarioNavigation)
+                .FirstOrDefaultAsync(r => r.TokenHash == tokenHash && !r.Usado && r.TipoToken == "recuperacion", ct);
 
             if (registro == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido." };
 
-            if (registro.fecha_expiracion < DateTime.UtcNow)
+            if (registro.FechaExpiracion < DateTime.UtcNow)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
-            var usuario = registro.Usuario;
-            usuario.clave_usuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            var usuario = registro.IdUsuarioNavigation;
+            usuario.ClaveUsuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
 
-            registro.usado = true;
-            registro.usado_en = DateTime.UtcNow;
+            registro.Usado = true;
+            registro.UsadoEn = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
 
-            var asunto = "Contraseña actualizada - Laboratorio Clínico <strong>'La Inmaculada'</strong>";
-            var cuerpoHtml = $@"
-                <p>Hola <b>{usuario.nombre}</b>,</p>
-                <p>Tu contraseña fue restablecida correctamente.</p>
-                <p>Si no realizaste este cambio, comunícate con soporte de inmediato.</p>
-                <br/><p>Saludos,<br/><b>Laboratorio Clínico <strong>'La Inmaculada'</strong></b></p>";
+            var asunto = "Contraseña actualizada - Laboratorio Clínico 'La Inmaculada'";
+            var cuerpoHtml = $@"\n                <p>Hola <b>{usuario.Nombre}</b>,</p>\n                <p>Tu contraseña fue restablecida correctamente.</p>\n                <p>Si no realizaste este cambio, comunícate con soporte de inmediato.</p>\n                <br/><p>Saludos,<br/><b>Laboratorio Clínico 'La Inmaculada'</b></p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpoHtml);
+            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }

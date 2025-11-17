@@ -15,100 +15,102 @@ namespace Lab_APIRest.Services.Reactivos
             _context = context;
         }
 
+        private static ReactivoDto MapReactivo(Reactivo entidad) => new()
+        {
+            IdReactivo = entidad.IdReactivo,
+            NombreReactivo = entidad.NombreReactivo,
+            Fabricante = entidad.Fabricante ?? string.Empty,
+            Unidad = entidad.Unidad ?? string.Empty,
+            CantidadDisponible = entidad.CantidadDisponible ?? 0m,
+            Anulado = !entidad.Activo
+        };
+
         public async Task<List<ReactivoDto>> ListarReactivosAsync()
         {
-            return await _context.reactivos
-                .Where(r => !(r.anulado ?? false))
-                .Select(r => new ReactivoDto
-                {
-                    IdReactivo = r.id_reactivo,
-                    NombreReactivo = r.nombre_reactivo,
-                    Fabricante = r.fabricante,
-                    Unidad = r.unidad,
-                    Anulado = r.anulado ?? false,
-                    CantidadDisponible = (decimal)r.cantidad_disponible
-                })
+            return await _context.Reactivo
+                .Where(r => r.Activo)
+                .Select(r => MapReactivo(r))
                 .ToListAsync();
         }
 
         public async Task<ReactivoDto?> ObtenerDetalleReactivoAsync(int idReactivo)
         {
-            var entidad = await _context.reactivos.FindAsync(idReactivo);
-            if (entidad == null) return null;
-            return new ReactivoDto
-            {
-                IdReactivo = entidad.id_reactivo,
-                NombreReactivo = entidad.nombre_reactivo,
-                Fabricante = entidad.fabricante,
-                Unidad = entidad.unidad,
-                Anulado = entidad.anulado ?? false,
-                CantidadDisponible = (decimal)entidad.cantidad_disponible
-            };
+            var entidad = await _context.Reactivo.FindAsync(idReactivo);
+            return entidad == null ? null : MapReactivo(entidad);
         }
 
         public async Task<ReactivoDto> GuardarReactivoAsync(ReactivoDto reactivo)
         {
-            var entidad = new reactivo
+            var entidad = new Reactivo
             {
-                nombre_reactivo = reactivo.NombreReactivo,
-                fabricante = reactivo.Fabricante,
-                unidad = reactivo.Unidad,
-                anulado = false,
-                cantidad_disponible = reactivo.CantidadDisponible
+                NombreReactivo = reactivo.NombreReactivo,
+                Fabricante = reactivo.Fabricante,
+                Unidad = reactivo.Unidad,
+                CantidadDisponible = reactivo.CantidadDisponible,
+                Activo = true,
+                FechaCreacion = DateTime.UtcNow
             };
-            _context.reactivos.Add(entidad);
+            _context.Reactivo.Add(entidad);
             await _context.SaveChangesAsync();
-            reactivo.IdReactivo = entidad.id_reactivo;
-            return reactivo;
+            return MapReactivo(entidad);
         }
 
         public async Task<bool> GuardarReactivoAsync(int idReactivo, ReactivoDto reactivo)
         {
-            var entidad = await _context.reactivos.FindAsync(idReactivo);
+            var entidad = await _context.Reactivo.FindAsync(idReactivo);
             if (entidad == null) return false;
-
-            entidad.nombre_reactivo = reactivo.NombreReactivo;
-            entidad.fabricante = reactivo.Fabricante;
-            entidad.unidad = reactivo.Unidad;
-            entidad.cantidad_disponible = reactivo.CantidadDisponible;
-            entidad.anulado = reactivo.Anulado;
-
+            entidad.NombreReactivo = reactivo.NombreReactivo;
+            entidad.Fabricante = reactivo.Fabricante;
+            entidad.Unidad = reactivo.Unidad;
+            entidad.CantidadDisponible = reactivo.CantidadDisponible;
+            entidad.Activo = !reactivo.Anulado;
+            entidad.FechaActualizacion = DateTime.UtcNow;
+            if (!entidad.Activo)
+            {
+                entidad.FechaFin = entidad.FechaFin ?? DateTime.UtcNow;
+            }
+            else
+            {
+                entidad.FechaFin = null;
+            }
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> AnularReactivoAsync(int idReactivo)
         {
-            var entidad = await _context.reactivos.FindAsync(idReactivo);
+            var entidad = await _context.Reactivo.FindAsync(idReactivo);
             if (entidad == null) return false;
-
-            entidad.anulado = true;
+            if (!entidad.Activo) return true;
+            entidad.Activo = false;
+            entidad.FechaFin = DateTime.UtcNow;
+            entidad.FechaActualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> RegistrarIngresosReactivosAsync(IEnumerable<MovimientoReactivoIngresoDto> ingresos)
         {
-            using var transaccion = await _context.Database.BeginTransactionAsync();
+            await using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
                 foreach (var ingreso in ingresos)
                 {
-                    var entidad = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == ingreso.IdReactivo);
-                    if (entidad == null) continue;
+                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.IdReactivo == ingreso.IdReactivo);
+                    if (entidad == null || !entidad.Activo) continue;
 
-                    var movimiento = new movimiento_reactivo
+                    var movimiento = new MovimientoReactivo
                     {
-                        id_reactivo = ingreso.IdReactivo,
-                        tipo_movimiento = "INGRESO",
-                        cantidad = ingreso.Cantidad,
-                        fecha_movimiento = ingreso.FechaMovimiento,
-                        observacion = ingreso.Observacion
+                        IdReactivo = ingreso.IdReactivo,
+                        TipoMovimiento = "INGRESO",
+                        Cantidad = ingreso.Cantidad,
+                        FechaMovimiento = ingreso.FechaMovimiento,
+                        Observacion = ingreso.Observacion
                     };
-                    await _context.movimiento_reactivos.AddAsync(movimiento);
+                    await _context.MovimientoReactivo.AddAsync(movimiento);
 
-                    entidad.cantidad_disponible += ingreso.Cantidad;
-                    _context.reactivos.Update(entidad);
+                    entidad.CantidadDisponible = (entidad.CantidadDisponible ?? 0m) + ingreso.Cantidad;
+                    entidad.FechaActualizacion = DateTime.UtcNow;
                 }
 
                 await _context.SaveChangesAsync();
@@ -124,29 +126,31 @@ namespace Lab_APIRest.Services.Reactivos
 
         public async Task<bool> RegistrarEgresosReactivosAsync(IEnumerable<MovimientoReactivoEgresoDto> egresos)
         {
-            using var transaccion = await _context.Database.BeginTransactionAsync();
+            await using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
                 foreach (var egreso in egresos)
                 {
-                    var entidad = await _context.reactivos.FirstOrDefaultAsync(r => r.id_reactivo == egreso.IdReactivo);
-                    if (entidad == null) continue;
+                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.IdReactivo == egreso.IdReactivo);
+                    if (entidad == null || !entidad.Activo) continue;
 
-                    if (entidad.cantidad_disponible < egreso.Cantidad)
-                        throw new InvalidOperationException($"Stock insuficiente para {entidad.nombre_reactivo}");
+                    var disponible = entidad.CantidadDisponible ?? 0m;
+                    if (disponible < egreso.Cantidad)
+                        throw new InvalidOperationException($"Stock insuficiente para {entidad.NombreReactivo}");
 
-                    var movimiento = new movimiento_reactivo
+                    var movimiento = new MovimientoReactivo
                     {
-                        id_reactivo = egreso.IdReactivo,
-                        tipo_movimiento = "EGRESO",
-                        cantidad = egreso.Cantidad,
-                        fecha_movimiento = egreso.FechaMovimiento,
-                        observacion = egreso.Observacion,
-                        id_detalle_resultado = egreso.IdDetalleResultado
+                        IdReactivo = egreso.IdReactivo,
+                        TipoMovimiento = "EGRESO",
+                        Cantidad = egreso.Cantidad,
+                        FechaMovimiento = egreso.FechaMovimiento,
+                        Observacion = egreso.Observacion,
+                        IdDetalleResultado = egreso.IdDetalleResultado
                     };
-                    await _context.movimiento_reactivos.AddAsync(movimiento);
-                    entidad.cantidad_disponible -= egreso.Cantidad;
-                    _context.reactivos.Update(entidad);
+                    await _context.MovimientoReactivo.AddAsync(movimiento);
+
+                    entidad.CantidadDisponible = disponible - egreso.Cantidad;
+                    entidad.FechaActualizacion = DateTime.UtcNow;
                 }
 
                 await _context.SaveChangesAsync();
@@ -162,14 +166,14 @@ namespace Lab_APIRest.Services.Reactivos
 
         public async Task<ResultadoPaginadoDto<ReactivoDto>> ListarReactivosPaginadosAsync(ReactivoFiltroDto filtro)
         {
-            var query = _context.reactivos.AsNoTracking().AsQueryable();
+            var query = _context.Reactivo.AsNoTracking().AsQueryable();
 
             if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
             {
                 if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
-                    query = query.Where(r => r.anulado == true);
+                    query = query.Where(r => r.Activo == false);
                 else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
-                    query = query.Where(r => r.anulado == false || r.anulado == null);
+                    query = query.Where(r => r.Activo == true);
             }
 
             if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
@@ -178,10 +182,10 @@ namespace Lab_APIRest.Services.Reactivos
                 switch (filtro.CriterioBusqueda)
                 {
                     case "nombre":
-                        query = query.Where(r => (r.nombre_reactivo ?? "").ToLower().Contains(val));
+                        query = query.Where(r => (r.NombreReactivo ?? "").ToLower().Contains(val));
                         break;
                     case "fabricante":
-                        query = query.Where(r => (r.fabricante ?? "").ToLower().Contains(val));
+                        query = query.Where(r => (r.Fabricante ?? "").ToLower().Contains(val));
                         break;
                 }
             }
@@ -191,11 +195,11 @@ namespace Lab_APIRest.Services.Reactivos
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(ReactivoDto.NombreReactivo) => asc ? query.OrderBy(r => r.nombre_reactivo) : query.OrderByDescending(r => r.nombre_reactivo),
-                nameof(ReactivoDto.Fabricante) => asc ? query.OrderBy(r => r.fabricante) : query.OrderByDescending(r => r.fabricante),
-                nameof(ReactivoDto.Unidad) => asc ? query.OrderBy(r => r.unidad) : query.OrderByDescending(r => r.unidad),
-                nameof(ReactivoDto.CantidadDisponible) => asc ? query.OrderBy(r => r.cantidad_disponible) : query.OrderByDescending(r => r.cantidad_disponible),
-                _ => asc ? query.OrderBy(r => r.id_reactivo) : query.OrderByDescending(r => r.id_reactivo)
+                nameof(ReactivoDto.NombreReactivo) => asc ? query.OrderBy(r => r.NombreReactivo) : query.OrderByDescending(r => r.NombreReactivo),
+                nameof(ReactivoDto.Fabricante) => asc ? query.OrderBy(r => r.Fabricante) : query.OrderByDescending(r => r.Fabricante),
+                nameof(ReactivoDto.Unidad) => asc ? query.OrderBy(r => r.Unidad) : query.OrderByDescending(r => r.Unidad),
+                nameof(ReactivoDto.CantidadDisponible) => asc ? query.OrderBy(r => r.CantidadDisponible) : query.OrderByDescending(r => r.CantidadDisponible),
+                _ => asc ? query.OrderBy(r => r.IdReactivo) : query.OrderByDescending(r => r.IdReactivo)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
@@ -204,15 +208,7 @@ namespace Lab_APIRest.Services.Reactivos
             var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(r => new ReactivoDto
-                {
-                    IdReactivo = r.id_reactivo,
-                    NombreReactivo = r.nombre_reactivo,
-                    Fabricante = r.fabricante,
-                    Unidad = r.unidad,
-                    Anulado = r.anulado ?? false,
-                    CantidadDisponible = (decimal)r.cantidad_disponible
-                })
+                .Select(r => MapReactivo(r))
                 .ToListAsync();
 
             return new ResultadoPaginadoDto<ReactivoDto>

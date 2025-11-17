@@ -5,7 +5,6 @@ using Lab_APIRest.Infrastructure.EF.Models;
 using Microsoft.EntityFrameworkCore;
 using Lab_Contracts.Common;
 
-
 namespace Lab_APIRest.Services.Pagos
 {
     public class PagoService : IPagoService
@@ -17,210 +16,190 @@ namespace Lab_APIRest.Services.Pagos
             _context = context;
         }
 
+        private static PagoDto MapPago(Pago entidadPago) => new()
+        {
+            IdPago = entidadPago.IdPago,
+            IdOrden = entidadPago.IdOrden ?? 0,
+            FechaPago = entidadPago.FechaPago,
+            MontoPagado = entidadPago.MontoPagado ?? 0m,
+            Observacion = entidadPago.Observacion ?? string.Empty,
+            Anulado = !entidadPago.Activo,
+            DetallePagos = entidadPago.DetallePago.Select(d => new DetallePagoDto
+            {
+                IdDetallePago = d.IdDetallePago,
+                IdPago = d.IdPago ?? 0,
+                TipoPago = d.TipoPago ?? string.Empty,
+                Monto = d.Monto ?? 0m,
+                Anulado = !d.Activo,
+                FechaPago = entidadPago.FechaPago
+            }).ToList()
+        };
+
         public async Task<PagoDto?> GuardarPagoAsync(PagoDto pagoDto)
         {
-            var pago = new pago
+            var entidadPago = new Pago
             {
-                id_orden = pagoDto.IdOrden,
-                fecha_pago = pagoDto.FechaPago,
-                monto_pagado = pagoDto.MontoPagado,
-                observacion = pagoDto.Observacion,
-                anulado = pagoDto.Anulado
+                IdOrden = pagoDto.IdOrden,
+                FechaPago = pagoDto.FechaPago ?? DateTime.UtcNow,
+                MontoPagado = pagoDto.MontoPagado,
+                Observacion = pagoDto.Observacion,
+                Activo = !pagoDto.Anulado
             };
 
-            pago.detalle_pagos = pagoDto.DetallePagos.Select(d => new detalle_pago
+            entidadPago.DetallePago = pagoDto.DetallePagos.Select(d => new DetallePago
             {
-                tipo_pago = d.TipoPago,
-                monto = d.Monto,
-                anulado = d.Anulado
+                TipoPago = d.TipoPago,
+                Monto = d.Monto,
+                Activo = !(d.Anulado ?? false),
+                FechaCreacion = DateTime.UtcNow
             }).ToList();
 
-            _context.pagos.Add(pago);
+            _context.Pago.Add(entidadPago);
             await _context.SaveChangesAsync();
 
-            pagoDto.IdPago = pago.id_pago;
-            var detallesGuardados = pago.detalle_pagos.ToList();
-            for (int i = 0; i < pagoDto.DetallePagos.Count; i++)
-            {
-                pagoDto.DetallePagos[i].IdDetallePago = detallesGuardados[i].id_detalle_pago;
-                pagoDto.DetallePagos[i].IdPago = pago.id_pago;
-            }
-
-
-            return pagoDto;
+            return MapPago(entidadPago);
         }
 
         public async Task<List<PagoDto>> ListarPagosPorOrdenAsync(int idOrden)
         {
-            var pagos = await _context.pagos
-                .Include(p => p.detalle_pagos)
-                .Where(p => p.id_orden == idOrden)
+            var pagos = await _context.Pago
+                .Include(p => p.DetallePago)
+                .Where(p => p.IdOrden == idOrden && p.Activo)
                 .ToListAsync();
 
-            return pagos.Select(p => new PagoDto
-            {
-                IdPago = (int)p.id_pago,
-                IdOrden = (int)p.id_orden,
-                FechaPago = p.fecha_pago,
-                MontoPagado = (decimal)p.monto_pagado,
-                Observacion = p.observacion,
-                Anulado = (bool)p.anulado,
-                DetallePagos = p.detalle_pagos.Select(d => new DetallePagoDto
-                {
-                    IdDetallePago = d.id_detalle_pago,
-                    IdPago = (int)d.id_pago,
-                    TipoPago = d.tipo_pago,
-                    Monto = (decimal)d.monto,
-                    Anulado = d.anulado
-                }).ToList()
-            }).ToList();
+            return pagos.Select(MapPago).ToList();
         }
 
         public async Task<PagoDto?> ProcesarCobroCuentaPorCobrarAsync(PagoDto pagoDto)
         {
-            var orden = await _context.ordens.FirstOrDefaultAsync(o => o.id_orden == pagoDto.IdOrden);
-            if (orden == null) return null;
+            var entidadOrden = await _context.Orden.FirstOrDefaultAsync(o => o.IdOrden == pagoDto.IdOrden);
+            if (entidadOrden == null) return null;
 
-            var saldo = orden.saldo_pendiente ?? 0;
+            var saldo = entidadOrden.SaldoPendiente ?? 0m;
             var total = pagoDto.DineroEfectivo + pagoDto.Transferencia;
             if (total > saldo) total = saldo;
 
-            var pago = new pago
+            var entidadPago = new Pago
             {
-                id_orden = pagoDto.IdOrden,
-                fecha_pago = DateTime.Now,
-                monto_pagado = total,
-                observacion = pagoDto.Observacion,
-                anulado = false
+                IdOrden = pagoDto.IdOrden,
+                FechaPago = DateTime.UtcNow,
+                MontoPagado = total,
+                Observacion = pagoDto.Observacion,
+                Activo = true
             };
-
-            _context.pagos.Add(pago);
+            _context.Pago.Add(entidadPago);
             await _context.SaveChangesAsync();
 
-            var detalles = new List<detalle_pago>();
+            var detalles = new List<DetallePago>();
             if (pagoDto.DineroEfectivo > 0)
             {
-                detalles.Add(new detalle_pago
+                detalles.Add(new DetallePago
                 {
-                    id_pago = pago.id_pago,
-                    tipo_pago = "EFECTIVO",
-                    monto = pagoDto.DineroEfectivo,
-                    anulado = false
+                    IdPago = entidadPago.IdPago,
+                    TipoPago = "EFECTIVO",
+                    Monto = pagoDto.DineroEfectivo,
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
                 });
             }
             if (pagoDto.Transferencia > 0)
             {
-                detalles.Add(new detalle_pago
+                detalles.Add(new DetallePago
                 {
-                    id_pago = pago.id_pago,
-                    tipo_pago = "TRANSFERENCIA",
-                    monto = pagoDto.Transferencia,
-                    anulado = false
+                    IdPago = entidadPago.IdPago,
+                    TipoPago = "TRANSFERENCIA",
+                    Monto = pagoDto.Transferencia,
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
                 });
             }
             if (detalles.Any())
-                _context.detalle_pagos.AddRange(detalles);
+            {
+                _context.DetallePago.AddRange(detalles);
+                await _context.SaveChangesAsync();
+            }
 
-            orden.total_pagado = (orden.total_pagado ?? 0) + total;
-            orden.saldo_pendiente = orden.total - (orden.total_pagado ?? 0);
-            orden.estado_pago = orden.saldo_pendiente <= 0 ? "PAGADO" : "PENDIENTE";
-
+            entidadOrden.TotalPagado = (entidadOrden.TotalPagado ?? 0m) + total;
+            entidadOrden.SaldoPendiente = entidadOrden.Total - (entidadOrden.TotalPagado ?? 0m);
+            entidadOrden.EstadoPago = entidadOrden.SaldoPendiente <= 0 ? "PAGADO" : "PENDIENTE";
             await _context.SaveChangesAsync();
 
-            pagoDto.IdPago = pago.id_pago;
-            pagoDto.MontoPagado = total;
-            pagoDto.FechaPago = pago.fecha_pago;
-            pagoDto.DetallePagos = detalles.Select(d => new DetallePagoDto
-            {
-                IdDetallePago = d.id_detalle_pago,
-                IdPago = pago.id_pago,
-                TipoPago = d.tipo_pago,
-                Monto = (decimal)d.monto,
-                Anulado = d.anulado
-            }).ToList();
-
-            return pagoDto;
+            return MapPago(entidadPago);
         }
+
+        private static OrdenDto MapOrden(Orden o) => new()
+        {
+            IdOrden = o.IdOrden,
+            NumeroOrden = o.NumeroOrden,
+            CedulaPaciente = o.IdPacienteNavigation?.CedulaPaciente ?? string.Empty,
+            NombrePaciente = o.IdPacienteNavigation?.NombrePaciente ?? string.Empty,
+            FechaOrden = o.FechaOrden,
+            Total = o.Total,
+            TotalPagado = o.TotalPagado ?? 0m,
+            SaldoPendiente = o.SaldoPendiente ?? 0m,
+            EstadoPago = o.EstadoPago,
+            Anulado = !o.Activo
+        };
 
         public async Task<List<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro)
         {
-            var query = _context.ordens.Include(o => o.id_pacienteNavigation).AsQueryable();
+            var query = _context.Orden.Include(o => o.IdPacienteNavigation).Where(o => o.SaldoPendiente > 0);
 
             if (!string.IsNullOrEmpty(filtro.NumeroOrden))
-                query = query.Where(o => o.numero_orden.Contains(filtro.NumeroOrden));
+                query = query.Where(o => o.NumeroOrden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrEmpty(filtro.Cedula))
-                query = query.Where(o => o.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.CedulaPaciente.Contains(filtro.Cedula));
             if (!string.IsNullOrEmpty(filtro.NombrePaciente))
-                query = query.Where(o => o.id_pacienteNavigation.nombre_paciente.Contains(filtro.NombrePaciente));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.NombrePaciente.Contains(filtro.NombrePaciente));
             if (filtro.FechaInicio.HasValue)
-                query = query.Where(o => o.fecha_orden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
+                query = query.Where(o => o.FechaOrden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
             if (filtro.FechaFin.HasValue)
-                query = query.Where(o => o.fecha_orden <= DateOnly.FromDateTime(filtro.FechaFin.Value.Date));
+                query = query.Where(o => o.FechaOrden <= DateOnly.FromDateTime(filtro.FechaFin.Value.Date));
             if (filtro.IncluirAnulados.HasValue)
-                query = query.Where(o => o.anulado == filtro.IncluirAnulados);
-            else
-                query = query.Where(o => o.anulado == false || o.anulado == null);
+                query = query.Where(o => o.Activo == !filtro.IncluirAnulados.Value);
             if (!string.IsNullOrEmpty(filtro.EstadoPago))
-                query = query.Where(o => o.estado_pago == filtro.EstadoPago);
-            if (string.IsNullOrEmpty(filtro.EstadoPago) || filtro.EstadoPago == "PENDIENTE")
-                query = query.Where(o => o.saldo_pendiente > 0);
+                query = query.Where(o => o.EstadoPago == filtro.EstadoPago);
 
             var ordenes = await query
-                .OrderBy(o => o.id_pacienteNavigation.nombre_paciente)
-                .ThenBy(o => o.fecha_orden)
+                .OrderBy(o => o.IdPacienteNavigation!.NombrePaciente)
+                .ThenBy(o => o.FechaOrden)
                 .ToListAsync();
 
-            return ordenes.Select(o => new OrdenDto
-            {
-                IdOrden = o.id_orden,
-                NumeroOrden = o.numero_orden,
-                CedulaPaciente = o.id_pacienteNavigation?.cedula_paciente ?? "",
-                NombrePaciente = o.id_pacienteNavigation?.nombre_paciente ?? "",
-                Total = o.total,
-                TotalPagado = o.total_pagado ?? 0,
-                SaldoPendiente = o.saldo_pendiente ?? 0,
-                EstadoPago = o.estado_pago,
-                FechaOrden = o.fecha_orden,
-                Anulado = (bool)o.anulado
-            }).ToList();
+            return ordenes.Select(MapOrden).ToList();
         }
 
         public async Task<ResultadoPaginadoDto<OrdenDto>> ListarCuentasPorCobrarPaginadosAsync(PagoFiltroDto filtro)
         {
-            var query = _context.ordens
-                .Include(o => o.id_pacienteNavigation)
+            var query = _context.Orden
+                .Include(o => o.IdPacienteNavigation)
                 .AsNoTracking()
-                .AsQueryable();
+                .Where(o => o.SaldoPendiente > 0);
 
             if (!string.IsNullOrEmpty(filtro.NumeroOrden))
-                query = query.Where(o => o.numero_orden.Contains(filtro.NumeroOrden));
+                query = query.Where(o => o.NumeroOrden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrEmpty(filtro.Cedula))
-                query = query.Where(o => o.id_pacienteNavigation.cedula_paciente.Contains(filtro.Cedula));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.CedulaPaciente.Contains(filtro.Cedula));
             if (!string.IsNullOrEmpty(filtro.NombrePaciente))
-                query = query.Where(o => o.id_pacienteNavigation.nombre_paciente.Contains(filtro.NombrePaciente));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.NombrePaciente.Contains(filtro.NombrePaciente));
             if (filtro.FechaInicio.HasValue)
-                query = query.Where(o => o.fecha_orden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
+                query = query.Where(o => o.FechaOrden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
             if (filtro.FechaFin.HasValue)
-                query = query.Where(o => o.fecha_orden <= DateOnly.FromDateTime(filtro.FechaFin.Value.Date));
+                query = query.Where(o => o.FechaOrden <= DateOnly.FromDateTime(filtro.FechaFin.Value.Date));
             if (filtro.IncluirAnulados.HasValue)
-                query = query.Where(o => o.anulado == filtro.IncluirAnulados);
-            else
-                query = query.Where(o => o.anulado == false || o.anulado == null);
+                query = query.Where(o => o.Activo == !filtro.IncluirAnulados.Value);
             if (!string.IsNullOrEmpty(filtro.EstadoPago))
-                query = query.Where(o => o.estado_pago == filtro.EstadoPago);
-            if (string.IsNullOrEmpty(filtro.EstadoPago) || filtro.EstadoPago == "PENDIENTE")
-                query = query.Where(o => o.saldo_pendiente > 0);
+                query = query.Where(o => o.EstadoPago == filtro.EstadoPago);
 
             var total = await query.CountAsync();
 
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(OrdenDto.NumeroOrden) => asc ? query.OrderBy(o => o.numero_orden) : query.OrderByDescending(o => o.numero_orden),
-                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.id_pacienteNavigation!.nombre_paciente) : query.OrderByDescending(o => o.id_pacienteNavigation!.nombre_paciente),
-                nameof(OrdenDto.FechaOrden) => asc ? query.OrderBy(o => o.fecha_orden) : query.OrderByDescending(o => o.fecha_orden),
-                nameof(OrdenDto.Total) => asc ? query.OrderBy(o => o.total) : query.OrderByDescending(o => o.total),
-                _ => query.OrderByDescending(o => o.id_orden)
+                nameof(OrdenDto.NumeroOrden) => asc ? query.OrderBy(o => o.NumeroOrden) : query.OrderByDescending(o => o.NumeroOrden),
+                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.NombrePaciente) : query.OrderByDescending(o => o.IdPacienteNavigation!.NombrePaciente),
+                nameof(OrdenDto.FechaOrden) => asc ? query.OrderBy(o => o.FechaOrden) : query.OrderByDescending(o => o.FechaOrden),
+                nameof(OrdenDto.Total) => asc ? query.OrderBy(o => o.Total) : query.OrderByDescending(o => o.Total),
+                _ => query.OrderByDescending(o => o.IdOrden)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
@@ -229,19 +208,7 @@ namespace Lab_APIRest.Services.Pagos
             var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(o => new OrdenDto
-                {
-                    IdOrden = o.id_orden,
-                    NumeroOrden = o.numero_orden!,
-                    CedulaPaciente = o.id_pacienteNavigation!.cedula_paciente,
-                    NombrePaciente = o.id_pacienteNavigation!.nombre_paciente,
-                    FechaOrden = o.fecha_orden,
-                    Total = o.total,
-                    TotalPagado = o.total_pagado ?? 0m,
-                    SaldoPendiente = o.saldo_pendiente ?? 0m,
-                    EstadoPago = o.estado_pago,
-                    Anulado = o.anulado ?? false
-                })
+                .Select(o => MapOrden(o))
                 .ToListAsync();
 
             return new ResultadoPaginadoDto<OrdenDto>

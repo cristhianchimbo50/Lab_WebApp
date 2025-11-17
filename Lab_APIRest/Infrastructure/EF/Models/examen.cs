@@ -3,39 +3,45 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class examen
+public partial class Examen
 {
-    public int id_examen { get; set; }
+    public int IdExamen { get; set; }
 
-    public string? nombre_examen { get; set; }
+    public string? NombreExamen { get; set; }
 
-    public string? valor_referencia { get; set; }
+    public string? ValorReferencia { get; set; }
 
-    public string? unidad { get; set; }
+    public string? Unidad { get; set; }
 
-    public decimal precio { get; set; }
+    public decimal Precio { get; set; }
 
-    public bool? anulado { get; set; }
+    public string? Estudio { get; set; }
 
-    public string? estudio { get; set; }
+    public string? TipoMuestra { get; set; }
 
-    public string? tipo_muestra { get; set; }
+    public string? TiempoEntrega { get; set; }
 
-    public string? tiempo_entrega { get; set; }
+    public string? TipoExamen { get; set; }
 
-    public string? tipo_examen { get; set; }
+    public string? Tecnica { get; set; }
 
-    public string? tecnica { get; set; }
+    public string? TituloExamen { get; set; }
 
-    public string? titulo_examen { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
-    public virtual ICollection<detalle_orden> detalle_ordens { get; set; } = new List<detalle_orden>();
+    public DateTime? FechaActualizacion { get; set; }
 
-    public virtual ICollection<detalle_resultado> detalle_resultados { get; set; } = new List<detalle_resultado>();
+    public DateTime? FechaFin { get; set; }
 
-    public virtual ICollection<examen_reactivo> examen_reactivos { get; set; } = new List<examen_reactivo>();
+    public bool Activo { get; set; }
 
-    public virtual ICollection<examen_composicion> id_examen_hijos { get; set; } = new List<examen_composicion>();
-    public virtual ICollection<examen_composicion> id_examen_padres { get; set; } = new List<examen_composicion>();
+    public virtual ICollection<DetalleOrden> DetalleOrden { get; set; } = new List<DetalleOrden>();
 
+    public virtual ICollection<DetalleResultado> DetalleResultado { get; set; } = new List<DetalleResultado>();
+
+    public virtual ICollection<ExamenComposicion> ExamenComposicionIdExamenHijoNavigation { get; set; } = new List<ExamenComposicion>();
+
+    public virtual ICollection<ExamenComposicion> ExamenComposicionIdExamenPadreNavigation { get; set; } = new List<ExamenComposicion>();
+
+    public virtual ICollection<ExamenReactivo> ExamenReactivo { get; set; } = new List<ExamenReactivo>();
 }

@@ -3,42 +3,43 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class orden
+public partial class Orden
 {
-    public int id_orden { get; set; }
+    public int IdOrden { get; set; }
 
-    public string numero_orden { get; set; } = null!;
+    public string NumeroOrden { get; set; } = null!;
 
-    public int? id_paciente { get; set; }
+    public int? IdPaciente { get; set; }
 
-    public DateOnly fecha_orden { get; set; }
+    public DateOnly FechaOrden { get; set; }
 
-    public decimal total { get; set; }
+    public decimal Total { get; set; }
 
-    public decimal? saldo_pendiente { get; set; }
+    public decimal? SaldoPendiente { get; set; }
 
-    public decimal? total_pagado { get; set; }
+    public decimal? TotalPagado { get; set; }
 
-    public string estado_pago { get; set; } = null!;
+    public string EstadoPago { get; set; } = null!;
 
-    public bool? anulado { get; set; }
+    public int? IdMedico { get; set; }
 
-    public bool? liquidado_convenio { get; set; }
+    public string? Observacion { get; set; }
 
-    public int? id_medico { get; set; }
+    public int? IdConvenio { get; set; }
 
-    public string? observacion { get; set; }
+    public DateTime? FechaFin { get; set; }
 
-    public virtual ICollection<detalle_convenio> detalle_convenios { get; set; } = new List<detalle_convenio>();
+    public bool Activo { get; set; }
 
-    public virtual ICollection<detalle_orden> detalle_ordens { get; set; } = new List<detalle_orden>();
+    public virtual ICollection<DetalleOrden> DetalleOrden { get; set; } = new List<DetalleOrden>();
 
-    public virtual medico? id_medicoNavigation { get; set; }
+    public virtual Convenio? IdConvenioNavigation { get; set; }
 
-    public virtual paciente? id_pacienteNavigation { get; set; }
+    public virtual Medico? IdMedicoNavigation { get; set; }
 
+    public virtual Paciente? IdPacienteNavigation { get; set; }
 
-    public virtual ICollection<pago> pagos { get; set; } = new List<pago>();
+    public virtual ICollection<Pago> Pago { get; set; } = new List<Pago>();
 
-    public virtual ICollection<resultado> resultados { get; set; } = new List<resultado>();
+    public virtual ICollection<Resultado> Resultado { get; set; } = new List<Resultado>();
 }

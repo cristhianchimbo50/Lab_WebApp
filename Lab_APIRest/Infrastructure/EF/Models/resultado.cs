@@ -3,25 +3,23 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class resultado
+public partial class Resultado
 {
-    public int id_resultado { get; set; }
+    public int IdResultado { get; set; }
 
-    public string numero_resultado { get; set; } = null!;
+    public string NumeroResultado { get; set; } = null!;
 
+    public DateTime FechaResultado { get; set; }
 
-    public DateTime fecha_resultado { get; set; }
+    public string? Observaciones { get; set; }
 
-    public string? observaciones { get; set; }
+    public DateTime? FechaFin { get; set; }
 
-    public int? id_orden { get; set; }
+    public bool Activo { get; set; }
 
-    public bool? anulado { get; set; }
+    public int IdOrden { get; set; }
 
-    public virtual ICollection<detalle_orden> detalle_ordens { get; set; } = new List<detalle_orden>();
+    public virtual ICollection<DetalleResultado> DetalleResultado { get; set; } = new List<DetalleResultado>();
 
-    public virtual ICollection<detalle_resultado> detalle_resultados { get; set; } = new List<detalle_resultado>();
-
-    public virtual orden? id_ordenNavigation { get; set; }
-
+    public virtual Orden IdOrdenNavigation { get; set; } = null!;
 }

@@ -1,4 +1,5 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
+using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
@@ -24,26 +25,26 @@ namespace Lab_APIRest.Services.Auth
         private static readonly TimeSpan LockoutTiempo = TimeSpan.FromMinutes(15);
 
         private sealed record UsuarioLoginProjection(
-            int id_usuario,
-            string correo_usuario,
-            string nombre,
-            string rol,
-            string clave_usuario,
-            bool activo
+            int IdUsuario,
+            string CorreoUsuario,
+            string Nombre,
+            string Rol,
+            string? ClaveUsuario,
+            bool? Activo
         );
 
         private static readonly Func<LabDbContext, string, IAsyncEnumerable<UsuarioLoginProjection>> QryUsuarioPorCorreo =
             EF.CompileAsyncQuery((LabDbContext ctx, string correo) =>
-                ctx.usuarios
+                ctx.Usuario
                     .AsNoTracking()
-                    .Where(u => u.correo_usuario == correo)
+                    .Where(u => u.CorreoUsuario == correo)
                     .Select(u => new UsuarioLoginProjection(
-                        u.id_usuario,
-                        u.correo_usuario,
-                        u.nombre,
-                        u.rol,
-                        u.clave_usuario,
-                        u.activo
+                        u.IdUsuario,
+                        u.CorreoUsuario,
+                        u.Nombre,
+                        u.Rol,
+                        u.ClaveUsuario,
+                        u.Activo
                     ))
             );
 
@@ -86,60 +87,68 @@ namespace Lab_APIRest.Services.Auth
                 return null;
             }
 
-            var claveOk = _hasher.VerifyHashedPassword(null!, usuarioEntidad.clave_usuario, solicitud.Clave) != PasswordVerificationResult.Failed;
+            if (string.IsNullOrEmpty(usuarioEntidad.ClaveUsuario))
+            {
+                RegistrarIntentoFallido(emailNorm);
+                return null;
+            }
+
+            var claveOk = _hasher.VerifyHashedPassword(null!, usuarioEntidad.ClaveUsuario!, solicitud.Clave) != PasswordVerificationResult.Failed;
             if (!claveOk)
             {
                 RegistrarIntentoFallido(emailNorm);
                 return null;
             }
 
-            if (!usuarioEntidad.activo)
+            // Activo es nullable en el modelo nuevo
+            if (usuarioEntidad.Activo != true)
                 return null;
 
             _cache.Remove(cacheKey);
 
             try
             {
-                var usuarioActualizar = new Infrastructure.EF.Models.usuario
+                // Actualizamos solo UltimoAcceso usando la nueva entidad Usuario
+                var usuarioActualizar = new Usuario
                 {
-                    id_usuario = usuarioEntidad.id_usuario,
-                    ultimo_acceso = DateTime.UtcNow
+                    IdUsuario = usuarioEntidad.IdUsuario,
+                    UltimoAcceso = DateTime.UtcNow
                 };
-                _context.usuarios.Attach(usuarioActualizar);
-                _context.Entry(usuarioActualizar).Property(x => x.ultimo_acceso).IsModified = true;
+                _context.Usuario.Attach(usuarioActualizar);
+                _context.Entry(usuarioActualizar).Property(x => x.UltimoAcceso).IsModified = true;
                 await _context.SaveChangesAsync(ct);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", usuarioEntidad.id_usuario);
+                _logger.LogWarning(ex, "No se pudo registrar la fecha del último acceso del usuario {UsuarioId}", usuarioEntidad.IdUsuario);
             }
 
             int? idPaciente = null;
-            if (usuarioEntidad.rol == "paciente")
+            if (usuarioEntidad.Rol == "paciente")
             {
-                var pacienteEntidad = await _context.pacientes.AsNoTracking()
-                    .Where(p => p.id_usuario == usuarioEntidad.id_usuario)
-                    .Select(p => new { p.id_paciente })
+                var pacienteEntidad = await _context.Paciente.AsNoTracking()
+                    .Where(p => p.IdUsuario == usuarioEntidad.IdUsuario)
+                    .Select(p => new { p.IdPaciente })
                     .FirstOrDefaultAsync(ct);
                 if (pacienteEntidad != null)
-                    idPaciente = pacienteEntidad.id_paciente;
+                    idPaciente = pacienteEntidad.IdPaciente;
             }
 
             (string token, DateTime expiraUtc) = _tokenService.CreateToken(
-                usuarioEntidad.id_usuario,
-                usuarioEntidad.correo_usuario,
-                usuarioEntidad.nombre,
-                usuarioEntidad.rol,
+                usuarioEntidad.IdUsuario,
+                usuarioEntidad.CorreoUsuario,
+                usuarioEntidad.Nombre,
+                usuarioEntidad.Rol,
                 false,
                 idPaciente
             );
 
             return new LoginResponseDto
             {
-                IdUsuario = usuarioEntidad.id_usuario,
-                CorreoUsuario = usuarioEntidad.correo_usuario,
-                Nombre = usuarioEntidad.nombre,
-                Rol = usuarioEntidad.rol,
+                IdUsuario = usuarioEntidad.IdUsuario,
+                CorreoUsuario = usuarioEntidad.CorreoUsuario,
+                Nombre = usuarioEntidad.Nombre,
+                Rol = usuarioEntidad.Rol,
                 AccessToken = token,
                 ExpiresAtUtc = expiraUtc,
                 Mensaje = "Inicio de sesión exitoso. La sesión expirará en 1 hora."
@@ -157,23 +166,25 @@ namespace Lab_APIRest.Services.Auth
         public async Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto cambio, CancellationToken ct)
         {
             var correo = cambio.CorreoUsuario.Trim().ToLowerInvariant();
-            var usuarioEntidad = await _context.usuarios.FirstOrDefaultAsync(u => u.correo_usuario.ToLower() == correo, ct);
+            var usuarioEntidad = await _context.Usuario.FirstOrDefaultAsync(u => u.CorreoUsuario.ToLower() == correo, ct);
 
             if (usuarioEntidad == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.clave_usuario, cambio.ContraseniaActual);
+            if (string.IsNullOrEmpty(usuarioEntidad.ClaveUsuario))
+                return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Credenciales inválidas." };
+
+            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.ClaveUsuario!, cambio.ContraseniaActual);
             if (verificacion == PasswordVerificationResult.Failed)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
             var nuevaHash = _hasher.HashPassword(null!, cambio.NuevaContrasenia);
-            usuarioEntidad.clave_usuario = nuevaHash;
+            usuarioEntidad.ClaveUsuario = nuevaHash;
 
             await _context.SaveChangesAsync(ct);
 
             return new CambiarContraseniaResponseDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }
-
 
         public async Task<RespuestaMensajeDto> ActivarCuentaAsync(RestablecerContraseniaDto dto, CancellationToken ct)
         {
@@ -188,35 +199,33 @@ namespace Lab_APIRest.Services.Auth
             using var sha = SHA256.Create();
             var tokenHash = sha.ComputeHash(Encoding.UTF8.GetBytes(dto.Token));
 
-            var registros = await _context.tokens_usuarios
-                .Include(r => r.Usuario)
-                .Where(r => r.tipo_token == "activacion" && !r.usado)
+            // Ajuste a nuevos nombres de DbSet y propiedades
+            var registros = await _context.TokensUsuarios
+                .Include(r => r.IdUsuarioNavigation)
+                .Where(r => r.TipoToken == "activacion" && !r.Usado)
                 .ToListAsync(ct);
 
-            var registro = registros.FirstOrDefault(r => r.token_hash.SequenceEqual(tokenHash));
+            var registro = registros.FirstOrDefault(r => r.TokenHash.SequenceEqual(tokenHash));
 
             if (registro == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido o ya fue usado." };
 
-            if (registro.fecha_expiracion < DateTime.UtcNow)
+            if (registro.FechaExpiracion < DateTime.UtcNow)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
-            var usuario = registro.Usuario;
-            usuario.clave_usuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
-            usuario.activo = true;
+            var usuario = registro.IdUsuarioNavigation;
+            usuario.ClaveUsuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            usuario.Activo = true;
 
-            registro.usado = true;
-            registro.usado_en = DateTime.UtcNow;
+            registro.Usado = true;
+            registro.UsadoEn = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(ct);
 
             var asunto = "Cuenta activada correctamente";
-            var cuerpo = $@"
-        <p>Hola <b>{usuario.nombre}</b>,</p>
-        <p>Tu cuenta ha sido activada exitosamente.</p>
-        <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
+            var cuerpo = $@"\n        <p>Hola <b>{usuario.Nombre}</b>,</p>\n        <p>Tu cuenta ha sido activada exitosamente.</p>\n        <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.correo_usuario, usuario.nombre, asunto, cuerpo);
+            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpo);
 
             return new RespuestaMensajeDto
             {

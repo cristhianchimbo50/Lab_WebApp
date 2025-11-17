@@ -16,63 +16,69 @@ namespace Lab_APIRest.Services.Examenes
 
         public async Task<List<ExamenComposicionDto>> ListarComposicionesPorPadreAsync(int idExamenPadre)
         {
-            var composiciones = await _context.Set<examen_composicion>()
-                .Where(c => c.id_examen_padre == idExamenPadre)
-                .Include(c => c.id_examen_hijoNavigation)
-                .Include(c => c.id_examen_padreNavigation)
+            var composiciones = await _context.ExamenComposicion
+                .Where(c => c.IdExamenPadre == idExamenPadre && c.Activo)
+                .Include(c => c.IdExamenHijoNavigation)
+                .Include(c => c.IdExamenPadreNavigation)
                 .ToListAsync();
 
             return composiciones.Select(c => new ExamenComposicionDto
             {
-                IdExamenPadre = c.id_examen_padre,
-                IdExamenHijo = c.id_examen_hijo,
-                NombreExamenPadre = c.id_examen_padreNavigation?.nombre_examen,
-                NombreExamenHijo = c.id_examen_hijoNavigation?.nombre_examen
+                IdExamenPadre = c.IdExamenPadre,
+                IdExamenHijo = c.IdExamenHijo,
+                NombreExamenPadre = c.IdExamenPadreNavigation?.NombreExamen,
+                NombreExamenHijo = c.IdExamenHijoNavigation?.NombreExamen
             }).ToList();
         }
 
         public async Task<List<ExamenComposicionDto>> ListarComposicionesPorHijoAsync(int idExamenHijo)
         {
-            var composiciones = await _context.Set<examen_composicion>()
-                .Where(c => c.id_examen_hijo == idExamenHijo)
-                .Include(c => c.id_examen_hijoNavigation)
-                .Include(c => c.id_examen_padreNavigation)
+            var composiciones = await _context.ExamenComposicion
+                .Where(c => c.IdExamenHijo == idExamenHijo && c.Activo)
+                .Include(c => c.IdExamenHijoNavigation)
+                .Include(c => c.IdExamenPadreNavigation)
                 .ToListAsync();
 
             return composiciones.Select(c => new ExamenComposicionDto
             {
-                IdExamenPadre = c.id_examen_padre,
-                IdExamenHijo = c.id_examen_hijo,
-                NombreExamenPadre = c.id_examen_padreNavigation?.nombre_examen,
-                NombreExamenHijo = c.id_examen_hijoNavigation?.nombre_examen
+                IdExamenPadre = c.IdExamenPadre,
+                IdExamenHijo = c.IdExamenHijo,
+                NombreExamenPadre = c.IdExamenPadreNavigation?.NombreExamen,
+                NombreExamenHijo = c.IdExamenHijoNavigation?.NombreExamen
             }).ToList();
         }
 
         public async Task<bool> GuardarComposicionAsync(ExamenComposicionDto composicionDto)
         {
-            var existe = await _context.Set<examen_composicion>()
-                .AnyAsync(c => c.id_examen_padre == composicionDto.IdExamenPadre && c.id_examen_hijo == composicionDto.IdExamenHijo);
-            if (existe) return false;
-
-            var composicion = new examen_composicion
+            var existente = await _context.ExamenComposicion.FirstOrDefaultAsync(c => c.IdExamenPadre == composicionDto.IdExamenPadre && c.IdExamenHijo == composicionDto.IdExamenHijo);
+            if (existente != null)
             {
-                id_examen_padre = composicionDto.IdExamenPadre,
-                id_examen_hijo = composicionDto.IdExamenHijo
+                if (existente.Activo) return false;
+                existente.Activo = true;
+                existente.FechaFin = null;
+                existente.FechaActualizacion = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            var composicion = new ExamenComposicion
+            {
+                IdExamenPadre = composicionDto.IdExamenPadre,
+                IdExamenHijo = composicionDto.IdExamenHijo,
+                FechaCreacion = DateTime.UtcNow,
+                Activo = true
             };
-
-            _context.Set<examen_composicion>().Add(composicion);
+            _context.ExamenComposicion.Add(composicion);
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> EliminarComposicionAsync(int idExamenPadre, int idExamenHijo)
         {
-            var composicion = await _context.Set<examen_composicion>()
-                .FirstOrDefaultAsync(c => c.id_examen_padre == idExamenPadre && c.id_examen_hijo == idExamenHijo);
-
+            var composicion = await _context.ExamenComposicion.FirstOrDefaultAsync(c => c.IdExamenPadre == idExamenPadre && c.IdExamenHijo == idExamenHijo && c.Activo);
             if (composicion == null) return false;
-
-            _context.Set<examen_composicion>().Remove(composicion);
+            composicion.Activo = false;
+            composicion.FechaFin = DateTime.UtcNow;
+            composicion.FechaActualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }

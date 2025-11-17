@@ -23,7 +23,6 @@ namespace Lab_Contracts.Resultados
 
     public class DetalleResultadoDto
     {
-        public int IdDetalleResultado { get; set; }
         public string NombreExamen { get; set; } = "";
         public string Valor { get; set; } = "";
         public string Unidad { get; set; } = "";

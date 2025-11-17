@@ -1,4 +1,5 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
+using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_Contracts.Ajustes.Perfil;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,44 +17,50 @@ namespace Lab_APIRest.Services.Perfil
             _logger = logger;
         }
 
+        private static PerfilDto MapPerfil(Usuario usuario, Paciente? paciente)
+        {
+            var perfil = new PerfilDto
+            {
+                IdUsuario = usuario.IdUsuario,
+                Nombre = usuario.Nombre,
+                Correo = usuario.CorreoUsuario,
+                Rol = usuario.Rol,
+                Activo = usuario.Activo == true,
+                UltimoAcceso = usuario.UltimoAcceso,
+                FechaRegistro = usuario.FechaCreacion
+            };
+
+            if (paciente != null)
+            {
+                perfil.Cedula = paciente.CedulaPaciente;
+                perfil.FechaNacimiento = paciente.FechaNacPaciente;
+                perfil.Direccion = paciente.DireccionPaciente;
+                perfil.Telefono = paciente.TelefonoPaciente;
+                perfil.FechaRegistro = paciente.FechaCreacion; // prioriza registro paciente
+            }
+            return perfil;
+        }
+
         public async Task<PerfilResponseDto?> ObtenerDetallePerfilAsync(int idUsuario, CancellationToken ct)
         {
             try
             {
-                var usuario = await _context.usuarios
+                var usuario = await _context.Usuario
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.id_usuario == idUsuario, ct);
+                    .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario, ct);
 
                 if (usuario == null)
                     return null;
 
-                var perfil = new PerfilDto
+                Paciente? paciente = null;
+                if (usuario.Rol.Equals("paciente", StringComparison.OrdinalIgnoreCase))
                 {
-                    IdUsuario = usuario.id_usuario,
-                    Nombre = usuario.nombre,
-                    Correo = usuario.correo_usuario,
-                    Rol = usuario.rol,
-                    Activo = usuario.activo,
-                    UltimoAcceso = usuario.ultimo_acceso,
-                    FechaRegistro = usuario.fecha_creacion
-                };
-
-                if (usuario.rol.Equals("Paciente", StringComparison.OrdinalIgnoreCase))
-                {
-                    var paciente = await _context.pacientes
+                    paciente = await _context.Paciente
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(p => p.id_usuario == idUsuario && p.anulado == false, ct);
-
-                    if (paciente != null)
-                    {
-                        perfil.Cedula = paciente.cedula_paciente;
-                        perfil.FechaNacimiento = paciente.fecha_nac_paciente;
-                        perfil.Direccion = paciente.direccion_paciente;
-                        perfil.Telefono = paciente.telefono_paciente;
-                        perfil.FechaRegistro = paciente.fecha_registro;
-                    }
+                        .FirstOrDefaultAsync(p => p.IdUsuario == idUsuario && p.Activo, ct);
                 }
 
+                var perfil = MapPerfil(usuario, paciente);
                 return new PerfilResponseDto { Perfil = perfil };
             }
             catch (Exception ex)

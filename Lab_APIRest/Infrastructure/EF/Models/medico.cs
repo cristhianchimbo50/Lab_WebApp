@@ -3,21 +3,27 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class medico
+public partial class Medico
 {
-    public int id_medico { get; set; }
+    public int IdMedico { get; set; }
 
-    public string nombre_medico { get; set; } = null!;
+    public string NombreMedico { get; set; } = null!;
 
-    public string especialidad { get; set; } = null!;
+    public string Especialidad { get; set; } = null!;
 
-    public string? telefono { get; set; }
+    public string? Telefono { get; set; }
 
-    public string? correo { get; set; }
+    public string? Correo { get; set; }
 
-    public bool? anulado { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
-    public virtual ICollection<convenio> convenios { get; set; } = new List<convenio>();
+    public DateTime? FechaFin { get; set; }
 
-    public virtual ICollection<orden> ordens { get; set; } = new List<orden>();
+    public DateTime? FechaActualizacion { get; set; }
+
+    public bool Activo { get; set; }
+
+    public virtual ICollection<Convenio> Convenio { get; set; } = new List<Convenio>();
+
+    public virtual ICollection<Orden> Orden { get; set; } = new List<Orden>();
 }

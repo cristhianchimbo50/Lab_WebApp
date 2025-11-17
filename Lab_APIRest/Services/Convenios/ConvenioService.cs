@@ -18,67 +18,70 @@ namespace Lab_APIRest.Services.Convenios
             _logger = logger;
         }
 
+        private static ConvenioDto MapConvenio(Convenio entidad) => new()
+        {
+            IdConvenio = entidad.IdConvenio,
+            IdMedico = entidad.IdMedico,
+            NombreMedico = entidad.IdMedicoNavigation?.NombreMedico,
+            FechaConvenio = entidad.FechaConvenio,
+            PorcentajeComision = entidad.PorcentajeComision,
+            MontoTotal = entidad.MontoTotal,
+            Anulado = !entidad.Activo
+        };
+
+        private static DetalleConvenioDto MapOrdenConvenio(Orden o, int idConvenio) => new()
+        {
+            IdDetalleConvenio = o.IdOrden,
+            IdConvenio = idConvenio,
+            IdOrden = o.IdOrden,
+            NumeroOrden = o.NumeroOrden,
+            Paciente = o.IdPacienteNavigation?.NombrePaciente,
+            FechaOrden = o.FechaOrden,
+            Subtotal = o.Total
+        };
+
         public async Task<IEnumerable<ConvenioDto>> ListarConveniosAsync()
         {
-            return await _context.convenios
-                .Include(c => c.id_medicoNavigation)
-                .Select(c => new ConvenioDto
-                {
-                    IdConvenio = c.id_convenio,
-                    IdMedico = c.id_medico,
-                    NombreMedico = c.id_medicoNavigation!.nombre_medico,
-                    FechaConvenio = c.fecha_convenio,
-                    PorcentajeComision = c.porcentaje_comision,
-                    MontoTotal = c.monto_total,
-                    Anulado = c.anulado
-                })
+            var convenios = await _context.Convenio
+                .Include(c => c.IdMedicoNavigation)
                 .OrderByDescending(c => c.FechaConvenio)
                 .ToListAsync();
+            return convenios.Select(MapConvenio);
         }
 
         public async Task<ResultadoPaginadoDto<ConvenioDto>> ListarConveniosPaginadosAsync(ConvenioFiltroDto filtro)
         {
-            var query = _context.convenios.Include(c => c.id_medicoNavigation).AsNoTracking().AsQueryable();
-            if (filtro.FechaDesde.HasValue) query = query.Where(c => c.fecha_convenio >= filtro.FechaDesde.Value);
-            if (filtro.FechaHasta.HasValue) query = query.Where(c => c.fecha_convenio <= filtro.FechaHasta.Value);
+            var query = _context.Convenio.Include(c => c.IdMedicoNavigation).AsNoTracking().AsQueryable();
+            if (filtro.FechaDesde.HasValue) query = query.Where(c => c.FechaConvenio >= filtro.FechaDesde.Value);
+            if (filtro.FechaHasta.HasValue) query = query.Where(c => c.FechaConvenio <= filtro.FechaHasta.Value);
             if (!(filtro.IncluirAnuladas && filtro.IncluirVigentes))
             {
-                if (filtro.IncluirAnuladas && !filtro.IncluirVigentes) query = query.Where(c => c.anulado == true);
-                else if (!filtro.IncluirAnuladas && filtro.IncluirVigentes) query = query.Where(c => c.anulado == false || c.anulado == null);
+                if (filtro.IncluirAnuladas && !filtro.IncluirVigentes) query = query.Where(c => c.Activo == false);
+                else if (!filtro.IncluirAnuladas && filtro.IncluirVigentes) query = query.Where(c => c.Activo == true);
             }
             if (!string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
             {
                 var val = filtro.ValorBusqueda.ToLower();
                 switch (filtro.CriterioBusqueda)
                 {
-                    case "numero": query = query.Where(c => EF.Functions.Like(c.id_convenio.ToString(), $"%{val}%")); break;
-                    case "medico": query = query.Where(c => c.id_medicoNavigation != null && c.id_medicoNavigation.nombre_medico.ToLower().Contains(val)); break;
+                    case "numero": query = query.Where(c => EF.Functions.Like(c.IdConvenio.ToString(), $"%{val}%")); break;
+                    case "medico": query = query.Where(c => c.IdMedicoNavigation != null && c.IdMedicoNavigation.NombreMedico.ToLower().Contains(val)); break;
                 }
             }
             var total = await query.CountAsync();
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(ConvenioDto.IdConvenio) => asc ? query.OrderBy(c => c.id_convenio) : query.OrderByDescending(c => c.id_convenio),
-                nameof(ConvenioDto.NombreMedico) => asc ? query.OrderBy(c => c.id_medicoNavigation!.nombre_medico) : query.OrderByDescending(c => c.id_medicoNavigation!.nombre_medico),
-                nameof(ConvenioDto.FechaConvenio) => asc ? query.OrderBy(c => c.fecha_convenio) : query.OrderByDescending(c => c.fecha_convenio),
-                nameof(ConvenioDto.MontoTotal) => asc ? query.OrderBy(c => c.monto_total) : query.OrderByDescending(c => c.monto_total),
-                _ => query.OrderByDescending(c => c.fecha_convenio)
+                nameof(ConvenioDto.IdConvenio) => asc ? query.OrderBy(c => c.IdConvenio) : query.OrderByDescending(c => c.IdConvenio),
+                nameof(ConvenioDto.NombreMedico) => asc ? query.OrderBy(c => c.IdMedicoNavigation!.NombreMedico) : query.OrderByDescending(c => c.IdMedicoNavigation!.NombreMedico),
+                nameof(ConvenioDto.FechaConvenio) => asc ? query.OrderBy(c => c.FechaConvenio) : query.OrderByDescending(c => c.FechaConvenio),
+                nameof(ConvenioDto.MontoTotal) => asc ? query.OrderBy(c => c.MontoTotal) : query.OrderByDescending(c => c.MontoTotal),
+                _ => query.OrderByDescending(c => c.FechaConvenio)
             };
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
             var pageSize = filtro.PageSize <= 0 ? 10 : Math.Min(filtro.PageSize, 200);
-            var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize)
-                .Select(c => new ConvenioDto
-                {
-                    IdConvenio = c.id_convenio,
-                    IdMedico = c.id_medico,
-                    NombreMedico = c.id_medicoNavigation!.nombre_medico,
-                    FechaConvenio = c.fecha_convenio,
-                    PorcentajeComision = c.porcentaje_comision,
-                    MontoTotal = c.monto_total,
-                    Anulado = c.anulado
-                })
-                .ToListAsync();
+            var entidades = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+            var items = entidades.Select(MapConvenio).ToList();
             return new ResultadoPaginadoDto<ConvenioDto> { TotalCount = total, PageNumber = pageNumber, PageSize = pageSize, Items = items };
         }
 
@@ -90,44 +93,37 @@ namespace Lab_APIRest.Services.Convenios
 
         public async Task<ConvenioDetalleDto?> ObtenerDetalleConvenioAsync(int idConvenio)
         {
-            var entidad = await _context.convenios
-                .Include(c => c.id_medicoNavigation)
-                .Include(c => c.detalle_convenios).ThenInclude(d => d.id_ordenNavigation).ThenInclude(o => o.id_pacienteNavigation)
-                .FirstOrDefaultAsync(c => c.id_convenio == idConvenio);
-            if (entidad == null) return null;
+            var convenio = await _context.Convenio.Include(c => c.IdMedicoNavigation).FirstOrDefaultAsync(c => c.IdConvenio == idConvenio);
+            if (convenio == null) return null;
+            var ordenes = await _context.Orden
+                .Include(o => o.IdPacienteNavigation)
+                .Where(o => o.IdConvenio == idConvenio)
+                .ToListAsync();
             return new ConvenioDetalleDto
             {
-                IdConvenio = entidad.id_convenio,
-                IdMedico = entidad.id_medico,
-                NombreMedico = entidad.id_medicoNavigation?.nombre_medico,
-                FechaConvenio = entidad.fecha_convenio,
-                PorcentajeComision = entidad.porcentaje_comision,
-                MontoTotal = entidad.monto_total,
-                Anulado = entidad.anulado,
-                Ordenes = entidad.detalle_convenios.Select(d => new DetalleConvenioDto
-                {
-                    IdDetalleConvenio = d.id_detalle_convenio,
-                    IdOrden = d.id_orden,
-                    NumeroOrden = d.id_ordenNavigation.numero_orden,
-                    Paciente = d.id_ordenNavigation.id_pacienteNavigation!.nombre_paciente,
-                    FechaOrden = d.id_ordenNavigation.fecha_orden,
-                    Subtotal = d.subtotal
-                }).ToList()
+                IdConvenio = convenio.IdConvenio,
+                IdMedico = convenio.IdMedico,
+                NombreMedico = convenio.IdMedicoNavigation?.NombreMedico,
+                FechaConvenio = convenio.FechaConvenio,
+                PorcentajeComision = convenio.PorcentajeComision,
+                MontoTotal = convenio.MontoTotal,
+                Anulado = !convenio.Activo,
+                Ordenes = ordenes.Select(o => MapOrdenConvenio(o, convenio.IdConvenio)).ToList()
             };
         }
 
         public async Task<IEnumerable<OrdenDisponibleDto>> ListarOrdenesDisponiblesAsync(int idMedico)
         {
-            return await _context.ordens
-                .Include(o => o.id_pacienteNavigation)
-                .Where(o => o.id_medico == idMedico && (o.liquidado_convenio == false || o.liquidado_convenio == null) && (o.anulado == false || o.anulado == null))
+            return await _context.Orden
+                .Include(o => o.IdPacienteNavigation)
+                .Where(o => o.IdMedico == idMedico && o.IdConvenio == null && o.Activo)
                 .Select(o => new OrdenDisponibleDto
                 {
-                    IdOrden = o.id_orden,
-                    NumeroOrden = o.numero_orden,
-                    Paciente = o.id_pacienteNavigation!.nombre_paciente,
-                    FechaOrden = o.fecha_orden,
-                    Total = o.total
+                    IdOrden = o.IdOrden,
+                    NumeroOrden = o.NumeroOrden,
+                    Paciente = o.IdPacienteNavigation!.NombrePaciente,
+                    FechaOrden = o.FechaOrden,
+                    Total = o.Total
                 })
                 .OrderByDescending(o => o.FechaOrden)
                 .ToListAsync();
@@ -138,21 +134,24 @@ namespace Lab_APIRest.Services.Convenios
             await using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
-                var entidad = new convenio
+                var entidad = new Convenio
                 {
-                    id_medico = convenioRegistro.IdMedico,
-                    fecha_convenio = convenioRegistro.FechaConvenio,
-                    porcentaje_comision = convenioRegistro.PorcentajeComision,
-                    monto_total = convenioRegistro.MontoTotal,
-                    anulado = false
+                    IdMedico = convenioRegistro.IdMedico,
+                    FechaConvenio = convenioRegistro.FechaConvenio,
+                    PorcentajeComision = convenioRegistro.PorcentajeComision,
+                    MontoTotal = convenioRegistro.MontoTotal,
+                    Activo = true,
+                    FechaFin = null
                 };
-                _context.convenios.Add(entidad);
+                _context.Convenio.Add(entidad);
                 await _context.SaveChangesAsync();
                 foreach (var od in convenioRegistro.Ordenes)
                 {
-                    _context.detalle_convenios.Add(new detalle_convenio { id_convenio = entidad.id_convenio, id_orden = od.IdOrden, subtotal = od.Subtotal });
-                    var orden = await _context.ordens.FindAsync(od.IdOrden);
-                    if (orden != null) orden.liquidado_convenio = true;
+                    var orden = await _context.Orden.FindAsync(od.IdOrden);
+                    if (orden != null)
+                    {
+                        orden.IdConvenio = entidad.IdConvenio;
+                    }
                 }
                 await _context.SaveChangesAsync();
                 await transaccion.CommitAsync();
@@ -170,13 +169,14 @@ namespace Lab_APIRest.Services.Convenios
         {
             try
             {
-                var entidad = await _context.convenios.Include(c => c.detalle_convenios).FirstOrDefaultAsync(c => c.id_convenio == idConvenio);
+                var entidad = await _context.Convenio.FirstOrDefaultAsync(c => c.IdConvenio == idConvenio);
                 if (entidad == null) return false;
-                entidad.anulado = true;
-                foreach (var det in entidad.detalle_convenios)
+                entidad.Activo = false;
+                entidad.FechaFin = DateTime.UtcNow;
+                var ordenes = await _context.Orden.Where(o => o.IdConvenio == idConvenio).ToListAsync();
+                foreach (var ord in ordenes)
                 {
-                    var orden = await _context.ordens.FindAsync(det.id_orden);
-                    if (orden != null) orden.liquidado_convenio = false;
+                    ord.IdConvenio = null;
                 }
                 await _context.SaveChangesAsync();
                 return true;

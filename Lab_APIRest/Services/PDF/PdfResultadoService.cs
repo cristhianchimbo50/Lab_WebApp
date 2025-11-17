@@ -93,8 +93,17 @@ namespace Lab_APIRest.Services.PDF
                                             .BorderColor(Colors.Grey.Lighten3);
                             });
 
-                            col.Item().PaddingTop(20).AlignCenter().Text("_______________________________");
-                            col.Item().AlignCenter().Text("LABORATORISTA").FontSize(10);
+                            var observaciones = string.Join("\n",
+                                resultado.Detalles
+                                    .Select(d => d.Observaciones)
+                                    .Where(o => !string.IsNullOrWhiteSpace(o)));
+
+                            if (!string.IsNullOrWhiteSpace(observaciones))
+                            {
+                                col.Item().PaddingTop(10).Text("Observaciones:").Bold().FontSize(10);
+                                col.Item().Text(observaciones).FontSize(10);
+                            }
+
                         });
                     });
                 }

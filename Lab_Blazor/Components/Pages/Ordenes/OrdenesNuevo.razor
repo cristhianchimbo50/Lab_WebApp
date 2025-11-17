@@ -133,7 +133,7 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <button class="btn btn-success" type="button" @onclick="() => _mostrarModalExamen = true">
+                        <button class="btn btn-success" type="button" @onclick="AbrirModalExamenAsync">
                             <i class="bi bi-plus-circle me-1"></i> Agregar Examen
                         </button>
                     </div>
@@ -347,7 +347,7 @@
                                             </InputSelect>
                                         </div>
                                         <div class="col-md-5">
-                                            <InputText class="form-control" @bind-Value="_filtroExamen.ValorBusqueda" placeholder="Buscar examen..." />
+                                            <InputText class="form-control" @bind-Value="_filtroExamen.ValorBusqueda" placeholder="Buscar examen..." @onkeypress="@(async e => { if (e.Key == "Enter") { _filtroExamen.PageNumber = 1; await BuscarExamenesModalAsync(); } })" />
                                         </div>
                                         <div class="col-md-2">
                                             <select class="form-select form-select-sm" @bind="_filtroExamen.PageSize" @bind:after="async () => { _filtroExamen.PageNumber = 1; await BuscarExamenesModalAsync(); }">
@@ -359,7 +359,7 @@
                                             </select>
                                         </div>
                                         <div class="col-md-2 d-grid">
-                                            <button class="btn btn-primary" @onclick="BuscarExamenesModalAsync"><i class="bi bi-search"></i></button>
+                                            <button class="btn btn-primary" @onclick="@(async ()=> { _filtroExamen.PageNumber = 1; await BuscarExamenesModalAsync(); })"><i class="bi bi-search"></i></button>
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -385,7 +385,13 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @if (_resultadoExamenes?.Items.Any() == true)
+                                                @if (_resultadoExamenes == null)
+                                                {
+                                                    <tr>
+                                                        <td colspan="4" class="text-center text-muted">Ingrese un criterio y presione buscar</td>
+                                                    </tr>
+                                                }
+                                                else if (_resultadoExamenes.Items.Any())
                                                 {
                                                     @foreach (var examen in _resultadoExamenes.Items)
                                                     {
@@ -562,7 +568,7 @@
     private bool _mostrarModalPago;
     private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
     private ResultadoPaginadoDto<PacienteDto>? _resultadoPacientes;
-    private ExamenFiltroDto _filtroExamen = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+    private ExamenFiltroDto _filtroExamen = new() { CriterioBusqueda = "nombre", PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = false, IncluirVigentes = true };
     private ResultadoPaginadoDto<ExamenDto>? _resultadoExamenes;
     private int? MedicoIdSeleccionado { get => _medicoSeleccionado?.IdMedico; set => _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.IdMedico == value); }
     private bool _sesionVerificada = false;
@@ -640,7 +646,21 @@
     private async Task BuscarExamenesModalAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+        if (string.IsNullOrWhiteSpace(_filtroExamen.ValorBusqueda))
+        {
+            _resultadoExamenes = null;
+            StateHasChanged();
+            return;
+        }
         _resultadoExamenes = await ExamenesApi.ListarExamenesPaginadosAsync(_filtroExamen);
+    }
+    private async Task AbrirModalExamenAsync()
+    {
+        _mostrarModalExamen = true;
+        _filtroExamen.PageNumber = 1;
+        _resultadoExamenes = null;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
+        StateHasChanged();
     }
     private async Task CambiarPaginaExamenAsync(int delta)
     {
@@ -661,11 +681,13 @@
             return $"Mostrando {desde} - {hasta} de {_resultadoExamenes.TotalCount} exámenes";
         }
     }
-    private void SeleccionarExamen(ExamenDto examen)
+    private async Task SeleccionarExamen(ExamenDto examen)
     {
         if (!_examenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
             _examenesSeleccionados.Add(examen);
         _mostrarModalExamen = false;
+        _resultadoExamenes = null;
+        await JS.InvokeVoidAsync("marcarModalCerrado");
     }
     private void QuitarExamen(ExamenDto examen) => _examenesSeleccionados.Remove(examen);
     private async Task AbrirModalNuevoMedicoAsync()
@@ -720,7 +742,6 @@
         _ordenActual.TotalPagado = totalPagado;
         _ordenActual.EstadoPago = saldoPendiente == 0 ? "PAGADO" : "PENDIENTE";
         _ordenActual.Anulado = false;
-        _ordenActual.LiquidadoConvenio = false;
         _ordenActual.NumeroOrden = "";
         _ordenActual.Observacion = "";
         _ordenActual.Detalles = _examenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
@@ -788,6 +809,7 @@
     private async Task CerrarModalExamenAsync()
     {
         _mostrarModalExamen = false;
+        _resultadoExamenes = null;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
     private async Task CerrarModalPagoAsync()

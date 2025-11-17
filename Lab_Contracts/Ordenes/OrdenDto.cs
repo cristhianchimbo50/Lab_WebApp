@@ -16,7 +16,7 @@ namespace Lab_Contracts.Ordenes
         public decimal TotalPagado { get; set; }
         public string EstadoPago { get; set; }
         public bool Anulado { get; set; }
-        public bool LiquidadoConvenio { get; set; }
+        public bool IdConvenio { get; set; }
         public int? IdMedico { get; set; }
         public string Observacion { get; set; }
         public List<DetalleOrdenDto> Detalles { get; set; }
