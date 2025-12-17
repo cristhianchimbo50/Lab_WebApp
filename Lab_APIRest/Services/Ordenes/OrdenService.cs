@@ -4,6 +4,7 @@ using Lab_APIRest.Services.PDF;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Common;
 using Lab_Contracts.Ordenes;
+using Lab_Contracts.Pacientes;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
@@ -284,6 +285,31 @@ namespace Lab_APIRest.Services.Ordenes
         }
 
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden) => await ObtenerDetalleOrdenAsync(idOrden);
+
+        public async Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente)
+        {
+            var ordenesPaciente = _context.Orden
+                .Where(o => o.IdPaciente == idPaciente && o.Activo);
+
+            var ordenesActivas = await ordenesPaciente.CountAsync();
+            var ultimaOrden = await ordenesPaciente
+                .OrderByDescending(o => o.FechaOrden)
+                .Select(o => new { o.FechaOrden, o.NumeroOrden })
+                .FirstOrDefaultAsync();
+
+            var resultadosDisponibles = await _context.Resultado
+                .Include(r => r.IdOrdenNavigation)
+                .Where(r => r.Activo && r.IdOrdenNavigation != null && r.IdOrdenNavigation.IdPaciente == idPaciente)
+                .CountAsync();
+
+            return new PacienteDashboardDto
+            {
+                OrdenesActivas = ordenesActivas,
+                ResultadosDisponibles = resultadosDisponibles,
+                FechaUltimaOrden = ultimaOrden?.FechaOrden,
+                NumeroUltimaOrden = ultimaOrden?.NumeroOrden
+            };
+        }
 
         public async Task VerificarYNotificarResultadosCompletosAsync(int idOrden)
         {

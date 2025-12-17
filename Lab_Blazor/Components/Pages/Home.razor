@@ -5,8 +5,12 @@
 @rendermode InteractiveServer
 
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Lab_Blazor.Services.Ordenes
+@using Lab_Contracts.Pacientes
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
+@inject IOrdenesApiService OrdenesApi
 
 @if (!_checkedAuth)
 {
@@ -16,23 +20,40 @@
 }
 else if (!IsAuthenticated)
 {
-    <div class="container mt-4">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-3 text-primary">
+                            <i class="bi bi-shield-lock-fill display-5"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">No has iniciado sesión</h3>
+                        <p class="text-muted">Accede para consultar tus órdenes y resultados.</p>
+                        <button class="btn btn-primary px-4" @onclick="IrALogin">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (!_esPaciente)
+{
+    <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0">
-                    <div class="card-body text-center">
-                        <h3 class="card-title mb-3">
-                            <i class="fas fa-user-lock text-primary me-2"></i> No has iniciado sesión
-                        </h3>
-                        <div class="alert alert-warning mt-4" role="alert">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Por favor, inicia sesión para acceder a las funcionalidades.
-                            <div class="mt-3">
-                                <button class="btn btn-primary" @onclick="IrALogin">
-                                    <i class="fas fa-sign-in-alt me-1"></i> Iniciar sesión
-                                </button>
-                            </div>
+                    <div class="card-body py-5 text-center">
+                        <div class="mb-3 text-primary">
+                            <i class="bi bi-info-circle-fill display-6"></i>
                         </div>
+                        <h4 class="fw-bold">Panel diseñado para pacientes</h4>
+                        <p class="text-muted mb-4">Usa el menú lateral para continuar con tus tareas administrativas.</p>
+                        <button class="btn btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/ordenes", true))">
+                            <i class="bi bi-list-check me-2"></i>Ir a órdenes
+                        </button>
                     </div>
                 </div>
             </div>
@@ -41,42 +62,213 @@ else if (!IsAuthenticated)
 }
 else
 {
-    <div class="container mt-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body text-center">
-                        <h3 class="card-title mb-3">
-                            <i class="fas fa-house-user text-primary me-2"></i> Bienvenido
-                        </h3>
-                        <p class="card-text fs-5 mb-3">
-                            Bienvenido a la Aplicación de gestión del laboratorio Clinico <strong>"La Inmaculada"</strong> <strong/>. Aquí puedes consultar resultados, administrar pacientes y gestionar exámenes.
-                        </p>
-                        <p class="card-text fs-6 mb-4">
-                            Usa el menú lateral para navegar por las secciones disponibles.
-                        </p>
-                        <p class="text-muted small">
-                            Laboratorio Clínico "La Inmaculada" - Cantón Guano
-                        </p>
+    <div class="dashboard-wrapper py-4 px-3 px-lg-4">
+        <div class="patient-dashboard d-flex flex-column flex-lg-row gap-3">
+
+
+            <main class="flex-grow-1">
+                <div class="card border-0 shadow-sm rounded-4 welcome-card mb-3">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                            <div>
+                                <div class="badge bg-primary-subtle text-primary mb-2">Paciente</div>
+                                <h2 class="fw-bold text-dark mb-1">Bienvenido, @_nombreUsuario</h2>
+                                <p class="text-muted mb-0">Consulta tus órdenes, revisa tus resultados y mantén tus datos siempre actualizados.</p>
+                            </div>
+                            <div class="hero-icon rounded-circle d-flex align-items-center justify-content-center">
+                                <i class="bi bi-person-heart text-primary"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                @if (_cargandoDashboard)
+                {
+                    <div class="d-flex align-items-center justify-content-center py-5 text-primary">
+                        <div class="spinner-border me-2" role="status"></div>
+                        <span>Cargando tu resumen...</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="row g-3 mb-4">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="metric-card gradient-blue text-white h-100">
+                                <div class="d-flex align-items-start justify-content-between">
+                                    <div>
+                                        <p class="small text-light opacity-75 mb-1">Órdenes activas</p>
+                                        <div class="display-6 fw-bold">@_resumen.OrdenesActivas</div>
+                                        <small class="text-light opacity-75">Órdenes vigentes en curso</small>
+                                    </div>
+                                    <div class="metric-icon bg-white bg-opacity-25 text-white">
+                                        <i class="bi bi-file-medical"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="metric-card gradient-green text-white h-100">
+                                <div class="d-flex align-items-start justify-content-between">
+                                    <div>
+                                        <p class="small text-light opacity-75 mb-1">Resultados disponibles</p>
+                                        <div class="display-6 fw-bold">@_resumen.ResultadosDisponibles</div>
+                                        <small class="text-light opacity-75">Resultados listos para revisión</small>
+                                    </div>
+                                    <div class="metric-icon bg-white bg-opacity-25 text-white">
+                                        <i class="bi bi-graph-up"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="metric-card gradient-amber text-dark h-100">
+                                <div class="d-flex align-items-start justify-content-between">
+                                    <div>
+                                        <p class="small text-secondary mb-1">Última orden</p>
+                                        <div class="display-6 fw-bold">
+                                            @(_resumen.FechaUltimaOrden.HasValue ? _resumen.FechaUltimaOrden.Value.ToString("dd/MM/yyyy") : "Sin registros")
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(_resumen.NumeroUltimaOrden))
+                                        {
+                                            <small class="text-muted">Número: @_resumen.NumeroUltimaOrden</small>
+                                        }
+                                    </div>
+                                    <div class="metric-icon bg-white bg-opacity-50 text-dark">
+                                        <i class="bi bi-calendar-week"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="icon-pill bg-primary-subtle text-primary">
+                                    <i class="bi bi-lightning-charge"></i>
+                                </div>
+                                <h5 class="mb-0 fw-bold text-dark">Atajos rápidos</h5>
+                            </div>
+                            <small class="text-muted">Accede rápidamente a tus secciones principales</small>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3">
+                            <button class="quick-action btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/ordenes", true))">
+                                <i class="bi bi-journal-text me-2"></i> Ver mis órdenes
+                            </button>
+                            <button class="quick-action btn btn-success" @onclick="@(() => Navigation.NavigateTo("/resultados", true))">
+                                <i class="bi bi-clipboard2-check me-2"></i> Ver resultados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="icon-pill bg-info-subtle text-primary"><i class="bi bi-info-circle"></i></div>
+                            <div>
+                                <h5 class="mb-0 fw-bold text-dark">Información del laboratorio</h5>
+                                <small class="text-muted">Estamos para ayudarte</small>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="info-item d-flex align-items-start gap-3">
+                                    <div class="circle-icon bg-primary-subtle text-primary"><i class="bi bi-geo-alt"></i></div>
+                                    <div>
+                                        <div class="fw-semibold">Ubicación</div>
+                                        <small class="text-muted">Cantón Guano, Barrio Central</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-item d-flex align-items-start gap-3">
+                                    <div class="circle-icon bg-success-subtle text-success"><i class="bi bi-clock-history"></i></div>
+                                    <div>
+                                        <div class="fw-semibold">Horario de atención</div>
+                                        <small class="text-muted">Lunes a Viernes 07h00 - 18h00</small><br />
+                                        <small class="text-muted">Sábados 07h00 - 13h00</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-item d-flex align-items-start gap-3">
+                                    <div class="circle-icon bg-warning-subtle text-warning"><i class="bi bi-telephone"></i></div>
+                                    <div>
+                                        <div class="fw-semibold">Contáctanos</div>
+                                        <small class="text-muted">(+593) 99 999 9999</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 }
 
+
 @code {
     private bool IsAuthenticated;
     private bool _checkedAuth = false;
+    private bool _esPaciente = false;
+    private bool _cargandoDashboard = false;
+    private string _nombreUsuario = "Paciente";
+    private string _correoUsuario = string.Empty;
+    private string _rolUsuario = string.Empty;
+    private PacienteDashboardDto _resumen = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
-            IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+            var user = authState.User;
+            IsAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+            if (IsAuthenticated)
+            {
+                _rolUsuario = user.FindFirst(ClaimTypes.Role)?.Value
+                    ?? user.FindFirst("role")?.Value
+                    ?? user.FindFirst("roles")?.Value
+                    ?? string.Empty;
+                _esPaciente = string.Equals(_rolUsuario, "paciente", StringComparison.OrdinalIgnoreCase);
+                _nombreUsuario = user.Identity?.Name
+                    ?? user.FindFirst("name")?.Value
+                    ?? "Paciente";
+                _correoUsuario = user.FindFirst(ClaimTypes.Email)?.Value
+                    ?? user.FindFirst("email")?.Value
+                    ?? string.Empty;
+            }
+
             _checkedAuth = true;
             StateHasChanged();
+
+            if (IsAuthenticated && _esPaciente)
+            {
+                var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+                if (int.TryParse(idPacienteClaim, out var idPaciente))
+                {
+                    _cargandoDashboard = true;
+                    StateHasChanged();
+                    try
+                    {
+                        _resumen = await OrdenesApi.ObtenerDashboardPacienteAsync(idPaciente) ?? new();
+                    }
+                    catch
+                    {
+                        _resumen = new PacienteDashboardDto();
+                    }
+                    finally
+                    {
+                        _cargandoDashboard = false;
+                        StateHasChanged();
+                    }
+                }
+            }
         }
     }
 

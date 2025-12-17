@@ -243,6 +243,129 @@ html, body {
         color: #ff4d5b !important;
     }
 
+/* Patient dashboard styles (moved from Home.razor) */
+.dashboard-wrapper {
+    background: linear-gradient(135deg, #f5fbff 0%, #eef5ff 100%);
+    min-height: calc(100vh - 60px);
+}
+
+.patient-dashboard {
+    min-height: 70vh;
+}
+
+.patient-sidebar {
+    background: #0f1f37;
+    color: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    min-width: 260px;
+}
+
+.patient-sidebar .nav-item-link {
+    color: #d9e2ef;
+    padding: 12px 14px;
+    border-radius: 12px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    transition: all .2s ease;
+}
+
+.patient-sidebar .nav-item-link:hover,
+.patient-sidebar .nav-item-link.active {
+    background: linear-gradient(135deg, #1780ff, #3ad0ff);
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(23, 128, 255, 0.25);
+}
+
+.patient-sidebar .brand-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+}
+
+.sidebar-user {
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+}
+
+.sidebar-user .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.welcome-card {
+    background: #fff;
+}
+
+.hero-icon {
+    width: 70px;
+    height: 70px;
+    background: #e9f2ff;
+    border-radius: 18px;
+    font-size: 32px;
+}
+
+.metric-card {
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.gradient-blue { background: linear-gradient(135deg, #0d6efd, #3a86ff); }
+.gradient-green { background: linear-gradient(135deg, #0f9d58, #34c759); }
+.gradient-amber { background: linear-gradient(135deg, #ffe082, #f6c443); }
+
+.icon-pill {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.quick-action {
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-weight: 600;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    border: none;
+}
+
+.info-item .circle-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+@media (max-width: 991.98px) {
+    .patient-sidebar {
+        min-width: 100%;
+    }
+}
+
 @media (min-width: 992px) {
     .content-with-sidebar {
         margin-left: var(--sidebar-width) !important;
@@ -789,9 +912,6 @@ html.sb-open .sb-float-toggle {
     }
 
 
-/* ===========================================================
-   TABLAS FIJAS UNIVERSALES (cabecera fija + cuerpo scroll)
-   =========================================================== */
 .tabla-fija {
     position: relative;
     background: #fff;
@@ -800,15 +920,13 @@ html.sb-open .sb-float-toggle {
     border: 1px solid #dee2e6;
 }
 
-    /* Contenedor del scroll */
     .tabla-fija .tabla-body {
-        max-height: 55vh; /* 👈 altura ajustable según la vista */
+        max-height: 55vh;
         overflow-y: auto;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Cabecera fija */
     .tabla-fija table thead th {
         position: sticky;
         top: 0;
@@ -817,14 +935,12 @@ html.sb-open .sb-float-toggle {
         border-bottom: 2px solid #dee2e6;
     }
 
-    /* Tabla base */
     .tabla-fija table {
         width: 100%;
         table-layout: fixed;
         border-collapse: collapse;
     }
 
-    /* Ajustes visuales */
     .tabla-fija th, .tabla-fija td {
         padding: 0.65rem 0.75rem;
         text-overflow: ellipsis;
@@ -833,7 +949,6 @@ html.sb-open .sb-float-toggle {
         vertical-align: middle;
     }
 
-/* Responsive para pantallas pequeñas */
 @media (max-width: 768px) {
     .tabla-fija table thead {
         display: none;

@@ -1,5 +1,6 @@
 ﻿using Lab_Contracts.Ordenes;
 using Lab_Contracts.Common;
+using Lab_Contracts.Pacientes;
 
 namespace Lab_APIRest.Services.Ordenes
 {
@@ -15,5 +16,6 @@ namespace Lab_APIRest.Services.Ordenes
         Task<List<object>> ListarOrdenesPorPacienteAsync(int idPaciente);
         Task<OrdenDetalleDto?> ObtenerDetalleOrdenPacienteAsync(int idOrden);
         Task VerificarYNotificarResultadosCompletosAsync(int idOrden);
+        Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente);
     }
 }

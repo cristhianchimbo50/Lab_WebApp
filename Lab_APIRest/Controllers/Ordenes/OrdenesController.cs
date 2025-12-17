@@ -132,5 +132,15 @@ namespace Lab_APIRest.Controllers
             await _ordenService.VerificarYNotificarResultadosCompletosAsync(idOrden);
             return Ok(new { Mensaje = "Verificación de resultados completada." });
         }
+
+        [Authorize(Roles = "paciente")]
+        [HttpGet("paciente/{idPaciente}/resumen")]
+        public async Task<IActionResult> ObtenerResumenPaciente(int idPaciente)
+        {
+            var userId = User.FindFirst("IdPaciente")?.Value;
+            if (userId == null || userId != idPaciente.ToString()) return Forbid();
+            var resumen = await _ordenService.ObtenerDashboardPacienteAsync(idPaciente);
+            return Ok(resumen);
+        }
     }
 }

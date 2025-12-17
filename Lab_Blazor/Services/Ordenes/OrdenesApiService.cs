@@ -2,6 +2,7 @@
 using Lab_Contracts.Examenes;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
+using Lab_Contracts.Pacientes;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -181,6 +182,21 @@ namespace Lab_Blazor.Services.Ordenes
             respuesta.EnsureSuccessStatusCode();
 
             return await respuesta.Content.ReadFromJsonAsync<List<OrdenDto>>() ?? new();
+        }
+
+        public async Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var solicitud = new HttpRequestMessage(HttpMethod.Get, $"api/ordenes/paciente/{idPaciente}/resumen");
+            AddTokenHeader(solicitud);
+
+            var respuesta = await _http.SendAsync(solicitud);
+            if (!respuesta.IsSuccessStatusCode)
+                return new PacienteDashboardDto();
+
+            return await respuesta.Content.ReadFromJsonAsync<PacienteDashboardDto>() ?? new PacienteDashboardDto();
         }
 
         public async Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPorPacienteAsync(int idPaciente, int idOrden)
