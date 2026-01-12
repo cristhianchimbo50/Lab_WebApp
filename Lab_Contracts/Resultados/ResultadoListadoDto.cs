@@ -17,5 +17,6 @@ namespace Lab_Contracts.Resultados
         public bool Anulado { get; set; }
         public string Observaciones { get; set; } = "";
         public int IdPaciente { get; set; }
+        public string EstadoResultado { get; set; } = string.Empty;
     }
 }

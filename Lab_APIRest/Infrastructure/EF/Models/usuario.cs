@@ -28,4 +28,6 @@ public partial class Usuario
     public virtual ICollection<Paciente> Paciente { get; set; } = new List<Paciente>();
 
     public virtual ICollection<TokensUsuarios> TokensUsuarios { get; set; } = new List<TokensUsuarios>();
+
+    public virtual ICollection<Resultado> Resultado { get; set; } = new List<Resultado>();
 }

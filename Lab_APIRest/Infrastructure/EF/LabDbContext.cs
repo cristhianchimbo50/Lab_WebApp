@@ -540,16 +540,26 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
+            entity.Property(e => e.EstadoResultado)
+                .HasMaxLength(30)
+                .HasColumnName("estado_resultado");
             entity.Property(e => e.FechaFin)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
             entity.Property(e => e.FechaResultado)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_resultado");
+            entity.Property(e => e.FechaRevision)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_revision");
             entity.Property(e => e.IdOrden).HasColumnName("id_orden");
+            entity.Property(e => e.IdRevisor).HasColumnName("id_revisor");
             entity.Property(e => e.NumeroResultado)
                 .HasMaxLength(50)
                 .HasColumnName("numero_resultado");
+            entity.Property(e => e.ObservacionRevision)
+                .HasColumnType("text")
+                .HasColumnName("observacion_revision");
             entity.Property(e => e.Observaciones)
                 .HasMaxLength(255)
                 .HasColumnName("observaciones");
@@ -558,6 +568,10 @@ public partial class LabDbContext : DbContext
                 .HasForeignKey(d => d.IdOrden)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_resultado_orden");
+
+            entity.HasOne(d => d.IdRevisorNavigation).WithMany(p => p.Resultado)
+                .HasForeignKey(d => d.IdRevisor)
+                .HasConstraintName("FK_resultado_revisor");
         });
 
         modelBuilder.Entity<TokensUsuarios>(entity =>

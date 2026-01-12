@@ -3,6 +3,7 @@ using Lab_Contracts.Examenes;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
 using Lab_Contracts.Pacientes;
+using Lab_Contracts.Dashboard;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -199,6 +200,21 @@ namespace Lab_Blazor.Services.Ordenes
             return await respuesta.Content.ReadFromJsonAsync<PacienteDashboardDto>() ?? new PacienteDashboardDto();
         }
 
+        public async Task<LaboratoristaHomeDto> ObtenerDashboardLaboratoristaAsync()
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var solicitud = new HttpRequestMessage(HttpMethod.Get, "api/ordenes/laboratorista/resumen");
+            AddTokenHeader(solicitud);
+
+            var respuesta = await _http.SendAsync(solicitud);
+            if (!respuesta.IsSuccessStatusCode)
+                return new LaboratoristaHomeDto();
+
+            return await respuesta.Content.ReadFromJsonAsync<LaboratoristaHomeDto>() ?? new LaboratoristaHomeDto();
+        }
+
         public async Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPorPacienteAsync(int idPaciente, int idOrden)
         {
             if (!await SetAuthHeaderAsync())
@@ -211,15 +227,16 @@ namespace Lab_Blazor.Services.Ordenes
             if (!respuesta.IsSuccessStatusCode)
                 return (null, false);
 
-            var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            using var documento = await JsonDocument.ParseAsync(await respuesta.Content.ReadAsStreamAsync());
-            var raiz = documento.RootElement;
+            var payload = await respuesta.Content.ReadFromJsonAsync<DetallePacienteOrdenResponse>(
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            var detalle = raiz.TryGetProperty("detalleOrden", out var elementoDetalle)
-                ? JsonSerializer.Deserialize<OrdenDetalleDto>(elementoDetalle.GetRawText(), opciones)
-                : null;
-            var tieneSaldo = raiz.TryGetProperty("tieneSaldoPendiente", out var elementoSaldo) && elementoSaldo.GetBoolean();
-            return (detalle, tieneSaldo);
+            return (payload?.DetalleOrden, payload?.TieneSaldoPendiente ?? false);
+        }
+
+        private sealed class DetallePacienteOrdenResponse
+        {
+            public OrdenDetalleDto? DetalleOrden { get; set; }
+            public bool TieneSaldoPendiente { get; set; }
         }
 
         public async Task<HttpResponseMessage> VerificarNotificacionResultadosOrdenAsync(int idOrden)

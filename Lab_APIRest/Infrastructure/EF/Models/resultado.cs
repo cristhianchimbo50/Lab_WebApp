@@ -19,7 +19,17 @@ public partial class Resultado
 
     public int IdOrden { get; set; }
 
+    public string EstadoResultado { get; set; } = null!;
+
+    public string? ObservacionRevision { get; set; }
+
+    public int? IdRevisor { get; set; }
+
+    public DateTime? FechaRevision { get; set; }
+
     public virtual ICollection<DetalleResultado> DetalleResultado { get; set; } = new List<DetalleResultado>();
 
     public virtual Orden IdOrdenNavigation { get; set; } = null!;
+
+    public virtual Usuario? IdRevisorNavigation { get; set; }
 }

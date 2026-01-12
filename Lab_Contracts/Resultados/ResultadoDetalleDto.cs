@@ -18,11 +18,18 @@ namespace Lab_Contracts.Resultados
         public List<DetalleResultadoDto> Detalles { get; set; } = new();
         public int IdPaciente { get; set; }
         public string NumeroOrden { get; set; } = "";
-        public string EstadoPago { get; set; } = ""; 
+        public string EstadoPago { get; set; } = "";
+        public string EstadoResultado { get; set; } = string.Empty;
+        public string? ObservacionRevision { get; set; }
+        public DateTime? FechaRevision { get; set; }
+        public int? IdRevisor { get; set; }
+        public string? NombreRevisor { get; set; }
+        public int IdOrden { get; set; }
     }
 
     public class DetalleResultadoDto
     {
+        public int IdExamen { get; set; }
         public string NombreExamen { get; set; } = "";
         public string Valor { get; set; } = "";
         public string Unidad { get; set; } = "";

@@ -75,8 +75,17 @@ namespace Lab_APIRest.Controllers.Medicos
         {
             try
             {
+                medicoDto.Correo = medicoDto.Correo?.Trim() ?? string.Empty;
                 var creado = await _medicoService.GuardarMedicoAsync(medicoDto);
                 return CreatedAtAction(nameof(ObtenerDetalleMedico), new { idMedico = creado.IdMedico }, creado);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
             }
             catch (Exception ex)
             {
@@ -90,9 +99,26 @@ namespace Lab_APIRest.Controllers.Medicos
         public async Task<IActionResult> GuardarMedico(int idMedico, [FromBody] MedicoDto medicoDto)
         {
             if (idMedico != medicoDto.IdMedico) return BadRequest("El identificador del médico no coincide.");
-            var ok = await _medicoService.GuardarMedicoAsync(idMedico, medicoDto);
-            if (!ok) return NotFound("Médico no encontrado.");
-            return NoContent();
+            try
+            {
+                medicoDto.Correo = medicoDto.Correo?.Trim() ?? string.Empty;
+                var ok = await _medicoService.GuardarMedicoAsync(idMedico, medicoDto);
+                if (!ok) return NotFound("Médico no encontrado.");
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar médico con ID {MedicoId}.", idMedico);
+                return StatusCode(500, "Ocurrió un error interno al actualizar el médico.");
+            }
         }
 
         [Authorize(Roles = "administrador")]

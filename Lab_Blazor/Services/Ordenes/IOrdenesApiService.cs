@@ -3,6 +3,7 @@ using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
 using Lab_Contracts.Common;
 using Lab_Contracts.Pacientes;
+using Lab_Contracts.Dashboard;
 
 namespace Lab_Blazor.Services.Ordenes
 {
@@ -16,6 +17,7 @@ namespace Lab_Blazor.Services.Ordenes
         Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden);
         Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPorPacienteAsync(int idPaciente, int idOrden);
         Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente);
+        Task<LaboratoristaHomeDto> ObtenerDashboardLaboratoristaAsync();
         Task<OrdenRespuestaDto?> GuardarOrdenAsync(OrdenCompletaDto orden);
         Task<HttpResponseMessage> GuardarOrdenHttpAsync(OrdenCompletaDto orden);
         Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);

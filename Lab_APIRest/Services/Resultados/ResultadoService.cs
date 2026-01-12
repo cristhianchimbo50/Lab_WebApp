@@ -31,11 +31,13 @@ namespace Lab_APIRest.Services.Resultados
             FechaResultado = r.FechaResultado,
             Anulado = !r.Activo,
             Observaciones = r.Observaciones ?? string.Empty,
-            IdPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPaciente ?? 0
+            IdPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPaciente ?? 0,
+            EstadoResultado = r.EstadoResultado ?? "REVISION"
         };
 
         private static DetalleResultadoDto MapDetalle(DetalleResultado d) => new()
         {
+            IdExamen = d.IdExamen,
             NombreExamen = d.IdExamenNavigation?.NombreExamen ?? string.Empty,
             Valor = d.Valor,
             Unidad = d.IdExamenNavigation?.Unidad ?? string.Empty,
@@ -57,7 +59,13 @@ namespace Lab_APIRest.Services.Resultados
             Detalles = r.DetalleResultado.Select(MapDetalle).ToList(),
             IdPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPaciente ?? 0,
             NumeroOrden = r.IdOrdenNavigation?.NumeroOrden ?? string.Empty,
-            EstadoPago = string.Empty
+            EstadoPago = r.IdOrdenNavigation?.EstadoPago ?? string.Empty,
+            EstadoResultado = r.EstadoResultado ?? "REVISION",
+            ObservacionRevision = r.ObservacionRevision,
+            FechaRevision = r.FechaRevision,
+            IdRevisor = r.IdRevisor,
+            NombreRevisor = r.IdRevisorNavigation?.Nombre,
+            IdOrden = r.IdOrden
         };
 
         private static int CalcularEdad(DateOnly? fechaNac)
@@ -84,7 +92,8 @@ namespace Lab_APIRest.Services.Resultados
                     NumeroResultado = numeroGenerado,
                     FechaResultado = resultado.FechaResultado ?? DateTime.UtcNow,
                     Observaciones = resultado.ObservacionesGenerales,
-                    Activo = true
+                    Activo = true,
+                    EstadoResultado = "REVISION"
                 };
                 _context.Resultado.Add(entidadResultado);
                 await _context.SaveChangesAsync();
@@ -189,6 +198,8 @@ namespace Lab_APIRest.Services.Resultados
         {
             var entidad = await _context.Resultado
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
+                .Include(r => r.IdRevisorNavigation)
                 .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)
                 .FirstOrDefaultAsync(r => r.IdResultado == idResultado);
             return entidad == null ? null : MapDetalleResultado(entidad);
@@ -199,6 +210,7 @@ namespace Lab_APIRest.Services.Resultados
             var entidad = await _context.Resultado
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
+                .Include(r => r.IdRevisorNavigation)
                 .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)
                 .FirstOrDefaultAsync(r => r.IdResultado == idResultado);
             if (entidad == null) return null;
@@ -238,6 +250,62 @@ namespace Lab_APIRest.Services.Resultados
             entidad.FechaFin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> RevisarResultadoAsync(int idResultado, string estado, string? observacion, int idRevisor)
+        {
+            if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("Estado inválido", nameof(estado));
+            var estadoNormalizado = estado.Trim().ToUpperInvariant();
+            if (estadoNormalizado != "APROBADO" && estadoNormalizado != "CORRECCION")
+                throw new ArgumentException("Estado de resultado no soportado", nameof(estado));
+
+            var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.IdResultado == idResultado && r.Activo);
+            if (entidad == null) return false;
+
+            entidad.EstadoResultado = estadoNormalizado;
+            entidad.ObservacionRevision = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
+            entidad.IdRevisor = idRevisor;
+            entidad.FechaRevision = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ActualizarResultadoAsync(ResultadoActualizarDto resultado)
+        {
+            await using var transaccion = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var entidad = await _context.Resultado
+                    .Include(r => r.DetalleResultado)
+                    .FirstOrDefaultAsync(r => r.IdResultado == resultado.IdResultado && r.Activo);
+                if (entidad == null) return false;
+                if (!string.Equals(entidad.EstadoResultado, "CORRECCION", StringComparison.OrdinalIgnoreCase)) return false;
+
+                entidad.FechaResultado = resultado.FechaResultado ?? DateTime.UtcNow;
+                entidad.Observaciones = resultado.ObservacionesGenerales;
+                entidad.EstadoResultado = "REVISION";
+                entidad.ObservacionRevision = null;
+                entidad.FechaRevision = null;
+                entidad.IdRevisor = null;
+
+                foreach (var ex in resultado.Examenes)
+                {
+                    var detalle = entidad.DetalleResultado.FirstOrDefault(d => d.IdExamen == ex.IdExamen);
+                    if (detalle != null)
+                        detalle.Valor = ex.Valor ?? string.Empty;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaccion.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaccion.RollbackAsync();
+                _logger.LogError(ex, "Error actualizando resultados");
+                return false;
+            }
         }
     }
 }

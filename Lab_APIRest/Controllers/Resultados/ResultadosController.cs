@@ -132,6 +132,24 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
+        [Authorize(Roles = "administrador,laboratorista")]
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> ActualizarResultado(int id, [FromBody] ResultadoActualizarDto dto)
+        {
+            if (dto == null || id != dto.IdResultado) return BadRequest("Datos de actualización inválidos.");
+            try
+            {
+                var ok = await _resultadoService.ActualizarResultadoAsync(dto);
+                if (!ok) return BadRequest(new { mensaje = "No se pudo actualizar el resultado. Verifique estado y datos." });
+                return Ok(new { mensaje = "Resultado actualizado y enviado a revisión." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al actualizar resultado {id}.");
+                return StatusCode(500, "Error interno al actualizar el resultado.");
+            }
+        }
+
         [Authorize(Roles = "paciente")]
         [HttpGet("mis-resultados")]
         public async Task<ActionResult<List<ResultadoListadoDto>>> ListarResultadosPaciente()
@@ -169,6 +187,32 @@ namespace Lab_APIRest.Controllers.Resultados
             {
                 _logger.LogError(ex, $"Error al obtener detalle del resultado {id} para paciente.");
                 return StatusCode(500, "Error interno al obtener detalle del resultado.");
+            }
+        }
+
+        [Authorize(Roles = "administrador")]
+        [HttpPut("{id:int}/revision")]
+        public async Task<IActionResult> RevisarResultado(int id, [FromBody] ResultadoRevisionDto revision)
+        {
+            if (revision == null) return BadRequest("Datos de revisión inválidos.");
+            var idRevisorClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idRevisorClaim) || !int.TryParse(idRevisorClaim, out var idRevisor))
+                return Forbid();
+
+            try
+            {
+                var ok = await _resultadoService.RevisarResultadoAsync(id, revision.EstadoResultado, revision.ObservacionRevision, idRevisor);
+                if (!ok) return NotFound("No se encontró el resultado o ya fue anulado.");
+                return Ok(new { mensaje = "Resultado actualizado correctamente." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al revisar resultado {id}.");
+                return StatusCode(500, "Error interno al actualizar el resultado.");
             }
         }
     }

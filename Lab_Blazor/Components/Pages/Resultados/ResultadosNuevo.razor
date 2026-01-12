@@ -7,6 +7,7 @@
 @using Lab_Contracts.Resultados
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Blazor.Services.Examenes
+@using Lab_Blazor.Services.Resultados
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using Lab_Blazor.Services.Auth
@@ -16,6 +17,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
+@inject IResultadosApiService ResultadosApi
 
 
 <AuthorizeView>
@@ -61,7 +63,7 @@
                 <div class="card shadow-sm border-0 mt-3 mb-5">
                     <div class="card-header bg-primary text-white d-flex align-items-center">
                         <i class="bi bi-clipboard2-check me-2"></i>
-                        <h5 class="m-0">Ingreso de Resultados</h5>
+                        <h5 class="m-0">@(_modoEdicion ? "Edición de Resultado" : "Ingreso de Resultados")</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3 mb-4">
@@ -141,7 +143,7 @@
 
                         <div class="d-flex justify-content-end gap-2">
                             <button class="btn btn-success shadow-sm" @onclick="GuardarResultadosAsync">
-                                <i class="bi bi-save me-1"></i> Guardar Resultado
+                                <i class="bi bi-save me-1"></i> @(_modoEdicion ? "Actualizar Resultado" : "Guardar Resultado")
                             </button>
                             <button class="btn btn-secondary shadow-sm" @onclick="@(() => Navigation.NavigateTo("/ordenes"))">
                                 <i class="bi bi-arrow-left me-1"></i> Cancelar
@@ -181,6 +183,9 @@
     private bool _cargando = true;
 
     private bool _sesionVerificada = false;
+    private bool _modoEdicion = false;
+    private int _idResultadoEdicion;
+    private ResultadoDetalleDto? _detalleResultadoEdicion;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -202,11 +207,20 @@
                     {
                         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
                         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-                        if (query.TryGetValue("idOrden", out var idOrdenStr))
-                            idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
-                        if (query.TryGetValue("idsExamenes", out var ids))
-                            idsExamenes = ids.Select(int.Parse).ToList();
-                        await InicializarDatosAsync();
+                        if (query.TryGetValue("idResultado", out var idResultadoStr) && int.TryParse(idResultadoStr, out var idResultado))
+                        {
+                            _modoEdicion = true;
+                            _idResultadoEdicion = idResultado;
+                            await InicializarDatosEdicionAsync();
+                        }
+                        else
+                        {
+                            if (query.TryGetValue("idOrden", out var idOrdenStr))
+                                idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
+                            if (query.TryGetValue("idsExamenes", out var ids))
+                                idsExamenes = ids.Select(int.Parse).ToList();
+                            await InicializarDatosAsync();
+                        }
                     }
                 }
             }
@@ -239,6 +253,48 @@
             _valoresIngresados.TryAdd(padre.IdExamen, string.Empty);
             foreach (var hijo in hijos)
                 _valoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
+        }
+    }
+
+    private async Task InicializarDatosEdicionAsync()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
+        _detalleResultadoEdicion = await ResultadosApi.ObtenerDetalleResultadoAsync(_idResultadoEdicion);
+        if (_detalleResultadoEdicion == null)
+        {
+            await JS.InvokeVoidAsync("alert", "No se encontró el resultado para editar.");
+            return;
+        }
+
+        if (!string.Equals(_detalleResultadoEdicion.EstadoResultado, "CORRECCION", StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync("alert", "Solo se pueden modificar resultados en estado Corrección.");
+            Navigation.NavigateTo("/ordenes");
+            return;
+        }
+
+        idOrden = _detalleResultadoEdicion.IdOrden;
+        _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+        if (_datosOrden == null)
+        {
+            await JS.InvokeVoidAsync("alert", "No se pudieron cargar los datos de la orden.");
+            return;
+        }
+
+        _fechaResultado = _detalleResultadoEdicion.FechaResultado;
+        _observacionesGenerales = _detalleResultadoEdicion.Observaciones ?? string.Empty;
+
+        var todos = await ExamenesApi.ListarExamenesAsync();
+        _examenesAgrupados = new();
+        _valoresIngresados = new();
+
+        foreach (var detalle in _detalleResultadoEdicion.Detalles)
+        {
+            var examen = todos.FirstOrDefault(e => e.IdExamen == detalle.IdExamen);
+            if (examen == null) continue;
+            _examenesAgrupados.Add((examen, new List<ExamenDto>()));
+            _valoresIngresados[examen.IdExamen] = detalle.Valor ?? string.Empty;
         }
     }
 
@@ -279,6 +335,29 @@
                         Observacion = ""
                     });
                 }
+            }
+
+            if (_modoEdicion)
+            {
+                var dtoActualizacion = new ResultadoActualizarDto
+                {
+                    IdResultado = _idResultadoEdicion,
+                    FechaResultado = _fechaResultado,
+                    ObservacionesGenerales = _observacionesGenerales,
+                    Examenes = resultados
+                };
+
+                var ok = await ResultadosApi.ActualizarResultadoAsync(dtoActualizacion);
+                if (ok)
+                {
+                    await JS.InvokeVoidAsync("alert", "Resultado actualizado y enviado a revisión.");
+                    Navigation.NavigateTo("/ordenes");
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", "No se pudo actualizar el resultado.");
+                }
+                return;
             }
 
             var dto = new ResultadoGuardarDto

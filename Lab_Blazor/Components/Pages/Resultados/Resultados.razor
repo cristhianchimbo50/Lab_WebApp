@@ -186,7 +186,7 @@
                             else
                             {
                                 <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalle de Resultado <span class="badge bg-light text-dark">@_detalleActual.NumeroResultado</span></h5>
+                                    <h5 class="modal-title d-flex align-items-center gap-2"><i class="fas fa-info-circle me-2"></i>Detalle de Resultado <span class="badge bg-light text-dark">@_detalleActual.NumeroResultado</span><span class="badge bg-@ObtenerClaseEstadoResultado(_detalleActual.EstadoResultado)">@EstadoResultadoTexto(_detalleActual.EstadoResultado)</span></h5>
                                     <button class="btn-close" @onclick="CerrarDetalle">
                                     </button>
                                 </div>
@@ -380,6 +380,11 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (_detalleActual == null) { await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning"); return; }
         if (_detalleActual.Anulado) { await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning"); return; }
+        if (!string.Equals(_detalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Solo se pueden imprimir resultados aprobados.", "warning");
+            return;
+        }
         var pdfBytes = await ResultadosApi.GenerarResultadosPdfAsync(new List<int> { _detalleActual.IdResultado });
         if (pdfBytes == null || pdfBytes.Length == 0) { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al generar el PDF del resultado.", "danger"); return; }
         var base64Pdf = Convert.ToBase64String(pdfBytes); _pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
@@ -403,4 +408,30 @@
     }
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private string ObtenerClaseEstadoResultado(string? estado)
+    {
+        var val = (estado ?? "REVISION").ToUpperInvariant();
+        return val switch
+        {
+            "APROBADO" => "success",
+            "CORRECCION" => "warning text-dark",
+            "REVISION" => "info",
+            "REGISTRO" => "secondary",
+            _ => "secondary"
+        };
+    }
+
+    private string EstadoResultadoTexto(string? estado)
+    {
+        var val = (estado ?? "REVISION").ToUpperInvariant();
+        return val switch
+        {
+            "APROBADO" => "Aprobado",
+            "CORRECCION" => "Corrección",
+            "REVISION" => "En revisión",
+            "REGISTRO" => "Registrado",
+            _ => "Pendiente"
+        };
+    }
 }

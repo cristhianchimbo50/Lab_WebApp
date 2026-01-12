@@ -309,6 +309,11 @@
                                                        @oninput="(e => _medicoNuevo.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Correo</label>
+                                            <InputText class="form-control"
+                                                       @bind-Value="_medicoNuevo.Correo" />
+                                        </div>
+                                        <div class="mb-3">
                                             <label class="form-label">Teléfono</label>
                                             <InputText class="form-control" @bind-Value="_medicoNuevo.Telefono" />
                                         </div>

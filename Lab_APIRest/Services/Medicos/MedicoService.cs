@@ -71,12 +71,13 @@ namespace Lab_APIRest.Services.Medicos
 
         public async Task<MedicoDto> GuardarMedicoAsync(MedicoDto medicoDto)
         {
+            var correoNormalizado = await NormalizarCorreoOpcionalAsync(medicoDto.Correo);
             var entidadMedico = new Medico
             {
                 NombreMedico = medicoDto.NombreMedico,
                 Especialidad = medicoDto.Especialidad,
                 Telefono = medicoDto.Telefono,
-                Correo = medicoDto.Correo,
+                Correo = correoNormalizado,
                 Activo = true,
                 FechaCreacion = DateTime.UtcNow
             };
@@ -89,10 +90,11 @@ namespace Lab_APIRest.Services.Medicos
         {
             var entidadMedico = await _context.Medico.FindAsync(idMedico);
             if (entidadMedico == null) return false;
+            var correoNormalizado = await NormalizarCorreoOpcionalAsync(medicoDto.Correo, idMedico);
             entidadMedico.NombreMedico = medicoDto.NombreMedico;
             entidadMedico.Especialidad = medicoDto.Especialidad;
             entidadMedico.Telefono = medicoDto.Telefono;
-            entidadMedico.Correo = medicoDto.Correo;
+            entidadMedico.Correo = correoNormalizado;
             entidadMedico.Activo = !medicoDto.Anulado;
             entidadMedico.FechaActualizacion = DateTime.UtcNow;
             if (!entidadMedico.Activo)
@@ -161,6 +163,23 @@ namespace Lab_APIRest.Services.Medicos
                 PageSize = pageSize,
                 Items = items
             };
+        }
+
+        private async Task<string?> NormalizarCorreoOpcionalAsync(string? correo, int? idMedicoActual = null)
+        {
+            if (string.IsNullOrWhiteSpace(correo))
+            {
+                return null;
+            }
+
+            var correoNormalizado = correo.Trim();
+            bool existe = await _context.Medico.AnyAsync(m => m.Correo != null && m.Correo == correoNormalizado && (!idMedicoActual.HasValue || m.IdMedico != idMedicoActual.Value));
+            if (existe)
+            {
+                throw new InvalidOperationException("Ya existe un médico registrado con ese correo.");
+            }
+
+            return correoNormalizado;
         }
     }
 }

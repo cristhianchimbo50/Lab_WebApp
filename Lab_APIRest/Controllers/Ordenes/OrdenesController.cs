@@ -2,6 +2,7 @@
 using Lab_APIRest.Services.Resultados;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Resultados;
+using Lab_Contracts.Dashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
@@ -29,10 +30,21 @@ namespace Lab_APIRest.Controllers
             return Ok(lista);
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
         [HttpPost("buscar")]
         public async Task<IActionResult> ListarOrdenesPaginados([FromBody] OrdenFiltroDto filtro)
         {
+            if (User.IsInRole("paciente"))
+            {
+                var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
+                if (!int.TryParse(idPacienteClaim, out var idPaciente))
+                    return Forbid();
+
+                filtro.IdPaciente = idPaciente;
+                filtro.IncluirAnuladas = false;
+                filtro.IncluirVigentes = true;
+            }
+
             var resultado = await _ordenService.ListarOrdenesPaginadosAsync(filtro);
             return Ok(resultado);
         }
@@ -141,6 +153,14 @@ namespace Lab_APIRest.Controllers
             if (userId == null || userId != idPaciente.ToString()) return Forbid();
             var resumen = await _ordenService.ObtenerDashboardPacienteAsync(idPaciente);
             return Ok(resumen);
+        }
+
+        [Authorize(Roles = "laboratorista,administrador")]
+        [HttpGet("laboratorista/resumen")]
+        public async Task<IActionResult> ObtenerResumenLaboratorista()
+        {
+            var data = await _ordenService.ObtenerDashboardLaboratoristaAsync();
+            return Ok(data);
         }
     }
 }

@@ -40,6 +40,7 @@ namespace Lab_Contracts.Ordenes
         public string? NombreEstudio { get; set; }
         public int? IdResultado { get; set; }
         public string? NumeroResultado { get; set; }
+        public string? EstadoResultado { get; set; }
 
         public bool Seleccionado { get; set; } = false;
     }

@@ -17,6 +17,7 @@ namespace Lab_Contracts.Medicos
         [StringLength(20)]
         public string Telefono { get; set; } = string.Empty;
 
+        [EmailAddress(ErrorMessage = "Ingrese un correo válido")]
         [StringLength(150)]
         public string Correo { get; set; } = string.Empty;
 

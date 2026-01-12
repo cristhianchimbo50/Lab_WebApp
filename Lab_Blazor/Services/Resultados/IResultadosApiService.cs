@@ -12,5 +12,7 @@ namespace Lab_Blazor.Services.Resultados
         Task<bool> AnularResultadoAsync(int idResultado);
         Task<List<ResultadoListadoDto>> ListarResultadosPacienteAsync();
         Task<ResultadoDetalleDto?> ObtenerDetalleResultadoPacienteAsync(int idResultado);
+        Task<bool> RevisarResultadoAsync(int idResultado, ResultadoRevisionDto revision);
+        Task<bool> ActualizarResultadoAsync(ResultadoActualizarDto dto);
     }
 }

@@ -8,6 +8,7 @@
 @using System.Security.Claims
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Contracts.Pacientes
+@using Lab_Contracts.Dashboard
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
 @inject IOrdenesApiService OrdenesApi
@@ -29,7 +30,7 @@ else if (!IsAuthenticated)
                             <i class="bi bi-shield-lock-fill display-5"></i>
                         </div>
                         <h3 class="fw-bold mb-2">No has iniciado sesión</h3>
-                        <p class="text-muted">Accede para consultar tus órdenes y resultados.</p>
+                        <p class="text-muted">Accede para gestionar tus operaciones.</p>
                         <button class="btn btn-primary px-4" @onclick="IrALogin">
                             <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
                         </button>
@@ -39,32 +40,151 @@ else if (!IsAuthenticated)
         </div>
     </div>
 }
-else if (!_esPaciente)
+else if (_esLaboratorista)
 {
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body py-5 text-center">
-                        <div class="mb-3 text-primary">
-                            <i class="bi bi-info-circle-fill display-6"></i>
+    <div class="lab-dashboard container-fluid py-4">
+        <div class="lab-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <div class="lab-icon bg-primary-subtle text-primary"><i class="bi bi-eyedropper"></i></div>
+                    <h2 class="mb-0 fw-bold text-dark">Bienvenido, Laboratorista</h2>
+                </div>
+                <p class="text-muted mb-0">Panel para gestionar órdenes médicas, resultados y reactivos del día a día.</p>
+            </div>
+        </div>
+
+        @if (_cargandoDashboard)
+        {
+            <div class="d-flex align-items-center justify-content-center py-5 text-primary">
+                <div class="spinner-border me-2" role="status"></div>
+                <span>Cargando tu panel...</span>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3 mb-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="lab-card stat-card bg-primary text-white">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-label">Órdenes pendientes</div>
+                                <div class="stat-value">@_labData.Resumen.OrdenesPendientes</div>
+                                <small class="text-white-50">Órdenes médicas en espera</small>
+                            </div>
+                            <div class="stat-icon bg-white bg-opacity-25 text-white"><i class="bi bi-file-medical"></i></div>
                         </div>
-                        <h4 class="fw-bold">Panel diseñado para pacientes</h4>
-                        <p class="text-muted mb-4">Usa el menú lateral para continuar con tus tareas administrativas.</p>
-                        <button class="btn btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/ordenes", true))">
-                            <i class="bi bi-list-check me-2"></i>Ir a órdenes
-                        </button>
                     </div>
                 </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="lab-card stat-card bg-success text-white">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-label">Resultados por registrar</div>
+                                <div class="stat-value">@_labData.Resumen.ResultadosPorRegistrar</div>
+                                <small class="text-white-50">Exámenes pendientes</small>
+                            </div>
+                            <div class="stat-icon bg-white bg-opacity-25 text-white"><i class="bi bi-clipboard2-pulse"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="lab-card stat-card bg-danger text-white">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-label">Reactivos con stock bajo</div>
+                                <div class="stat-value">@_labData.Resumen.ReactivosStockBajo</div>
+                                <small class="text-white-50">Revisar inventario</small>
+                            </div>
+                            <div class="stat-icon bg-white bg-opacity-25 text-white"><i class="bi bi-exclamation-triangle"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="lab-card mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="pill-icon bg-primary-subtle text-primary"><i class="bi bi-lightning"></i></div>
+                    <h5 class="mb-0 fw-bold text-dark">Acciones rápidas</h5>
+                </div>
+                <small class="text-muted">Accede a tus tareas frecuentes</small>
+            </div>
+            <div class="row g-3">
+                <div class="col-sm-6 col-lg-3">
+                    <button class="quick-btn btn btn-primary w-100" @onclick='() => Navigation.NavigateTo("/resultados/ingresar", true)'>
+                        <i class="bi bi-clipboard2-plus me-2"></i> Registrar resultados
+                    </button>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <button class="quick-btn btn btn-outline-primary w-100" @onclick='() => Navigation.NavigateTo("/ordenes", true)'>
+                        <i class="bi bi-journal-text me-2"></i> Órdenes médicas
+                    </button>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <button class="quick-btn btn btn-outline-success w-100" @onclick='() => Navigation.NavigateTo("/reactivos", true)'>
+                        <i class="bi bi-boxes me-2"></i> Stock de reactivos
+                    </button>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <button class="quick-btn btn btn-outline-danger w-100" @onclick='() => Navigation.NavigateTo("/movimientos", true)'>
+                        <i class="bi bi-arrow-left-right me-2"></i> Movimientos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lab-card">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="pill-icon bg-secondary-subtle text-secondary"><i class="bi bi-clock-history"></i></div>
+                    <h5 class="mb-0 fw-bold text-dark">Órdenes recientes</h5>
+                </div>
+                <small class="text-muted">Últimas 5 órdenes</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_labData.OrdenesRecientes.Any())
+                        {
+                            @foreach (var ord in _labData.OrdenesRecientes)
+                            {
+                                <tr>
+                                    <td>@ord.NumeroOrden</td>
+                                    <td>
+                                        <span class="badge bg-@(ord.EstadoOrden?.Equals("PAGADO", StringComparison.OrdinalIgnoreCase) == true ? "success" : "warning text-dark")">@ord.EstadoOrden</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick='() => Navigation.NavigateTo($"/resultados/ingresar?idOrden={ord.IdOrden}", true)'>
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Sin órdenes recientes</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 }
-else
+else if (_esPaciente)
 {
     <div class="dashboard-wrapper py-4 px-3 px-lg-4">
         <div class="patient-dashboard d-flex flex-column flex-lg-row gap-3">
-
 
             <main class="flex-grow-1">
                 <div class="card border-0 shadow-sm rounded-4 welcome-card mb-3">
@@ -73,7 +193,7 @@ else
                             <div>
                                 <div class="badge bg-primary-subtle text-primary mb-2">Paciente</div>
                                 <h2 class="fw-bold text-dark mb-1">Bienvenido, @_nombreUsuario</h2>
-                                <p class="text-muted mb-0">Consulta tus órdenes, revisa tus resultados y mantén tus datos siempre actualizados.</p>
+                                <p class="text-muted mb-0">Consulta tus órdenes, revisa tus resultados y mantén tus datos actualizados.</p>
                             </div>
                             <div class="hero-icon rounded-circle d-flex align-items-center justify-content-center">
                                 <i class="bi bi-person-heart text-primary"></i>
@@ -154,10 +274,10 @@ else
                             <small class="text-muted">Accede rápidamente a tus secciones principales</small>
                         </div>
                         <div class="d-flex flex-wrap gap-3">
-                            <button class="quick-action btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/ordenes", true))">
+                            <button class="quick-action btn btn-primary" @onclick='() => Navigation.NavigateTo("/ordenes", true)'>
                                 <i class="bi bi-journal-text me-2"></i> Ver mis órdenes
                             </button>
-                            <button class="quick-action btn btn-success" @onclick="@(() => Navigation.NavigateTo("/resultados", true))">
+                            <button class="quick-action btn btn-success" @onclick='() => Navigation.NavigateTo("/resultados", true)'>
                                 <i class="bi bi-clipboard2-check me-2"></i> Ver resultados
                             </button>
                         </div>
@@ -209,66 +329,124 @@ else
         </div>
     </div>
 }
-
+else
+{
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body py-5 text-center">
+                        <div class="mb-3 text-primary">
+                            <i class="bi bi-info-circle-fill display-6"></i>
+                        </div>
+                        <h4 class="fw-bold">Rol sin panel asignado</h4>
+                        <p class="text-muted mb-3">Usa el menú lateral para continuar con tus tareas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private bool IsAuthenticated;
     private bool _checkedAuth = false;
     private bool _esPaciente = false;
+    private bool _esLaboratorista = false;
     private bool _cargandoDashboard = false;
     private string _nombreUsuario = "Paciente";
     private string _correoUsuario = string.Empty;
-    private string _rolUsuario = string.Empty;
     private PacienteDashboardDto _resumen = new();
+    private LaboratoristaHomeDto _labData = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            IsAuthenticated = user.Identity?.IsAuthenticated ?? false;
+            return;
+        }
 
-            if (IsAuthenticated)
-            {
-                _rolUsuario = user.FindFirst(ClaimTypes.Role)?.Value
-                    ?? user.FindFirst("role")?.Value
-                    ?? user.FindFirst("roles")?.Value
-                    ?? string.Empty;
-                _esPaciente = string.Equals(_rolUsuario, "paciente", StringComparison.OrdinalIgnoreCase);
-                _nombreUsuario = user.Identity?.Name
-                    ?? user.FindFirst("name")?.Value
-                    ?? "Paciente";
-                _correoUsuario = user.FindFirst(ClaimTypes.Email)?.Value
-                    ?? user.FindFirst("email")?.Value
-                    ?? string.Empty;
-            }
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        IsAuthenticated = user.Identity?.IsAuthenticated ?? false;
 
-            _checkedAuth = true;
+        if (IsAuthenticated)
+        {
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value
+                ?? user.FindFirst("role")?.Value
+                ?? user.FindFirst("roles")?.Value
+                ?? string.Empty;
+
+            _esLaboratorista = string.Equals(rol, "laboratorista", StringComparison.OrdinalIgnoreCase);
+            _esPaciente = string.Equals(rol, "paciente", StringComparison.OrdinalIgnoreCase);
+
+            _nombreUsuario = user.Identity?.Name
+                ?? user.FindFirst("name")?.Value
+                ?? "Paciente";
+            _correoUsuario = user.FindFirst(ClaimTypes.Email)?.Value
+                ?? user.FindFirst("email")?.Value
+                ?? string.Empty;
+        }
+
+        _checkedAuth = true;
+        StateHasChanged();
+
+        if (!IsAuthenticated)
+        {
+            return;
+        }
+
+        if (_esLaboratorista)
+        {
+            await CargarDashboardLaboratoristaAsync();
+        }
+        else if (_esPaciente)
+        {
+            await CargarDashboardPacienteAsync(user);
+        }
+    }
+
+    private async Task CargarDashboardLaboratoristaAsync()
+    {
+        _cargandoDashboard = true;
+        StateHasChanged();
+        try
+        {
+            _labData = await OrdenesApi.ObtenerDashboardLaboratoristaAsync() ?? new();
+        }
+        catch
+        {
+            _labData = new LaboratoristaHomeDto();
+        }
+        finally
+        {
+            _cargandoDashboard = false;
             StateHasChanged();
+        }
+    }
 
-            if (IsAuthenticated && _esPaciente)
-            {
-                var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
-                if (int.TryParse(idPacienteClaim, out var idPaciente))
-                {
-                    _cargandoDashboard = true;
-                    StateHasChanged();
-                    try
-                    {
-                        _resumen = await OrdenesApi.ObtenerDashboardPacienteAsync(idPaciente) ?? new();
-                    }
-                    catch
-                    {
-                        _resumen = new PacienteDashboardDto();
-                    }
-                    finally
-                    {
-                        _cargandoDashboard = false;
-                        StateHasChanged();
-                    }
-                }
-            }
+    private async Task CargarDashboardPacienteAsync(ClaimsPrincipal user)
+    {
+        var idPacienteClaim = user.FindFirst("IdPaciente")?.Value;
+        if (!int.TryParse(idPacienteClaim, out var idPaciente))
+        {
+            return;
+        }
+
+        _cargandoDashboard = true;
+        StateHasChanged();
+        try
+        {
+            _resumen = await OrdenesApi.ObtenerDashboardPacienteAsync(idPaciente) ?? new();
+        }
+        catch
+        {
+            _resumen = new PacienteDashboardDto();
+        }
+        finally
+        {
+            _cargandoDashboard = false;
+            StateHasChanged();
         }
     }
 

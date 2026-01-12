@@ -12,5 +12,7 @@ namespace Lab_APIRest.Services.Resultados
         Task<byte[]?> GenerarResultadosPdfAsync(List<int> ids);
         Task<bool> AnularResultadoAsync(int idResultado);
         Task<ResultadoPaginadoDto<ResultadoListadoDto>> ListarResultadosPaginadosAsync(ResultadoFiltroDto filtro);
+        Task<bool> RevisarResultadoAsync(int idResultado, string estado, string? observacion, int idRevisor);
+        Task<bool> ActualizarResultadoAsync(ResultadoActualizarDto resultado);
     }
 }

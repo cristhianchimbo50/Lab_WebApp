@@ -4,6 +4,7 @@
 
 @using Lab_Contracts.Ordenes
 @using Lab_Contracts.Common
+@using Lab_Contracts.Resultados
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Blazor.Services.Resultados
 @using Microsoft.AspNetCore.Components.Authorization
@@ -22,10 +23,13 @@
     <Authorized Context="EstadoAutenticacion">
         @{
             var usuario = EstadoAutenticacion.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
             var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
             bool esPaciente = rol == "paciente";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "paciente";
+            bool esAdmin = rol == "administrador";
+            bool esLaboratorista = rol == "laboratorista";
+            bool puedeVer = rol is "administrador" or "recepcionista" or "paciente" or "laboratorista";
+            bool puedeEditarResultados = esAdmin || esLaboratorista;
         }
 
         @if (!puedeVer)
@@ -225,7 +229,7 @@
                                             </td>
                                             <td data-label="Acciones">
                                                 <button class="btn btn-primary btn-sm shadow-sm me-1"
-                                                        @onclick="() => VerDetalleOrdenAsync(orden.IdOrden)">
+                                                        @onclick="async () => await VerDetalleOrdenAsync(orden.IdOrden)">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
                                             </td>
@@ -314,7 +318,9 @@
                                                     }
                                                     <th>Nombre del Examen</th>
                                                     <th>Estudio</th>
+                                                    <th>Estado Resultado</th>
                                                     <th>Número de Resultado</th>
+                                                    <th>Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -325,12 +331,17 @@
                                                         @if (!esPaciente)
                                                         {
                                                             <td>
-                                                                <input type="checkbox" @bind="@examen.Seleccionado"
+                                                                <input type="checkbox" @bind="examen.Seleccionado"
                                                                        disabled="@(_detalleActual.Anulado == true || examen.IdResultado.HasValue)" />
                                                             </td>
                                                         }
                                                         <td>@examen.NombreExamen</td>
                                                         <td>@examen.NombreEstudio</td>
+                                                        <td>
+                                                            <span class="badge bg-@ObtenerClaseEstadoResultado(examen.EstadoResultado)">
+                                                                @EstadoResultadoTexto(examen.EstadoResultado)
+                                                            </span>
+                                                        </td>
                                                         <td>
                                                             @if (examen.IdResultado.HasValue)
                                                             {
@@ -339,6 +350,35 @@
                                                             else
                                                             {
                                                                 <span class="text-muted">Pendiente</span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (examen.IdResultado.HasValue)
+                                                            {
+                                                                <div class="d-flex gap-1 justify-content-center">
+                                                                    @if (esAdmin || esLaboratorista)
+                                                                    {
+                                                                        <button class="btn btn-outline-primary btn-sm" title="Ver resultado"
+                                                                                @onclick="() => VerResultadoAsync(examen.IdResultado!.Value)">
+                                                                            <i class="bi bi-eye"></i>
+                                                                        </button>
+                                                                    }
+                                                                    @if (puedeEditarResultados && string.Equals(examen.EstadoResultado, "CORRECCION", StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        <button class="btn btn-warning btn-sm" title="Editar resultado"
+                                                                                @onclick="() => EditarResultadoAsync(examen.IdResultado!.Value)">
+                                                                            <i class="bi bi-pencil-square"></i>
+                                                                        </button>
+                                                                    }
+                                                                    @if (!(esAdmin || esLaboratorista))
+                                                                    {
+                                                                        <span class="text-muted small">Solo admin</span>
+                                                                    }
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted small">Sin resultado</span>
                                                             }
                                                         </td>
                                                     </tr>
@@ -376,6 +416,115 @@
                     </div>
                 </div>
             }
+
+            @if (_mostrarResultadoModal && _resultadoDetalleActual is not null)
+            {
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index:1056;">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content shadow-lg border-0">
+                            <div class="modal-header bg-secondary text-white">
+                                <h5 class="modal-title d-flex align-items-center gap-2">
+                                    <i class="bi bi-eye-fill"></i>
+                                    <span>Detalle de Resultado</span>
+                                    <span class="badge bg-light text-dark">@_resultadoDetalleActual.NumeroResultado</span>
+                                    <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.EstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.EstadoResultado)</span>
+                                </h5>
+                                <button class="btn-close btn-close-white" @onclick="CerrarResultadoModal"></button>
+                            </div>
+                            <div class="modal-body">
+                                @if (_resultadoDetalleActual.Anulado)
+                                {
+                                    <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div>
+                                }
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">N° Orden</label>
+                                        <input class="form-control" value="@_resultadoDetalleActual.NumeroOrden" disabled />
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Fecha Resultado</label>
+                                        <input class="form-control" value="@_resultadoDetalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled />
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Cédula</label>
+                                        <input class="form-control" value="@_resultadoDetalleActual.CedulaPaciente" disabled />
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Paciente</label>
+                                        <input class="form-control" value="@_resultadoDetalleActual.NombrePaciente" disabled />
+                                    </div>
+                                </div>
+
+                                <h6 class="mt-3 mb-2"><i class="fas fa-vial me-1"></i>Resultados</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle text-center">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nombre del Examen</th>
+                                                <th>Valor</th>
+                                                <th>Unidad</th>
+                                                <th>Referencia</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var d in _resultadoDetalleActual.Detalles)
+                                            {
+                                                <tr>
+                                                    <td>@d.NombreExamen</td>
+                                                    <td>@d.Valor</td>
+                                                    <td>@d.Unidad</td>
+                                                    <td>@d.ValorReferencia</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Observaciones</label>
+                                    <textarea class="form-control" disabled readonly style="min-height:70px;">@_resultadoDetalleActual.Observaciones</textarea>
+                                </div>
+
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Observación de revisión</label>
+                                        <textarea class="form-control" rows="3" @bind="_observacionRevision" placeholder="Agregar observación opcional" disabled="@(!esAdmin)"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Historial de revisión</label>
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="fw-semibold">Estado actual: <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.EstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.EstadoResultado)</span></div>
+                                            <div>Revisor: @_resultadoDetalleActual.NombreRevisor ?? "-"</div>
+                                            <div>Fecha: @_resultadoDetalleActual.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "-"</div>
+                                            <div>Observación: @_resultadoDetalleActual.ObservacionRevision ?? "-"</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (!_resultadoDetalleActual.Anulado && esAdmin)
+                                {
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
+                                        <button class="btn btn-success" disabled="@_procesandoRevision" @onclick='() => RevisarResultadoAsync("APROBADO")'>
+                                            @if (_procesandoRevision)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="bi bi-check-lg me-1"></i>Aprobar
+                                        </button>
+                                        <button class="btn btn-danger" disabled="@_procesandoRevision" @onclick='() => RevisarResultadoAsync("CORRECCION")'>
+                                            @if (_procesandoRevision)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="bi bi-x-circle me-1"></i>Rechazar / Corrección
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         }
     </Authorized>
 
@@ -401,11 +550,15 @@
     private ResultadoPaginadoDto<OrdenDto>? _resultado;
     private OrdenFiltroDto _filtro = new();
     private OrdenDetalleDto? _detalleActual;
+    private ResultadoDetalleDto? _resultadoDetalleActual;
     private bool _mostrarDetalleOrden = false;
+    private bool _mostrarResultadoModal = false;
     private bool _contenidoCargado = false;
     private string? _pdfUrl;
     private bool _sesionVerificada = false;
     private bool _buscando = false;
+    private string _observacionRevision = string.Empty;
+    private bool _procesandoRevision = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -442,7 +595,7 @@
 
         var estado = await AuthProvider.GetAuthenticationStateAsync();
         var usuario = estado.User;
-        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
         var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
 
         if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
@@ -468,7 +621,13 @@
         _mostrarDetalleOrden = true;
     }
 
-    private void CerrarDetalle() => _mostrarDetalleOrden = false;
+    private void CerrarDetalle()
+    {
+        _mostrarDetalleOrden = false;
+        _mostrarResultadoModal = false;
+        _resultadoDetalleActual = null;
+        _observacionRevision = string.Empty;
+    }
 
     private async Task VisualizarTicketOrdenAsync()
     {
@@ -520,7 +679,7 @@
 
         var estado = await AuthProvider.GetAuthenticationStateAsync();
         var usuario = estado.User;
-        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
         if (rol == "paciente" && !_detalleActual.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase))
         {
             await JS.InvokeVoidAsync("alert", "No puede imprimir los resultados hasta completar el pago de la orden.");
@@ -536,6 +695,12 @@
         if (!idsResultados.Any())
         {
             await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
+            return;
+        }
+
+        if (!_detalleActual.Examenes.Any(e => string.Equals(e.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase)))
+        {
+            await JS.InvokeVoidAsync("alert", "No se puede generar el PDF porque ningún resultado está aprobado.");
             return;
         }
 
@@ -622,7 +787,7 @@
             _buscando = true;
             var estado = await AuthProvider.GetAuthenticationStateAsync();
             var usuario = estado.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
             var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
 
             if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
@@ -665,4 +830,126 @@
     }
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private string ObtenerClaseEstadoResultado(string? estado)
+    {
+        var val = (estado ?? "REVISION").ToUpperInvariant();
+        return val switch
+        {
+            "APROBADO" => "success",
+            "CORRECCION" => "warning text-dark",
+            "REVISION" => "info",
+            "REGISTRO" => "secondary",
+            _ => "secondary"
+        };
+    }
+
+    private string EstadoResultadoTexto(string? estado)
+    {
+        var val = (estado ?? "REVISION").ToUpperInvariant();
+        return val switch
+        {
+            "APROBADO" => "Aprobado",
+            "CORRECCION" => "Corrección",
+            "REVISION" => "En revisión",
+            "REGISTRO" => "Registrado",
+            _ => "Pendiente"
+        };
+    }
+
+    private async Task VerResultadoAsync(int idResultado)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        try
+        {
+            var auth = await AuthProvider.GetAuthenticationStateAsync();
+            var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+            _resultadoDetalleActual = rol == "paciente"
+                ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado)
+                : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
+            _observacionRevision = _resultadoDetalleActual?.ObservacionRevision ?? string.Empty;
+            _mostrarResultadoModal = _resultadoDetalleActual != null;
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el resultado.", "danger");
+        }
+    }
+
+    private void CerrarResultadoModal()
+    {
+        _mostrarResultadoModal = false;
+        _resultadoDetalleActual = null;
+        _observacionRevision = string.Empty;
+    }
+
+    private async Task RevisarResultadoAsync(string estado)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        if (_resultadoDetalleActual == null) return;
+
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+        if (rol != "administrador")
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Solo administradores pueden revisar resultados.", "warning");
+            return;
+        }
+
+        if (estado == "CORRECCION" && string.IsNullOrWhiteSpace(_observacionRevision))
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Ingrese una observación al rechazar.", "warning");
+            return;
+        }
+
+        try
+        {
+            _procesandoRevision = true;
+            var revision = new ResultadoRevisionDto
+            {
+                EstadoResultado = estado,
+                ObservacionRevision = string.IsNullOrWhiteSpace(_observacionRevision) ? null : _observacionRevision.Trim()
+            };
+            var ok = await ResultadosApi.RevisarResultadoAsync(_resultadoDetalleActual.IdResultado, revision);
+            if (ok)
+            {
+                _resultadoDetalleActual.EstadoResultado = estado;
+                _resultadoDetalleActual.ObservacionRevision = revision.ObservacionRevision;
+                _resultadoDetalleActual.FechaRevision = DateTime.Now;
+                _resultadoDetalleActual.NombreRevisor = auth.User.Identity?.Name ?? auth.User.FindFirst(ClaimTypes.Name)?.Value;
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Estado de resultado actualizado.", "success");
+                await RecargarDetalleOrdenAsync();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo actualizar el resultado.", "danger");
+            }
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al actualizar el resultado.", "danger");
+        }
+        finally
+        {
+            _procesandoRevision = false;
+        }
+    }
+
+    private async Task EditarResultadoAsync(int idResultado)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        Navigation.NavigateTo($"/resultados/ingresar?idResultado={idResultado}");
+    }
+
+    private async Task RecargarDetalleOrdenAsync()
+    {
+        if (_detalleActual == null) return;
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(_detalleActual.IdOrden);
+        if (_detalleActual?.Examenes != null)
+        {
+            foreach (var ex in _detalleActual.Examenes)
+                ex.Seleccionado = false;
+        }
+    }
 }

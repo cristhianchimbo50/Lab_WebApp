@@ -5,6 +5,7 @@ using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Common;
 using Lab_Contracts.Ordenes;
 using Lab_Contracts.Pacientes;
+using Lab_Contracts.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
@@ -148,7 +149,14 @@ namespace Lab_APIRest.Services.Ordenes
 
             var resultadosExamen = await _context.DetalleResultado
                 .Where(d => d.IdResultadoNavigation.IdOrden == idOrden && d.IdResultadoNavigation.Activo)
-                .Select(d => new { d.IdExamen, d.IdResultadoNavigation.IdResultado, d.IdResultadoNavigation.NumeroResultado, d.IdResultadoNavigation.FechaResultado })
+                .Select(d => new
+                {
+                    d.IdExamen,
+                    d.IdResultadoNavigation.IdResultado,
+                    d.IdResultadoNavigation.NumeroResultado,
+                    d.IdResultadoNavigation.FechaResultado,
+                    d.IdResultadoNavigation.EstadoResultado
+                })
                 .ToListAsync();
             var resultadoPorExamen = resultadosExamen
                 .GroupBy(x => x.IdExamen)
@@ -178,7 +186,8 @@ namespace Lab_APIRest.Services.Ordenes
                         NombreExamen = d.IdExamenNavigation!.NombreExamen ?? string.Empty,
                         NombreEstudio = d.IdExamenNavigation!.Estudio,
                         IdResultado = info?.IdResultado,
-                        NumeroResultado = info?.NumeroResultado
+                        NumeroResultado = info?.NumeroResultado,
+                        EstadoResultado = info?.EstadoResultado ?? "REVISION"
                     };
                 }).ToList()
             };
@@ -308,6 +317,41 @@ namespace Lab_APIRest.Services.Ordenes
                 ResultadosDisponibles = resultadosDisponibles,
                 FechaUltimaOrden = ultimaOrden?.FechaOrden,
                 NumeroUltimaOrden = ultimaOrden?.NumeroOrden
+            };
+        }
+
+        public async Task<LaboratoristaHomeDto> ObtenerDashboardLaboratoristaAsync()
+        {
+            const decimal stockMinimo = 5m;
+            var resumen = new LaboratoristaDashboardDto
+            {
+                OrdenesPendientes = await _context.Orden.CountAsync(o => o.Activo),
+                ResultadosPorRegistrar = await _context.Orden
+                    .Where(o => o.Activo && !_context.Resultado.Any(r => r.IdOrden == o.IdOrden && r.Activo))
+                    .CountAsync(),
+                ReactivosStockBajo = await _context.Reactivo
+                    .Where(r => r.Activo && (r.CantidadDisponible ?? 0m) < stockMinimo)
+                    .CountAsync()
+            };
+
+            var ordenesRecientes = await _context.Orden
+                .Include(o => o.IdPacienteNavigation)
+                .Where(o => o.Activo)
+                .OrderByDescending(o => o.FechaOrden)
+                .Take(5)
+                .Select(o => new LaboratoristaOrdenRecienteDto
+                {
+                    IdOrden = o.IdOrden,
+                    NumeroOrden = o.NumeroOrden ?? string.Empty,
+                    NombrePaciente = o.IdPacienteNavigation!.NombrePaciente,
+                    EstadoOrden = o.EstadoPago ?? ""
+                })
+                .ToListAsync();
+
+            return new LaboratoristaHomeDto
+            {
+                Resumen = resumen,
+                OrdenesRecientes = ordenesRecientes
             };
         }
 
