@@ -215,6 +215,21 @@ namespace Lab_Blazor.Services.Ordenes
             return await respuesta.Content.ReadFromJsonAsync<LaboratoristaHomeDto>() ?? new LaboratoristaHomeDto();
         }
 
+        public async Task<AdminHomeDto> ObtenerDashboardAdministradorAsync()
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var solicitud = new HttpRequestMessage(HttpMethod.Get, "api/ordenes/administrador/resumen");
+            AddTokenHeader(solicitud);
+
+            var respuesta = await _http.SendAsync(solicitud);
+            if (!respuesta.IsSuccessStatusCode)
+                return new AdminHomeDto();
+
+            return await respuesta.Content.ReadFromJsonAsync<AdminHomeDto>() ?? new AdminHomeDto();
+        }
+
         public async Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPorPacienteAsync(int idPaciente, int idOrden)
         {
             if (!await SetAuthHeaderAsync())
@@ -247,6 +262,21 @@ namespace Lab_Blazor.Services.Ordenes
             var solicitud = new HttpRequestMessage(HttpMethod.Post, $"api/ordenes/{idOrden}/verificar-notificacion");
             AddTokenHeader(solicitud);
             return await _http.SendAsync(solicitud);
+        }
+
+        public async Task<RecepcionistaHomeDto> ObtenerDashboardRecepcionistaAsync()
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var solicitud = new HttpRequestMessage(HttpMethod.Get, "api/ordenes/recepcionista/resumen");
+            AddTokenHeader(solicitud);
+
+            var respuesta = await _http.SendAsync(solicitud);
+            if (!respuesta.IsSuccessStatusCode)
+                return new RecepcionistaHomeDto();
+
+            return await respuesta.Content.ReadFromJsonAsync<RecepcionistaHomeDto>() ?? new RecepcionistaHomeDto();
         }
     }
 }

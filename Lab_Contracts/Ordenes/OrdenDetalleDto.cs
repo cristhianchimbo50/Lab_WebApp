@@ -13,6 +13,8 @@ namespace Lab_Contracts.Ordenes
 
         public DateOnly FechaOrden { get; set; }
         public string? EstadoPago { get; set; }
+        public string? EstadoOrden { get; set; }
+        public bool ResultadosHabilitados { get; set; }
 
         public int IdPaciente { get; set; }
         public string? CedulaPaciente { get; set; }

@@ -18,6 +18,7 @@ namespace Lab_Blazor.Services.Ordenes
         Task<(OrdenDetalleDto? Detalle, bool TieneSaldoPendiente)> ObtenerDetalleOrdenPorPacienteAsync(int idPaciente, int idOrden);
         Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente);
         Task<LaboratoristaHomeDto> ObtenerDashboardLaboratoristaAsync();
+        Task<AdminHomeDto> ObtenerDashboardAdministradorAsync();
         Task<OrdenRespuestaDto?> GuardarOrdenAsync(OrdenCompletaDto orden);
         Task<HttpResponseMessage> GuardarOrdenHttpAsync(OrdenCompletaDto orden);
         Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);
@@ -25,6 +26,7 @@ namespace Lab_Blazor.Services.Ordenes
         Task<byte[]> GenerarOrdenTicketPdfAsync(int idOrden);
         Task<HttpResponseMessage> AnularOrdenAsync(int idOrden);
         Task<HttpResponseMessage> AnularOrdenCompletaAsync(int idOrden);
+        Task<RecepcionistaHomeDto> ObtenerDashboardRecepcionistaAsync();
     }
 
 }

@@ -21,6 +21,12 @@ public partial class Orden
 
     public string EstadoPago { get; set; } = null!;
 
+    public string EstadoOrden { get; set; } = "EN_PROCESO";
+
+    public DateTime? FechaFinalizacion { get; set; }
+
+    public bool ResultadosHabilitados { get; set; }
+
     public int? IdMedico { get; set; }
 
     public string? Observacion { get; set; }

@@ -36,6 +36,8 @@ namespace Lab_APIRest.Services.Ordenes
             TotalPagado = entidadOrden.TotalPagado ?? 0m,
             SaldoPendiente = entidadOrden.SaldoPendiente ?? 0m,
             EstadoPago = entidadOrden.EstadoPago,
+            EstadoOrden = entidadOrden.EstadoOrden,
+            ResultadosHabilitados = entidadOrden.ResultadosHabilitados,
             Anulado = !entidadOrden.Activo,
             IdConvenio = entidadOrden.IdConvenio != null,
             IdMedico = entidadOrden.IdMedico,
@@ -126,15 +128,16 @@ namespace Lab_APIRest.Services.Ordenes
             var items = await query.Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Include(o => o.IdPacienteNavigation)
-                .Select(entidadOrden => MapOrden(entidadOrden))
                 .ToListAsync();
+
+            var dtoItems = items.Select(MapOrden).ToList();
 
             return new ResultadoPaginadoDto<OrdenDto>
             {
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize,
-                Items = items
+                Items = dtoItems
             };
         }
 
@@ -168,6 +171,8 @@ namespace Lab_APIRest.Services.Ordenes
                 NumeroOrden = entidadOrden.NumeroOrden,
                 FechaOrden = entidadOrden.FechaOrden,
                 EstadoPago = entidadOrden.EstadoPago,
+                EstadoOrden = entidadOrden.EstadoOrden,
+                ResultadosHabilitados = entidadOrden.ResultadosHabilitados,
                 IdPaciente = entidadOrden.IdPaciente ?? 0,
                 CedulaPaciente = entidadOrden.IdPacienteNavigation?.CedulaPaciente,
                 NombrePaciente = entidadOrden.IdPacienteNavigation?.NombrePaciente,
@@ -222,6 +227,8 @@ namespace Lab_APIRest.Services.Ordenes
                 IdMedico = dto.IdMedico,
                 Observacion = dto.Observacion,
                 EstadoPago = dto.EstadoPago,
+                EstadoOrden = "EN_PROCESO",
+                ResultadosHabilitados = false,
                 Activo = true,
                 NumeroOrden = numeroOrden,
                 Total = dto.Total,
@@ -336,6 +343,7 @@ namespace Lab_APIRest.Services.Ordenes
 
             var ordenesRecientes = await _context.Orden
                 .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdMedicoNavigation)
                 .Where(o => o.Activo)
                 .OrderByDescending(o => o.FechaOrden)
                 .Take(5)
@@ -344,14 +352,103 @@ namespace Lab_APIRest.Services.Ordenes
                     IdOrden = o.IdOrden,
                     NumeroOrden = o.NumeroOrden ?? string.Empty,
                     NombrePaciente = o.IdPacienteNavigation!.NombrePaciente,
-                    EstadoOrden = o.EstadoPago ?? ""
+                    Medico = o.IdMedicoNavigation != null ? o.IdMedicoNavigation.NombreMedico : string.Empty,
+                    EstadoPago = o.EstadoPago ?? string.Empty,
+                    ListoParaEntrega = o.ResultadosHabilitados == true
                 })
                 .ToListAsync();
+
+            var alertas = new List<string>();
+            if (resumen.ReactivosStockBajo > 0)
+                alertas.Add($"{resumen.ReactivosStockBajo} reactivo(s) con stock bajo");
+            if (resumen.ResultadosPorRegistrar > 0)
+                alertas.Add($"{resumen.ResultadosPorRegistrar} orden(es) con resultados pendientes por registrar");
+            if (resumen.OrdenesPendientes > 0 && !alertas.Any())
+                alertas.Add($"{resumen.OrdenesPendientes} orden(es) en curso");
 
             return new LaboratoristaHomeDto
             {
                 Resumen = resumen,
-                OrdenesRecientes = ordenesRecientes
+                OrdenesRecientes = ordenesRecientes,
+                Alertas = new LaboratoristaAlertasDto { Mensajes = alertas }
+            };
+        }
+
+        private static string NormalizarEstado(string? estado)
+        {
+            if (string.IsNullOrWhiteSpace(estado)) return string.Empty;
+            var upper = estado.ToUpperInvariant();
+            var normalized = upper
+                .Replace("Á", "A").Replace("É", "E").Replace("Í", "I").Replace("Ó", "O").Replace("Ú", "U")
+                .Replace(" ", string.Empty)
+                .Replace("_", string.Empty)
+                .Replace("-", string.Empty);
+            return normalized;
+        }
+
+        public async Task<AdminHomeDto> ObtenerDashboardAdministradorAsync()
+        {
+            var hoy = DateOnly.FromDateTime(DateTime.Today);
+
+            var resultados = await _context.Resultado
+                .AsNoTracking()
+                .Where(r => r.Activo)
+                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.DetalleResultado)!.ThenInclude(d => d.IdExamenNavigation)
+                .OrderByDescending(r => r.FechaResultado)
+                .ToListAsync();
+
+            var resultadosNorm = resultados
+                .Select(r => new
+                {
+                    Resultado = r,
+                    EstadoNorm = NormalizarEstado(r.EstadoResultado)
+                })
+                .ToList();
+
+            var resumen = new AdminDashboardDto
+            {
+                OrdenesHoy = await _context.Orden.CountAsync(o => o.Activo && o.FechaOrden == hoy),
+                ResultadosPendientesAprobacion = resultadosNorm.Count(x => x.EstadoNorm == "REVISION"),
+                ResultadosCorreccion = resultadosNorm.Count(x => x.EstadoNorm == "CORRECCION"),
+                ReactivosCriticos = await _context.Reactivo.CountAsync(r => r.Activo && (r.CantidadDisponible ?? 0m) < 3m),
+                UsuariosTotales = await _context.Usuario.CountAsync(u => u.Activo == true && u.Rol != "paciente")
+            };
+
+            var pendientes = resultadosNorm
+                .Where(x => string.IsNullOrEmpty(x.EstadoNorm)
+                    || x.EstadoNorm == "PENDIENTE"
+                    || x.EstadoNorm == "REVISION"
+                    || x.EstadoNorm == "CORRECCION")
+                .Take(5)
+                .Select(x => new AdminResultadoPendienteDto
+                {
+                    IdResultado = x.Resultado.IdResultado,
+                    IdOrden = x.Resultado.IdOrden,
+                    NumeroOrden = x.Resultado.IdOrdenNavigation!.NumeroOrden ?? string.Empty,
+                    Paciente = x.Resultado.IdOrdenNavigation!.IdPacienteNavigation!.NombrePaciente ?? string.Empty,
+                    TipoExamen = x.Resultado.DetalleResultado
+                        .Select(d => d.IdExamenNavigation!.TituloExamen ?? d.IdExamenNavigation!.NombreExamen)
+                        .FirstOrDefault() ?? string.Empty,
+                    Estado = x.Resultado.EstadoResultado ?? "PENDIENTE"
+                })
+                .ToList();
+
+            var alertas = new List<string>();
+            if (resumen.ReactivosCriticos > 0)
+                alertas.Add($"{resumen.ReactivosCriticos} reactivo(s) con stock crítico");
+            if (resumen.ResultadosPendientesAprobacion > 0)
+                alertas.Add($"{resumen.ResultadosPendientesAprobacion} resultado(s) in revisión");
+            if (resumen.ResultadosCorreccion > 0)
+                alertas.Add($"{resumen.ResultadosCorreccion} resultado(s) en corrección");
+            if (!pendientes.Any())
+                alertas.Add("No hay resultados pendientes de aprobación en este momento.");
+
+            return new AdminHomeDto
+            {
+                Resumen = resumen,
+                Pendientes = pendientes,
+                Alertas = new AdminAlertasDto { Mensajes = alertas }
             };
         }
 
@@ -359,37 +456,88 @@ namespace Lab_APIRest.Services.Ordenes
         {
             var orden = await _context.Orden
                 .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.DetalleOrden)
                 .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
             if (orden == null) return;
 
-            var examenesOrden = await _context.DetalleOrden
-                .Where(d => d.IdOrden == idOrden)
-                .Select(d => d.IdExamen)
-                .Distinct()
-                .ToListAsync();
-
+            var examenesOrden = orden.DetalleOrden.Select(d => d.IdExamen).Distinct().ToList();
             if (!examenesOrden.Any()) return;
 
-            var examenesConResultado = await _context.Resultado
-                .Where(r => r.IdOrden == idOrden && r.Activo)
+            var examenesAprobados = await _context.Resultado
+                .Where(r => r.IdOrden == idOrden && r.Activo && r.EstadoResultado == "APROBADO")
                 .SelectMany(r => r.DetalleResultado)
                 .Select(dr => dr.IdExamen)
                 .Distinct()
                 .ToListAsync();
 
-            bool completos = examenesOrden.All(idEx => examenesConResultado.Contains(idEx));
-            if (!completos || _ordenesNotificadas.ContainsKey(idOrden)) return;
+            bool todosAprobados = examenesOrden.All(examenesAprobados.Contains);
+            orden.EstadoOrden = todosAprobados ? "FINALIZADO" : "EN_PROCESO";
 
-            var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
-            var nombre = orden.IdPacienteNavigation?.NombrePaciente;
-            if (string.IsNullOrWhiteSpace(correo)) return;
+            bool habilitar = todosAprobados && string.Equals(orden.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase);
+            bool debeNotificar = habilitar && !orden.ResultadosHabilitados && !_ordenesNotificadas.ContainsKey(idOrden);
+            orden.ResultadosHabilitados = habilitar;
 
-            string asunto = "Resultados disponibles - Laboratorio La Inmaculada";
-            string cuerpo = $@"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Le informamos que todos los resultados de su orden <strong>{orden.NumeroOrden}</strong> están disponibles.</p><p>Puede consultarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
+            await _context.SaveChangesAsync();
 
-            var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-            await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
-            _ordenesNotificadas.TryAdd(idOrden, true);
+            if (debeNotificar)
+            {
+                var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
+                var nombre = orden.IdPacienteNavigation?.NombrePaciente;
+                if (!string.IsNullOrWhiteSpace(correo))
+                {
+                    string asunto = "Resultados habilitados - Laboratorio La Inmaculada";
+                    string cuerpo = $@"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede consultarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
+
+                    var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
+                    await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
+                    _ordenesNotificadas.TryAdd(idOrden, true);
+                }
+            }
+        }
+
+        public async Task<RecepcionistaHomeDto> ObtenerDashboardRecepcionistaAsync()
+        {
+            var hoy = DateOnly.FromDateTime(DateTime.Today);
+
+            var resumen = new RecepcionistaDashboardDto
+            {
+                OrdenesRegistradas = await _context.Orden.CountAsync(o => o.Activo && o.FechaOrden == hoy),
+                CuentasPorCobrar = await _context.Orden.CountAsync(o => o.Activo && (o.SaldoPendiente ?? 0m) > 0m),
+                ResultadosDisponibles = await _context.Orden.CountAsync(o => o.Activo && o.ResultadosHabilitados == true)
+            };
+
+            var ordenesRecientes = await _context.Orden
+                .AsNoTracking()
+                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdMedicoNavigation)
+                .Where(o => o.Activo)
+                .OrderByDescending(o => o.FechaOrden)
+                .Take(5)
+                .Select(o => new RecepcionistaOrdenRecienteDto
+                {
+                    IdOrden = o.IdOrden,
+                    NumeroOrden = o.NumeroOrden ?? string.Empty,
+                    Paciente = o.IdPacienteNavigation != null ? o.IdPacienteNavigation.NombrePaciente : string.Empty,
+                    Medico = o.IdMedicoNavigation != null ? o.IdMedicoNavigation.NombreMedico : string.Empty,
+                    EstadoPago = o.EstadoPago ?? "-",
+                    ListoParaEntrega = o.ResultadosHabilitados == true
+                })
+                .ToListAsync();
+
+            var alertas = new List<string>();
+            if (resumen.CuentasPorCobrar > 0)
+                alertas.Add($"{resumen.CuentasPorCobrar} cuenta(s) por cobrar pendientes.");
+            if (resumen.ResultadosDisponibles > 0)
+                alertas.Add($"{resumen.ResultadosDisponibles} resultado(s) listos para entrega.");
+            if (!ordenesRecientes.Any())
+                alertas.Add("No hay órdenes recientes registradas.");
+
+            return new RecepcionistaHomeDto
+            {
+                Resumen = resumen,
+                OrdenesRecientes = ordenesRecientes,
+                Alertas = new RecepcionistaAlertasDto { Mensajes = alertas }
+            };
         }
     }
 }

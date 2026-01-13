@@ -143,6 +143,7 @@
                                         <th style="width:12%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.CedulaPaciente))">Cédula @OrdenIcono(nameof(ResultadoListadoDto.CedulaPaciente))</th>
                                         <th style="width:18%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.NombrePaciente))">Paciente @OrdenIcono(nameof(ResultadoListadoDto.NombrePaciente))</th>
                                         <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(ResultadoListadoDto.FechaResultado))">Fecha @OrdenIcono(nameof(ResultadoListadoDto.FechaResultado))</th>
+                                        <th style="width:10%">Estado Resultado</th>
                                         <th style="width:10%">Estado</th>
                                         <th style="width:10%">Acciones</th>
                                     </tr>
@@ -156,6 +157,7 @@
                                             <td data-label="Cédula">@res.CedulaPaciente</td>
                                             <td data-label="Paciente">@res.NombrePaciente</td>
                                             <td data-label="Fecha">@res.FechaResultado.ToString("dd/MM/yyyy")</td>
+                                            <td data-label="Estado Resultado"><span class="badge bg-@ObtenerClaseEstadoResultado(res.EstadoResultado)">@EstadoResultadoTexto(res.EstadoResultado)</span></td>
                                             <td data-label="Estado"><span class="badge bg-@(res.Anulado ? "danger" : "success")">@(res.Anulado ? "Anulado" : "Vigente")</span></td>
                                             <td data-label="Acciones">
                                                 <button class="btn btn-primary btn-sm shadow-sm me-1" @onclick="() => VerDetalleResultadoAsync(res.IdResultado)"><i class="bi bi-eye"></i></button>
@@ -380,6 +382,11 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (_detalleActual == null) { await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontró información del resultado.", "warning"); return; }
         if (_detalleActual.Anulado) { await JS.InvokeVoidAsync("mostrarToastAsync", "El resultado está anulado. No se puede imprimir.", "warning"); return; }
+        if (!_detalleActual.ResultadosHabilitados)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Los resultados aún no están habilitados.", "warning");
+            return;
+        }
         if (!string.Equals(_detalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase))
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Solo se pueden imprimir resultados aprobados.", "warning");

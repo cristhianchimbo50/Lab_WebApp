@@ -15,6 +15,8 @@ namespace Lab_Contracts.Ordenes
         public decimal SaldoPendiente { get; set; }
         public decimal TotalPagado { get; set; }
         public string EstadoPago { get; set; }
+        public string EstadoOrden { get; set; } = "EN_PROCESO";
+        public bool ResultadosHabilitados { get; set; }
         public bool Anulado { get; set; }
         public bool IdConvenio { get; set; }
         public int? IdMedico { get; set; }

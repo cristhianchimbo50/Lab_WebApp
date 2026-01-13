@@ -16,64 +16,92 @@
 
 @if (!_checkedAuth)
 {
-    <div class="d-flex align-items-center justify-content-center vh-100 text-primary">
-        <div class="spinner-border me-2" role="status"></div>
+    <div class="login-viewport d-flex align-items-center justify-content-center">
+        <div class="soft-loader">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-3 mb-0 text-primary fw-semibold">Cargando...</p>
+        </div>
     </div>
 }
 else
 {
-    <div class="container d-flex align-items-center justify-content-center vh-100">
-        <div class="row w-100 shadow-lg rounded p-4 bg-white" style="max-width: 850px;">
-            <div class="col-md-6 d-none d-md-flex align-items-center justify-content-center bg-light">
-                <img src="images/login.png" class="img-fluid rounded" alt="Inicio de sesión" />
-            </div>
-
-            <div class="col-md-6 p-3">
-                <h3 class="mb-4 fw-bold text-primary text-center">
-                    <i class="bi bi-person-circle me-2"></i>Iniciar Sesión
-                </h3>
-
-                <EditForm Model="@_loginModel" OnValidSubmit="HandleLoginAsync">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <div class="mb-3">
-                        <label for="correo" class="form-label">Correo electrónico</label>
-                        <InputText id="correo" class="form-control" @bind-Value="_loginModel.CorreoUsuario" placeholder="ejemplo@correo.com" />
-                        <ValidationMessage For="@(() => _loginModel.CorreoUsuario)" />
-                    </div>
-
-                    <div class="mb-3 position-relative">
-                        <label for="clave" class="form-label">Contraseña</label>
-                        <div class="input-group">
-                            <InputText id="clave" class="form-control" @bind-Value="_loginModel.Clave" type="@_passwordInputType" placeholder="Ingrese su contraseña" />
-                            <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility" title="Mostrar/Ocultar contraseña">
-                                <i class="@_passwordIcon"></i>
-                            </button>
-                        </div>
-                        <ValidationMessage For="@(() => _loginModel.Clave)" />
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(_error))
-                    {
-                        <div class="alert alert-danger d-flex align-items-start mt-2" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                            <div>
-                                <strong>Atención:</strong><br />
-                                @_error
+    <div class="login-viewport">
+        <div class="login-shape shape-1"></div>
+        <div class="login-shape shape-2"></div>
+        <div class="container position-relative">
+            <div class="row justify-content-center">
+                <div class="col-lg-10 col-xl-9">
+                    <div class="login-card shadow-lg">
+                        <div class="login-visual d-none d-lg-flex align-items-center justify-content-center text-white">
+                            <div class="text-center px-4 px-xl-5">
+                                <div class="icon-blob mb-4">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                </div>
+                                <h3 class="fw-bold mb-2">Bienvenido de nuevo</h3>
+                                <p class="opacity-75 mb-4">Accede al panel para continuar con tus gestiones de laboratorio de forma segura.</p>
+                                <div class="login-badges d-flex flex-wrap justify-content-center gap-2">
+                                    <span class="badge rounded-pill bg-white text-primary">Autenticación segura</span>
+                                    <span class="badge rounded-pill bg-white text-primary">Soporte 24/7</span>
+                                    <span class="badge rounded-pill bg-white text-primary">Experiencia moderna</span>
+                                </div>
                             </div>
                         </div>
-                    }
 
-                    <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@_loginBloqueado">
-                        <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
-                    </button>
+                        <div class="login-form p-4 p-lg-5">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <div class="mini-dot"></div>
+                                <small class="text-muted">Panel de acceso</small>
+                            </div>
+                            <h3 class="fw-bold text-primary mb-2">Iniciar Sesión</h3>
+                            <p class="text-secondary mb-4">Ingresa tus credenciales para continuar.</p>
 
-                    <button type="button" class="btn btn-link w-100 text-secondary mt-2"
-                            @onclick="@(() => Navigation.NavigateTo("/auth/olvide-contrasenia"))">
-                        <i class="bi bi-question-circle me-1"></i>¿Olvidó su contraseña?
-                    </button>
-                </EditForm>
+                            <EditForm Model="@_loginModel" OnValidSubmit="HandleLoginAsync">
+                                <DataAnnotationsValidator />
+
+                                <div class="form-floating mb-3">
+                                    <InputText id="correo" class="form-control form-control-lg" @bind-Value="_loginModel.CorreoUsuario" placeholder="nombre@correo.com" />
+                                    <label for="correo">Correo electrónico</label>
+                                    <ValidationMessage For="@(() => _loginModel.CorreoUsuario)" class="text-danger small d-block mt-1" />
+                                </div>
+
+                                <div class="form-floating mb-2 position-relative">
+                                    <InputText id="clave" class="form-control form-control-lg pe-5" @bind-Value="_loginModel.Clave" type="@_passwordInputType" placeholder="Contraseña" />
+                                    <label for="clave">Contraseña</label>
+                                    <button type="button" class="btn btn-light password-toggle" @onclick="TogglePasswordVisibility" title="Mostrar/Ocultar contraseña">
+                                        <i class="@_passwordIcon"></i>
+                                    </button>
+                                    <ValidationMessage For="@(() => _loginModel.Clave)" class="text-danger small d-block mt-1" />
+                                </div>
+
+
+                                @if (!string.IsNullOrEmpty(_error))
+                                {
+                                    <div class="alert alert-danger soft-alert d-flex align-items-start mt-3" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                                        <div>
+                                            <strong>Atención:</strong><br />
+                                            @_error
+                                        </div>
+                                    </div>
+                                }
+
+                                <button type="submit" class="btn btn-primary btn-lg w-100 shadow-lift mt-3" disabled="@_loginBloqueado">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
+                                </button>
+
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+                                    <div class="d-flex align-items-center text-muted small gap-2">
+                                        <i class="bi bi-shield-check text-primary"></i>
+                                        <span>Tu información está cifrada</span>
+                                    </div>
+                                    <button type="button" class="btn btn-link text-secondary p-0" @onclick="@(() => Navigation.NavigateTo("/auth/olvide-contrasenia"))">
+                                        <i class="bi bi-question-circle me-1"></i>¿Olvidó su contraseña?
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -89,6 +117,7 @@ else
     private string? _redirectUrl;
     private Timer? _temporizador;
     private int _segundosEspera = 30;
+    private bool _labCoverEyes = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -169,11 +198,13 @@ else
         {
             _passwordInputType = "text";
             _passwordIcon = "bi bi-eye";
+            _labCoverEyes = true;
         }
         else
         {
             _passwordInputType = "password";
             _passwordIcon = "bi bi-eye-slash";
+            _labCoverEyes = false;
         }
     }
 

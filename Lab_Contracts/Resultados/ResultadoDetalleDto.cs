@@ -25,6 +25,7 @@ namespace Lab_Contracts.Resultados
         public int? IdRevisor { get; set; }
         public string? NombreRevisor { get; set; }
         public int IdOrden { get; set; }
+        public bool ResultadosHabilitados { get; set; }
     }
 
     public class DetalleResultadoDto

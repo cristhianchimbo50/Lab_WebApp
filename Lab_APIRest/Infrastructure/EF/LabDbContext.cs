@@ -372,9 +372,16 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.EstadoPago)
                 .HasMaxLength(20)
                 .HasColumnName("estado_pago");
+            entity.Property(e => e.EstadoOrden)
+                .HasMaxLength(30)
+                .HasDefaultValue("EN_PROCESO")
+                .HasColumnName("estado_orden");
             entity.Property(e => e.FechaFin)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
+            entity.Property(e => e.FechaFinalizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_finalizacion");
             entity.Property(e => e.FechaOrden).HasColumnName("fecha_orden");
             entity.Property(e => e.IdConvenio).HasColumnName("id_convenio");
             entity.Property(e => e.IdMedico).HasColumnName("id_medico");
@@ -385,6 +392,9 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.Observacion)
                 .HasMaxLength(255)
                 .HasColumnName("observacion");
+            entity.Property(e => e.ResultadosHabilitados)
+                .HasDefaultValue(false)
+                .HasColumnName("resultados_habilitados");
             entity.Property(e => e.SaldoPendiente)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(10, 2)")

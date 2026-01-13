@@ -5,6 +5,8 @@ using Lab_Contracts.Resultados;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Lab_Contracts.Common;
+using Lab_APIRest.Infrastructure.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace Lab_APIRest.Services.Resultados
 {
@@ -65,7 +67,8 @@ namespace Lab_APIRest.Services.Resultados
             FechaRevision = r.FechaRevision,
             IdRevisor = r.IdRevisor,
             NombreRevisor = r.IdRevisorNavigation?.Nombre,
-            IdOrden = r.IdOrden
+            IdOrden = r.IdOrden,
+            ResultadosHabilitados = r.IdOrdenNavigation?.ResultadosHabilitados ?? false
         };
 
         private static int CalcularEdad(DateOnly? fechaNac)
@@ -76,6 +79,53 @@ namespace Lab_APIRest.Services.Resultados
             int edad = hoy.Year - nacimiento.Year;
             if (nacimiento > hoy.AddYears(-edad)) edad--;
             return edad;
+        }
+
+        private async Task ActualizarOrdenSegunResultadosAsync(int idOrden)
+        {
+            var orden = await _context.Orden
+                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.DetalleOrden)
+                .Include(o => o.Resultado.Where(r => r.Activo))!.ThenInclude(r => r.DetalleResultado)
+                .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
+            if (orden == null) return;
+
+            var examenesOrden = orden.DetalleOrden.Select(d => d.IdExamen).Distinct().ToList();
+            var examenesAprobados = orden.Resultado
+                .Where(r => string.Equals(r.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(r => r.DetalleResultado)
+                .Select(d => d.IdExamen)
+                .Distinct()
+                .ToList();
+
+            bool todosAprobados = examenesOrden.Any() && examenesOrden.All(examenesAprobados.Contains);
+            orden.EstadoOrden = todosAprobados ? "FINALIZADO" : "EN_PROCESO";
+
+            bool habilitar = todosAprobados && string.Equals(orden.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase);
+            bool debeNotificar = habilitar && !orden.ResultadosHabilitados;
+            orden.ResultadosHabilitados = habilitar;
+
+            await _context.SaveChangesAsync();
+
+            if (debeNotificar)
+            {
+                try
+                {
+                    var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
+                    var nombre = orden.IdPacienteNavigation?.NombrePaciente;
+                    if (!string.IsNullOrWhiteSpace(correo))
+                    {
+                        string asunto = "Resultados habilitados - Laboratorio La Inmaculada";
+                        string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede revisarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
+                        var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
+                        await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error enviando notificación de resultados habilitados para la orden {IdOrden}", idOrden);
+                }
+            }
         }
 
         public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto resultado)
@@ -111,6 +161,7 @@ namespace Lab_APIRest.Services.Resultados
 
                 await _context.SaveChangesAsync();
                 await transaccion.CommitAsync();
+                await ActualizarOrdenSegunResultadosAsync(resultado.IdOrden);
                 return true;
             }
             catch (Exception ex)
@@ -268,6 +319,7 @@ namespace Lab_APIRest.Services.Resultados
             entidad.FechaRevision = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await ActualizarOrdenSegunResultadosAsync(entidad.IdOrden);
             return true;
         }
 
@@ -298,6 +350,7 @@ namespace Lab_APIRest.Services.Resultados
 
                 await _context.SaveChangesAsync();
                 await transaccion.CommitAsync();
+                await ActualizarOrdenSegunResultadosAsync(entidad.IdOrden);
                 return true;
             }
             catch (Exception ex)

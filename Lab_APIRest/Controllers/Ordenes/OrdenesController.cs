@@ -162,5 +162,21 @@ namespace Lab_APIRest.Controllers
             var data = await _ordenService.ObtenerDashboardLaboratoristaAsync();
             return Ok(data);
         }
+
+        [Authorize(Roles = "administrador")]
+        [HttpGet("administrador/resumen")]
+        public async Task<IActionResult> ObtenerResumenAdministrador()
+        {
+            var data = await _ordenService.ObtenerDashboardAdministradorAsync();
+            return Ok(data);
+        }
+
+        [Authorize(Roles = "recepcionista,administrador")]
+        [HttpGet("recepcionista/resumen")]
+        public async Task<IActionResult> ObtenerResumenRecepcionista()
+        {
+            var data = await _ordenService.ObtenerDashboardRecepcionistaAsync();
+            return Ok(data);
+        }
     }
 }

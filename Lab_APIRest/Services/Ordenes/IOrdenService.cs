@@ -19,5 +19,7 @@ namespace Lab_APIRest.Services.Ordenes
         Task VerificarYNotificarResultadosCompletosAsync(int idOrden);
         Task<PacienteDashboardDto> ObtenerDashboardPacienteAsync(int idPaciente);
         Task<LaboratoristaHomeDto> ObtenerDashboardLaboratoristaAsync();
+        Task<AdminHomeDto> ObtenerDashboardAdministradorAsync();
+        Task<RecepcionistaHomeDto> ObtenerDashboardRecepcionistaAsync();
     }
 }
