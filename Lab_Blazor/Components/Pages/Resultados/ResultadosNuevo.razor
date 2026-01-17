@@ -79,7 +79,13 @@
                                 <label class="form-label fw-semibold">Fecha Resultado</label>
                                 <InputDate class="form-control" @bind-Value="_fechaResultado" />
                             </div>
-                            <div class="col-md-6">
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Género</label>
+                                <input class="form-control" value="@_datosOrden.GeneroPaciente" disabled />
+                            </div>
+                            <div class="col-md-8">
                                 <label class="form-label fw-semibold">Médico</label>
                                 <input class="form-control" value="@_datosOrden.NombreMedico" disabled />
                             </div>

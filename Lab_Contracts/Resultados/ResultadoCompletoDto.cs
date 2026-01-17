@@ -14,6 +14,7 @@ namespace Lab_Contracts.Resultados
 
         public string NombrePaciente { get; set; } = string.Empty;
         public string CedulaPaciente { get; set; } = string.Empty;
+        public string? GeneroPaciente { get; set; }
         public int EdadPaciente { get; set; }
         public string MedicoSolicitante { get; set; } = string.Empty;
 

@@ -29,6 +29,10 @@ namespace Lab_Contracts.Pacientes
         [StringLength(30, ErrorMessage = "El telefono es muy largo")]
         public string TelefonoPaciente { get; set; } = string.Empty;
 
+        public int? IdGenero { get; set; }
+
+        public string? NombreGenero { get; set; }
+
         public DateTime? FechaRegistro { get; set; }
 
         public bool Anulado { get; set; }

@@ -55,6 +55,7 @@ namespace Lab_APIRest.Services.Resultados
             NumeroResultado = r.NumeroResultado,
             CedulaPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.CedulaPaciente ?? string.Empty,
             NombrePaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.NombrePaciente ?? string.Empty,
+            GeneroPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
             FechaResultado = r.FechaResultado,
             Observaciones = r.Observaciones ?? string.Empty,
             Anulado = !r.Activo,
@@ -96,10 +97,10 @@ namespace Lab_APIRest.Services.Resultados
                 .SelectMany(r => r.DetalleResultado)
                 .Select(d => d.IdExamen)
                 .Distinct()
-                .ToList();
+                .ToList();  
 
             bool todosAprobados = examenesOrden.Any() && examenesOrden.All(examenesAprobados.Contains);
-            orden.EstadoOrden = todosAprobados ? "FINALIZADO" : "EN_PROCESO";
+            orden.EstadoOrden = todosAprobados ? "FINALIZADA" : "EN_PROCESO";
 
             bool habilitar = todosAprobados && string.Equals(orden.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase);
             bool debeNotificar = habilitar && !orden.ResultadosHabilitados;
@@ -134,7 +135,9 @@ namespace Lab_APIRest.Services.Resultados
             try
             {
                 var ultimo = await _context.Resultado.OrderByDescending(r => r.IdResultado).FirstOrDefaultAsync();
-                string numeroGenerado = $"RES-{((ultimo?.IdResultado ?? 0) + 1):D5}";
+                var correlativo = (ultimo?.IdResultado ?? 0) + 1;
+
+                string numeroGenerado = $"RES-{correlativo:D5}";
 
                 var entidadResultado = new Resultado
                 {
@@ -160,6 +163,7 @@ namespace Lab_APIRest.Services.Resultados
                 }
 
                 await _context.SaveChangesAsync();
+
                 await transaccion.CommitAsync();
                 await ActualizarOrdenSegunResultadosAsync(resultado.IdOrden);
                 return true;
@@ -248,7 +252,7 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado)
         {
             var entidad = await _context.Resultado
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
                 .Include(r => r.IdRevisorNavigation)
                 .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)
@@ -259,7 +263,7 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int idResultado)
         {
             var entidad = await _context.Resultado
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
                 .Include(r => r.IdRevisorNavigation)
                 .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)
@@ -275,6 +279,7 @@ namespace Lab_APIRest.Services.Resultados
                 FechaResultado = entidad.FechaResultado,
                 NombrePaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation?.NombrePaciente ?? string.Empty,
                 CedulaPaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation?.CedulaPaciente ?? string.Empty,
+                GeneroPaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
                 EdadPaciente = edad,
                 MedicoSolicitante = entidad.IdOrdenNavigation?.IdMedicoNavigation?.NombreMedico ?? string.Empty,
                 Detalles = new List<ResultadoDetalleDto> { MapDetalleResultado(entidad) }
@@ -312,6 +317,10 @@ namespace Lab_APIRest.Services.Resultados
 
             var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.IdResultado == idResultado && r.Activo);
             if (entidad == null) return false;
+
+            if (string.Equals(entidad.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase)
+                && estadoNormalizado == "CORRECCION")
+                return false;
 
             entidad.EstadoResultado = estadoNormalizado;
             entidad.ObservacionRevision = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();

@@ -17,7 +17,12 @@
 
 <AuthorizeView>
     <Authorized Context="authState">
-        @{ var user = authState.User; var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? ""; bool puedeVer = rol is "administrador" or "recepcionista"; bool puedeModificar = rol is "administrador"; }
+        @{ 
+            var user = authState.User; 
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? ""; 
+            bool puedeVer = rol is "administrador" or "recepcionista"; 
+            bool puedeModificar = rol is "administrador"; 
+        }
 
         @if (!puedeVer)
         {
@@ -119,10 +124,11 @@
                                     <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.CedulaPaciente))">Cédula @OrdenIcono(nameof(PacienteDto.CedulaPaciente))</th>
                                     <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.NombrePaciente))">Nombre @OrdenIcono(nameof(PacienteDto.NombrePaciente))</th>
                                     <th style="width:7%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.EdadPaciente))">Edad @OrdenIcono(nameof(PacienteDto.EdadPaciente))</th>
+                                    <th style="width:10%;">Género</th>
                                     <th style="width:15%">Dirección</th>
                                     <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.CorreoElectronicoPaciente))">Correo @OrdenIcono(nameof(PacienteDto.CorreoElectronicoPaciente))</th>
                                     <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.TelefonoPaciente))">Teléfono @OrdenIcono(nameof(PacienteDto.TelefonoPaciente))</th>
-                                    <th style="width:10%">Estado</th>
+                                    <th style="width:8%">Estado</th>
                                     <th style="width:10%">Acciones</th>
                                 </tr>
                             </thead>
@@ -133,6 +139,7 @@
                                         <td data-label="Cédula">@paciente.CedulaPaciente</td>
                                         <td data-label="Nombre">@paciente.NombrePaciente</td>
                                         <td data-label="Edad">@paciente.EdadPaciente</td>
+                                        <td data-label="Género">@paciente.NombreGenero</td>
                                         <td data-label="Dirección">@paciente.DireccionPaciente</td>
                                         <td data-label="Correo">@paciente.CorreoElectronicoPaciente</td>
                                         <td data-label="Teléfono">@paciente.TelefonoPaciente</td>
@@ -163,7 +170,7 @@
             <div class="modal fade @(_modalVisible ? "show d-block" : "")" tabindex="-1" role="dialog" aria-modal="true" style="display:@(_modalVisible ? "block" : "none")">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
-                        <EditForm Model="@_pacienteActual" OnValidSubmit="ValidarYGuardarAsync">
+                        <EditForm Model="@_pacienteActual" OnValidSubmit="ValidarYGuardarAsync" Context="editContext">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>@(_pacienteActual.IdPaciente == 0 ? "Nuevo Paciente" : "Editar Paciente")</h5>
                                 <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalAsync"></button>
@@ -178,6 +185,16 @@
                                     <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.TelefonoPaciente" /></div>
                                     <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.CorreoElectronicoPaciente" readonly="@(_pacienteActual.IdPaciente != 0)" disabled="@(_pacienteActual.IdPaciente != 0)" /></div>
                                     <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="_pacienteActual.DireccionPaciente" /></div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Género</label>
+                                        <InputSelect class="form-select" @bind-Value="_pacienteActual.IdGenero">
+                                            <option value="">Seleccione</option>
+                                            @foreach (var g in _generos)
+                                            {
+                                                <option value="@g.IdGenero">@g.Nombre</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -209,6 +226,7 @@
     private bool _modalVisible;
     private bool _buscando = false;
     private bool _sesionVerificada = false;
+    private List<GeneroDto> _generos = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -216,11 +234,24 @@
         {
             _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
+            await CargarGenerosAsync();
             await BuscarPacientesAsync();
         }
     }
 
     private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
+
+    private async Task CargarGenerosAsync()
+    {
+        try
+        {
+            _generos = await PacientesApiService.ListarGenerosAsync();
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudieron cargar los géneros.", "warning");
+        }
+    }
 
     private async Task BuscarPacientesAsync()
     {
@@ -361,7 +392,7 @@
             if (_resultado == null || _resultado.TotalCount == 0) return "";
             int desde = ((_resultado.PageNumber - 1) * _resultado.PageSize) + 1;
             int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
-            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} exámenes";
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} pacientes";
         }
     }
 }

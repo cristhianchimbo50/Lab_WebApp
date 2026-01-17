@@ -21,6 +21,8 @@ public partial class Paciente
 
     public int? IdUsuario { get; set; }
 
+    public int? IdGenero { get; set; }
+
     public DateTime FechaCreacion { get; set; }
 
     public DateTime? FechaFin { get; set; }
@@ -28,6 +30,8 @@ public partial class Paciente
     public DateTime? FechaActualizacion { get; set; }
 
     public bool Activo { get; set; }
+
+    public virtual Genero? IdGeneroNavigation { get; set; }
 
     public virtual Usuario? IdUsuarioNavigation { get; set; }
 

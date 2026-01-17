@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
 using Lab_Contracts.Common;
+using System.Linq;
 
 namespace Lab_Blazor.Services.Pacientes
 {
@@ -100,6 +101,15 @@ namespace Lab_Blazor.Services.Pacientes
             var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
             var lista = await resp.Content.ReadFromJsonAsync<List<PacienteDto>>();
             return lista?.FirstOrDefault();
+        }
+
+        public async Task<List<GeneroDto>> ListarGenerosAsync()
+        {
+            if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
+            var req = new HttpRequestMessage(HttpMethod.Get, "api/pacientes/generos");
+            AddTokenHeader(req);
+            var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadFromJsonAsync<List<GeneroDto>>() ?? new();
         }
     }
 }

@@ -9,6 +9,7 @@ using Lab_Contracts.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Ordenes
 {
@@ -16,12 +17,14 @@ namespace Lab_APIRest.Services.Ordenes
     {
         private readonly LabDbContext _context;
         private readonly PdfTicketService _pdfTicketService;
+        private readonly ILogger<OrdenService> _logger;
         private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
 
-        public OrdenService(LabDbContext context, PdfTicketService pdfTicketService)
+        public OrdenService(LabDbContext context, PdfTicketService pdfTicketService, ILogger<OrdenService> logger)
         {
             _context = context;
             _pdfTicketService = pdfTicketService;
+            _logger = logger;
         }
 
         private static OrdenDto MapOrden(Orden entidadOrden) => new()
@@ -144,11 +147,17 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden)
         {
             var entidadOrden = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
                 .Include(o => o.IdMedicoNavigation)
                 .Include(o => o.DetalleOrden).ThenInclude(d => d.IdExamenNavigation)
                 .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
             if (entidadOrden == null) return null;
+
+            var examenesOrden = entidadOrden.DetalleOrden.Select(d => d.IdExamen).Distinct().ToList();
+
+            var composiciones = await _context.ExamenComposicion
+                .Where(ec => ec.Activo && examenesOrden.Contains(ec.IdExamenPadre))
+                .ToListAsync();
 
             var resultadosExamen = await _context.DetalleResultado
                 .Where(d => d.IdResultadoNavigation.IdOrden == idOrden && d.IdResultadoNavigation.Activo)
@@ -161,6 +170,7 @@ namespace Lab_APIRest.Services.Ordenes
                     d.IdResultadoNavigation.EstadoResultado
                 })
                 .ToListAsync();
+
             var resultadoPorExamen = resultadosExamen
                 .GroupBy(x => x.IdExamen)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.FechaResultado).First());
@@ -179,12 +189,26 @@ namespace Lab_APIRest.Services.Ordenes
                 DireccionPaciente = entidadOrden.IdPacienteNavigation?.DireccionPaciente,
                 CorreoPaciente = entidadOrden.IdPacienteNavigation?.CorreoElectronicoPaciente,
                 TelefonoPaciente = entidadOrden.IdPacienteNavigation?.TelefonoPaciente,
+                GeneroPaciente = entidadOrden.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
                 IdMedico = entidadOrden.IdMedico,
                 NombreMedico = entidadOrden.IdMedicoNavigation?.NombreMedico,
                 Anulado = !entidadOrden.Activo,
                 Examenes = entidadOrden.DetalleOrden.Select(d =>
                 {
                     resultadoPorExamen.TryGetValue(d.IdExamen, out var info);
+                    if (info == null)
+                    {
+                        var hijosIds = composiciones
+                            .Where(c => c.IdExamenPadre == d.IdExamen)
+                            .Select(c => c.IdExamenHijo)
+                            .ToList();
+                        var infoHijo = resultadosExamen
+                            .Where(r => hijosIds.Contains(r.IdExamen))
+                            .OrderByDescending(r => r.FechaResultado)
+                            .FirstOrDefault();
+                        info = infoHijo;
+                    }
+
                     return new ExamenDetalleDto
                     {
                         IdExamen = d.IdExamen,
@@ -192,7 +216,7 @@ namespace Lab_APIRest.Services.Ordenes
                         NombreEstudio = d.IdExamenNavigation!.Estudio,
                         IdResultado = info?.IdResultado,
                         NumeroResultado = info?.NumeroResultado,
-                        EstadoResultado = info?.EstadoResultado ?? "REVISION"
+                        EstadoResultado = info?.EstadoResultado ?? "PENDIENTE"
                     };
                 }).ToList()
             };
@@ -238,6 +262,23 @@ namespace Lab_APIRest.Services.Ordenes
             };
             _context.Orden.Add(entidadOrden);
             await _context.SaveChangesAsync();
+
+            try
+            {
+                var paciente = await _context.Paciente.FirstOrDefaultAsync(p => p.IdPaciente == entidadOrden.IdPaciente);
+                if (paciente != null && !string.IsNullOrWhiteSpace(paciente.CorreoElectronicoPaciente))
+                {
+                    string asunto = "Orden registrada - Laboratorio La Inmaculada";
+                    string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {paciente.NombrePaciente},</h3><p>Su orden <strong>{entidadOrden.NumeroOrden}</strong> ha sido registrada.</p><p>Fecha de orden: {entidadOrden.FechaOrden:dd/MM/yyyy}</p><p>Gracias por confiar en nosotros.</p><p style='margin-top:20px;'><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
+                    var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
+                    await emailService.EnviarCorreoAsync(paciente.CorreoElectronicoPaciente, paciente.NombrePaciente ?? "Paciente", asunto, cuerpo);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando correo de orden registrada para la orden {IdOrden}", entidadOrden.IdOrden);
+            }
+
             return new OrdenRespuestaDto { IdOrden = entidadOrden.IdOrden, NumeroOrden = entidadOrden.NumeroOrden };
         }
 
@@ -364,7 +405,7 @@ namespace Lab_APIRest.Services.Ordenes
             if (resumen.ResultadosPorRegistrar > 0)
                 alertas.Add($"{resumen.ResultadosPorRegistrar} orden(es) con resultados pendientes por registrar");
             if (resumen.OrdenesPendientes > 0 && !alertas.Any())
-                alertas.Add($"{resumen.OrdenesPendientes} orden(es) en curso");
+                alertas.Add($"{resumen.OrdenesPendientes} orden(es) in curso");
 
             return new LaboratoristaHomeDto
             {

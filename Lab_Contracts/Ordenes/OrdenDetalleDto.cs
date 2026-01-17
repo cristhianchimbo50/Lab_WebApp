@@ -22,6 +22,7 @@ namespace Lab_Contracts.Ordenes
         public string? DireccionPaciente { get; set; }
         public string? CorreoPaciente { get; set; }
         public string? TelefonoPaciente { get; set; }
+        public string? GeneroPaciente { get; set; }
 
         public int? IdMedico { get; set; }
         public string? NombreMedico { get; set; }

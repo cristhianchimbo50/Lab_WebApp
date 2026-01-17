@@ -12,6 +12,7 @@ namespace Lab_Contracts.Resultados
         public string NumeroResultado { get; set; } = "";
         public string CedulaPaciente { get; set; } = "";
         public string NombrePaciente { get; set; } = "";
+        public string? GeneroPaciente { get; set; }
         public DateTime FechaResultado { get; set; }
         public string Observaciones { get; set; } = "";
         public bool Anulado { get; set; }

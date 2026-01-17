@@ -30,18 +30,26 @@ namespace Lab_APIRest.Services.Pacientes
             TelefonoPaciente = entidadPaciente.TelefonoPaciente ?? string.Empty,
             FechaRegistro = entidadPaciente.FechaCreacion,
             Anulado = !entidadPaciente.Activo,
-            IdUsuario = entidadPaciente.IdUsuario
+            IdUsuario = entidadPaciente.IdUsuario,
+            IdGenero = entidadPaciente.IdGenero,
+            NombreGenero = entidadPaciente.IdGeneroNavigation?.Nombre
         };
 
         public async Task<List<PacienteDto>> ListarPacientesAsync()
         {
-            var lista = await _context.Paciente.Include(p => p.IdUsuarioNavigation).ToListAsync();
+            var lista = await _context.Paciente
+                .Include(p => p.IdUsuarioNavigation)
+                .Include(p => p.IdGeneroNavigation)
+                .ToListAsync();
             return lista.Select(MapPaciente).ToList();
         }
 
         public async Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente)
         {
-            var entidadPaciente = await _context.Paciente.Include(p => p.IdUsuarioNavigation).FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
+            var entidadPaciente = await _context.Paciente
+                .Include(p => p.IdUsuarioNavigation)
+                .Include(p => p.IdGeneroNavigation)
+                .FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
             return entidadPaciente == null ? null : MapPaciente(entidadPaciente);
         }
 
@@ -51,7 +59,7 @@ namespace Lab_APIRest.Services.Pacientes
                 return new List<PacienteDto>();
 
             var campoLower = criterio.ToLower();
-            IQueryable<Paciente> query = _context.Paciente;
+            IQueryable<Paciente> query = _context.Paciente.Include(p => p.IdGeneroNavigation);
             switch (campoLower)
             {
                 case "cedula":
@@ -68,7 +76,11 @@ namespace Lab_APIRest.Services.Pacientes
 
         public async Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro)
         {
-            var query = _context.Paciente.Include(p => p.IdUsuarioNavigation).AsNoTracking().AsQueryable();
+            var query = _context.Paciente
+                .Include(p => p.IdUsuarioNavigation)
+                .Include(p => p.IdGeneroNavigation)
+                .AsNoTracking()
+                .AsQueryable();
 
             if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
             {
@@ -186,7 +198,8 @@ namespace Lab_APIRest.Services.Pacientes
                 TelefonoPaciente = dto.TelefonoPaciente,
                 FechaCreacion = DateTime.UtcNow,
                 Activo = true,
-                IdUsuario = idUsuario
+                IdUsuario = idUsuario,
+                IdGenero = dto.IdGenero
             };
 
             _context.Paciente.Add(entidadPaciente);
@@ -217,6 +230,7 @@ namespace Lab_APIRest.Services.Pacientes
             entidadPaciente.TelefonoPaciente = dto.TelefonoPaciente;
             entidadPaciente.CorreoElectronicoPaciente = dto.CorreoElectronicoPaciente;
             entidadPaciente.IdUsuario = dto.IdUsuario;
+            entidadPaciente.IdGenero = dto.IdGenero;
             entidadPaciente.Activo = !dto.Anulado;
             entidadPaciente.FechaActualizacion = DateTime.UtcNow;
             if (!entidadPaciente.Activo)
@@ -241,6 +255,20 @@ namespace Lab_APIRest.Services.Pacientes
             entidadPaciente.FechaActualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<GeneroDto>> ListarGenerosAsync()
+        {
+            return await _context.Genero
+                .AsNoTracking()
+                .Select(g => new GeneroDto
+                {
+                    IdGenero = g.IdGenero,
+                    Nombre = g.Nombre,
+                    Descripcion = g.Descripcion,
+                    Activo = g.Activo
+                })
+                .ToListAsync();
         }
 
         private bool ValidarCedula(string cedula)

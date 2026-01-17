@@ -52,6 +52,13 @@ namespace Lab_APIRest.Controllers
             return Ok(resultado);
         }
 
+        [HttpGet("generos")]
+        public async Task<ActionResult<List<GeneroDto>>> ListarGeneros()
+        {
+            var generos = await _pacienteService.ListarGenerosAsync();
+            return Ok(generos);
+        }
+
         [HttpPost]
         public async Task<IActionResult> GuardarPaciente([FromBody] PacienteDto dto)
         {

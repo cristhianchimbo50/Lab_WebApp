@@ -21,6 +21,7 @@ namespace Lab_APIRest.Services.PDF
                     container.Page(page =>
                     {
                         page.Margin(20);
+                        page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
                         page.Header().Height(120).AlignCenter().AlignMiddle().Element(header =>
                         {
@@ -29,34 +30,37 @@ namespace Lab_APIRest.Services.PDF
 
                         page.Content().Column(col =>
                         {
-                            col.Spacing(8);
+                            col.Spacing(10);
 
-                            col.Item().Row(r =>
+                            col.Item().Row(row =>
                             {
-                                r.RelativeItem().Text($"Orden: {resultado.NumeroOrden}").FontSize(10);
-                                r.RelativeItem().AlignRight().Text($"Fecha: {resultado.FechaResultado:dd/M/yyyy}").FontSize(10);
+                                row.RelativeItem().Text($"Orden: {resultado.NumeroOrden}").SemiBold();
+                                row.RelativeItem().AlignCenter().Text($"Resultado: {resultado.NumeroResultado}").SemiBold();
+                                row.RelativeItem().AlignRight().Text($"Fecha: {resultado.FechaResultado:dd/MM/yyyy}").SemiBold();
                             });
 
-                            col.Item().Text($"Resultado: {resultado.NumeroResultado}").FontSize(10);
-
-                            col.Item().Row(r =>
+                            col.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(8).Column(info =>
                             {
-                                r.RelativeItem().Text($"Cédula: {resultado.CedulaPaciente}").FontSize(10);
-                                r.RelativeItem().AlignRight().Text($"Edad: {resultado.EdadPaciente} Años").FontSize(10);
+                                info.Spacing(4);
+                                info.Item().Text("Datos del Paciente").Bold().FontSize(11);
+                                info.Item().Row(r =>
+                                {
+                                    r.RelativeItem().Text($"Nombres: {resultado.NombrePaciente}");
+                                    r.RelativeItem().AlignCenter().Text($"Cédula: {resultado.CedulaPaciente}");
+                                    r.RelativeItem().AlignRight().Text($"Género: {resultado.GeneroPaciente ?? "-"}");
+                                });
+                                info.Item().Row(r =>
+                                {
+                                    r.RelativeItem().Text($"Edad: {resultado.EdadPaciente} años");
+                                    r.RelativeItem().AlignRight().Text($"Médico Solicitante: {resultado.MedicoSolicitante}");
+                                });
                             });
-
-                            col.Item().Text($"Nombres: {resultado.NombrePaciente}").FontSize(10);
-                            col.Item().Text($"Medico Solicitante: {resultado.MedicoSolicitante}").FontSize(10);
-
-                            col.Item().PaddingVertical(10);
 
                             var tituloExamen = resultado.Detalles
                                 .SelectMany(d => d.Detalles)
                                 .FirstOrDefault()?.TituloExamen ?? "Resultados";
 
-                            col.Item().AlignCenter().Text(tituloExamen).Bold().FontSize(14);
-
-                            col.Item().PaddingBottom(5);
+                            col.Item().AlignCenter().Text(tituloExamen).Bold().FontSize(13).Underline();
 
                             col.Item().Table(table =>
                             {
@@ -70,27 +74,36 @@ namespace Lab_APIRest.Services.PDF
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Element(CellStyle).Text("Parámetro").Bold();
-                                    header.Cell().Element(CellStyle).Text("Resultado").Bold();
-                                    header.Cell().Element(CellStyle).Text("Unidad").Bold();
-                                    header.Cell().Element(CellStyle).Text("Valor de Referencia").Bold();
+                                    header.Cell().Element(HeaderCellStyle).Text("Parámetro").Bold();
+                                    header.Cell().Element(HeaderCellStyle).Text("Resultado").Bold();
+                                    header.Cell().Element(HeaderCellStyle).Text("Unidad").Bold();
+                                    header.Cell().Element(HeaderCellStyle).Text("Valor de Referencia").Bold();
                                 });
 
                                 foreach (var detalle in resultado.Detalles)
                                 {
-                                    foreach (var examen in detalle.Detalles )
+                                    foreach (var examen in detalle.Detalles)
                                     {
-                                        table.Cell().Element(CellStyle).Text(examen.NombreExamen);
-                                        table.Cell().Element(CellStyle).Text(examen.Valor.ToString());
-                                        table.Cell().Element(CellStyle).Text(examen.Unidad ?? "-");
-                                        table.Cell().Element(CellStyle).Text(examen.ValorReferencia ?? "-");
+                                        table.Cell().Element(BodyCellStyle).Text(examen.NombreExamen);
+                                        table.Cell().Element(BodyCellStyle).Text(string.IsNullOrWhiteSpace(examen.Valor) ? "-" : examen.Valor);
+                                        table.Cell().Element(BodyCellStyle).Text(string.IsNullOrWhiteSpace(examen.Unidad) ? "-" : examen.Unidad);
+                                        table.Cell().Element(BodyCellStyle).Text(string.IsNullOrWhiteSpace(examen.ValorReferencia) ? "-" : examen.ValorReferencia);
                                     }
                                 }
 
-                                static IContainer CellStyle(IContainer container) =>
-                                    container.PaddingVertical(3)
+                                static IContainer HeaderCellStyle(IContainer container) =>
+                                    container.DefaultTextStyle(TextStyle.Default.FontSize(10).SemiBold())
+                                            .PaddingVertical(6)
+                                            .PaddingHorizontal(4)
+                                            .Background(Colors.Grey.Lighten3)
                                             .BorderBottom(1)
-                                            .BorderColor(Colors.Grey.Lighten3);
+                                            .BorderColor(Colors.Grey.Lighten2);
+
+                                static IContainer BodyCellStyle(IContainer container) =>
+                                    container.PaddingVertical(4)
+                                            .PaddingHorizontal(4)
+                                            .BorderBottom(0.5f)
+                                            .BorderColor(Colors.Grey.Lighten4);
                             });
 
                             var observaciones = string.Join("\n",
@@ -100,10 +113,16 @@ namespace Lab_APIRest.Services.PDF
 
                             if (!string.IsNullOrWhiteSpace(observaciones))
                             {
-                                col.Item().PaddingTop(10).Text("Observaciones:").Bold().FontSize(10);
-                                col.Item().Text(observaciones).FontSize(10);
+                                col.Item().PaddingTop(8).Text("Observaciones:").Bold();
+                                col.Item().Text(observaciones);
                             }
+                        });
 
+                        page.Footer().AlignCenter().Text(text =>
+                        {
+                            text.Span("Laboratorio Clínico La Inmaculada").SemiBold();
+                            text.Span("  |  ");
+                            text.Span("Documento generado automáticamente").FontSize(9);
                         });
                     });
                 }

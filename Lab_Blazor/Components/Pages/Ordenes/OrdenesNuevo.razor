@@ -98,6 +98,10 @@
                                             <label class="form-label fw-semibold">Cédula</label>
                                             <input class="form-control" value="@_pacienteSeleccionado.CedulaPaciente" disabled />
                                         </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-semibold">Género</label>
+                                            <input class="form-control" value="@_pacienteSeleccionado.NombreGenero" disabled />
+                                        </div>
                                         <div class="col-md-5">
                                             <label class="form-label fw-semibold">Correo Electrónico</label>
                                             <input class="form-control" value="@_pacienteSeleccionado.CorreoElectronicoPaciente" disabled />
@@ -185,6 +189,16 @@
                                                            @bind-Value="_pacienteNuevo.DireccionPaciente"
                                                            @oninput="(e => _pacienteNuevo.DireccionPaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Género</label>
+                                                <InputSelect class="form-select" @bind-Value="_pacienteNuevo.IdGenero">
+                                                    <option value="">Seleccione</option>
+                                                    @foreach (var g in _generos)
+                                                    {
+                                                        <option value="@g.IdGenero">@g.Nombre</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -250,7 +264,7 @@
                                     <div style="max-height: 300px; overflow-y: auto;" class="border rounded">
                                         <table class="table table-sm table-hover align-middle mb-0">
                                             <thead class="table-light">
-                                                <tr><th>Cédula</th><th>Nombre</th><th>Correo</th><th></th></tr>
+                                                <tr><th>Cédula</th><th>Nombre</th><th>Correo</th><th>Género</th><th></th></tr>
                                             </thead>
                                             <tbody>
                                                 @if (_resultadoPacientes?.Items.Any() == true)
@@ -261,6 +275,7 @@
                                                             <td>@paciente.CedulaPaciente</td>
                                                             <td>@paciente.NombrePaciente</td>
                                                             <td>@paciente.CorreoElectronicoPaciente</td>
+                                                            <td>@paciente.NombreGenero</td>
                                                             <td>
                                                                 <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPacienteAsync(paciente)"><i class="bi bi-check-lg"></i></button>
                                                             </td>
@@ -269,7 +284,7 @@
                                                 }
                                                 else
                                                 {
-                                                    <tr><td colspan="4" class="text-center text-muted">Sin resultados</td></tr>
+                                                    <tr><td colspan="5" class="text-center text-muted">Sin resultados</td></tr>
                                                 }
                                             </tbody>
                                         </table>
@@ -577,6 +592,7 @@
     private ResultadoPaginadoDto<ExamenDto>? _resultadoExamenes;
     private int? MedicoIdSeleccionado { get => _medicoSeleccionado?.IdMedico; set => _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.IdMedico == value); }
     private bool _sesionVerificada = false;
+    private List<GeneroDto> _generos = new();
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_sesionVerificada)
@@ -584,6 +600,7 @@
             _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
             _listaMedicos = await MedicosApi.ListarMedicosAsync();
+            _generos = await PacientesApi.ListarGenerosAsync();
             _contenidoCargado = true;
             StateHasChanged();
         }

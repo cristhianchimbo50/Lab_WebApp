@@ -30,6 +30,8 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<ExamenReactivo> ExamenReactivo { get; set; }
 
+    public virtual DbSet<Genero> Genero { get; set; }
+
     public virtual DbSet<Medico> Medico { get; set; }
 
     public virtual DbSet<MovimientoReactivo> MovimientoReactivo { get; set; }
@@ -282,6 +284,33 @@ public partial class LabDbContext : DbContext
                 .HasConstraintName("FK_examen_reactivo_reactivo");
         });
 
+        modelBuilder.Entity<Genero>(entity =>
+        {
+            entity.HasKey(e => e.IdGenero).HasName("PK__genero");
+
+            entity.ToTable("genero");
+
+            entity.HasIndex(e => e.Nombre, "UQ_genero_nombre").IsUnique();
+
+            entity.Property(e => e.IdGenero).HasColumnName("id_genero");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(100)
+                .HasColumnName("descripcion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(50)
+                .HasColumnName("nombre");
+        });
+
         modelBuilder.Entity<Medico>(entity =>
         {
             entity.HasKey(e => e.IdMedico).HasName("PK__medico");
@@ -459,6 +488,7 @@ public partial class LabDbContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
             entity.Property(e => e.FechaNacPaciente).HasColumnName("fecha_nac_paciente");
+            entity.Property(e => e.IdGenero).HasColumnName("id_genero");
             entity.Property(e => e.IdUsuario).HasColumnName("id_usuario");
             entity.Property(e => e.NombrePaciente)
                 .HasMaxLength(100)
@@ -466,6 +496,10 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.TelefonoPaciente)
                 .HasMaxLength(20)
                 .HasColumnName("telefono_paciente");
+
+            entity.HasOne(d => d.IdGeneroNavigation).WithMany(p => p.Paciente)
+                .HasForeignKey(d => d.IdGenero)
+                .HasConstraintName("FK_paciente_genero");
 
             entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.Paciente)
                 .HasForeignKey(d => d.IdUsuario)

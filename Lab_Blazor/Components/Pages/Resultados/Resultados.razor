@@ -53,47 +53,70 @@
             }
             else
             {
-                <div class="card mb-3 shadow-sm border-0">
-                    <div class="card-body row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="_criterioBusqueda">
-                                <option value="">-- Seleccione --</option>
-                                <option value="numeroResultado">Número de Resultado</option>
-                                <option value="numeroOrden">Número de Orden</option>
-                                <option value="cedula">Cédula</option>
-                                <option value="nombre">Nombre</option>
-                            </InputSelect>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="_valorBusqueda" placeholder="Ingrese valor a buscar" @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultadosAsync(); })" />
-                        </div>
-                        <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button type="button" class="btn btn-primary" @onclick="BuscarResultadosAsync" disabled="@_buscando"><i class="bi bi-search me-1"></i>Buscar</button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                @if (esPaciente)
+                {
+                    <div class="card mb-3 shadow-sm border-0">
+                        <div class="card-body row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Número de Resultado</label>
+                                <InputText class="form-control" @bind-Value="_valorBusqueda" placeholder="Ingrese número de resultado" @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultadosAsync(); })" />
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary w-100" @onclick="BuscarResultadosAsync" disabled="@_buscando"><i class="bi bi-search me-1"></i>Buscar</button>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-secondary w-100" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="card mb-3 shadow-sm border-0">
+                        <div class="card-body row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Buscar por</label>
+                                <InputSelect class="form-select" @bind-Value="_criterioBusqueda">
+                                    <option value="">-- Seleccione --</option>
+                                    <option value="numeroResultado">Número de Resultado</option>
+                                    <option value="numeroOrden">Número de Orden</option>
+                                    <option value="cedula">Cédula</option>
+                                    <option value="nombre">Nombre</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Valor</label>
+                                <InputText class="form-control" @bind-Value="_valorBusqueda" placeholder="Ingrese valor a buscar" @onkeypress="@(e => { if (e.Key == "Enter") BuscarResultadosAsync(); })" />
+                            </div>
+                            <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                                <button type="button" class="btn btn-primary" @onclick="BuscarResultadosAsync" disabled="@_buscando"><i class="bi bi-search me-1"></i>Buscar</button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando"><i class="bi bi-eraser me-1"></i>Limpiar</button>
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body row g-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Desde</label>
+                            <label class="form-label fw-semibold">Desde (dd/mm/aaaa)</label>
                             <InputDate @bind-Value="_filtro.FechaDesde" class="form-control" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Hasta</label>
+                            <label class="form-label fw-semibold">Hasta (dd/mm/aaaa)</label>
                             <InputDate @bind-Value="_filtro.FechaHasta" class="form-control" />
                         </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="_incluirAnulados" class="form-check-input me-2" />
-                            <label class="form-check-label">Anulado</label>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="_incluirVigentes" class="form-check-input me-2" />
-                            <label class="form-check-label">No Anulado</label>
-                        </div>
+                        @if (!esPaciente)
+                        {
+                            <div class="col-md-3 d-flex align-items-center mt-4">
+                                <InputCheckbox @bind-Value="_incluirAnulados" class="form-check-input me-2" />
+                                <label class="form-check-label">Anulado</label>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-center mt-4">
+                                <InputCheckbox @bind-Value="_incluirVigentes" class="form-check-input me-2" />
+                                <label class="form-check-label">No Anulado</label>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -200,6 +223,7 @@
                                         <div class="col-md-3 col-6 mb-2"><label><strong>N° Orden</strong></label><input class="form-control" value="@_detalleActual.NumeroOrden" disabled /></div>
                                         <div class="col-md-3 col-6 mb-2"><label><strong>Cédula</strong></label><input class="form-control" value="@_detalleActual.CedulaPaciente" disabled /></div>
                                         <div class="col-md-3 col-6 mb-2"><label><strong>Paciente</strong></label><input class="form-control" value="@_detalleActual.NombrePaciente" disabled /></div>
+                                        <div class="col-md-3 col-6 mb-2"><label><strong>Género</strong></label><input class="form-control" value="@_detalleActual.GeneroPaciente" disabled /></div>
                                     </div>
                                     <h5 class="mt-4 mb-3"><i class="fas fa-vial me-2"></i>Exámenes</h5>
                                     <div class="table-responsive">
@@ -271,6 +295,21 @@
         {
             _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            if (authState.User.IsInRole("paciente"))
+            {
+                _criterioBusqueda = "numeroResultado";
+                _incluirAnulados = false;
+                _incluirVigentes = true;
+            }
+            else
+            {
+                _criterioBusqueda = string.Empty;
+                _incluirAnulados = true;
+                _incluirVigentes = true;
+            }
+            _filtro.FechaHasta = null;
+            _filtro.FechaDesde = null;
             _resultado = null;
             _isRendered = true;
             StateHasChanged();
@@ -286,6 +325,8 @@
         try
         {
             _buscando = true;
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            bool esPaciente = authState.User.IsInRole("paciente");
 
             _filtro.NumeroResultado = null;
             _filtro.NumeroOrden = null;
@@ -293,20 +334,21 @@
             _filtro.Nombre = null;
             _filtro.Anulado = null;
 
-            if (!string.IsNullOrWhiteSpace(_criterioBusqueda) && !string.IsNullOrWhiteSpace(_valorBusqueda))
+            if (!string.IsNullOrWhiteSpace(_valorBusqueda))
             {
-                switch (_criterioBusqueda)
-                {
-                    case "numeroResultado": _filtro.NumeroResultado = _valorBusqueda.Trim(); break;
-                    case "numeroOrden": _filtro.NumeroOrden = _valorBusqueda.Trim(); break;
-                    case "cedula": _filtro.Cedula = _valorBusqueda.Trim(); break;
-                    case "nombre": _filtro.Nombre = _valorBusqueda.Trim(); break;
-                }
+                if (string.IsNullOrWhiteSpace(_criterioBusqueda) || _criterioBusqueda == "numeroResultado")
+                    _filtro.NumeroResultado = _valorBusqueda.Trim();
+                else if (_criterioBusqueda == "numeroOrden")
+                    _filtro.NumeroOrden = _valorBusqueda.Trim();
+                else if (_criterioBusqueda == "cedula")
+                    _filtro.Cedula = _valorBusqueda.Trim();
+                else if (_criterioBusqueda == "nombre")
+                    _filtro.Nombre = _valorBusqueda.Trim();
             }
 
             if (_incluirAnulados && !_incluirVigentes) _filtro.Anulado = true;
             else if (!_incluirAnulados && _incluirVigentes) _filtro.Anulado = false;
-            else _filtro.Anulado = null;
+            else if (!esPaciente) _filtro.Anulado = null;
 
             _resultado = await ResultadosApi.ListarResultadosPaginadosAsync(_filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados cargados correctamente.", "success");
@@ -322,11 +364,14 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        _criterioBusqueda = "";
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        bool esPaciente = auth.User.IsInRole("paciente");
+
+        _criterioBusqueda = esPaciente ? "numeroResultado" : string.Empty;
         _valorBusqueda = "";
         _filtro.FechaDesde = null;
         _filtro.FechaHasta = null;
-        _incluirAnulados = true;
+        _incluirAnulados = esPaciente ? false : true;
         _incluirVigentes = true;
         _filtro.PageNumber = 1;
         _resultado = null;
@@ -371,6 +416,20 @@
             var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
             _detalleActual = rol == "paciente" ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado) : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
             _mostrarDetalle = true;
+
+            if (authState.User.IsInRole("paciente") && _detalleActual != null)
+            {
+                if (!string.Equals(_detalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase))
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado no disponible: aún no está aprobado.", "warning");
+                    _mostrarDetalle = false; _detalleActual = null; _pdfUrl = null; return;
+                }
+                if (!_detalleActual.ResultadosHabilitados)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado no disponible: la orden aún no está finalizada.", "warning");
+                    _mostrarDetalle = false; _detalleActual = null; _pdfUrl = null; return;
+                }
+            }
         }
         catch { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el detalle.", "danger"); }
     }

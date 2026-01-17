@@ -70,57 +70,90 @@
             }
             else
             {
-                <div class="card mb-3 shadow-sm border-0">
-                    <div class="card-body row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Buscar por</label>
-                            <InputSelect class="form-select" @bind-Value="_filtro.CriterioBusqueda">
-                                <option value="">-- Seleccione --</option>
-                                <option value="numero">Número de Orden</option>
-                                <option value="cedula">Cédula</option>
-                                <option value="nombre">Nombre</option>
-                                <option value="estadoPago">Estado de Pago</option>
-                            </InputSelect>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Valor</label>
-                            <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda"
-                                       placeholder="Ingrese valor a buscar"
-                                       @onkeypress="@(e => { if (e.Key == "Enter") BuscarOrdenesAsync(); })" />
-                        </div>
-                        <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                            <button type="button" class="btn btn-primary" @onclick="BuscarOrdenesAsync" disabled="@_buscando">
-                                @if (_buscando)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                <i class="bi bi-search me-1"></i>Buscar
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando">
-                                <i class="bi bi-eraser me-1"></i>Limpiar
-                            </button>
+                @if (esPaciente)
+                {
+                    <div class="card mb-3 shadow-sm border-0">
+                        <div class="card-body row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Número de Orden</label>
+                                <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda"
+                                           placeholder="Ingrese número de orden"
+                                           @onkeypress="@(e => { if (e.Key == "Enter") BuscarOrdenesAsync(); })" />
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary w-100" @onclick="BuscarOrdenesAsync" disabled="@_buscando">
+                                    @if (_buscando)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-search me-1"></i>Buscar
+                                </button>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-secondary w-100" @onclick="LimpiarBusquedaAsync" disabled="@_buscando">
+                                    <i class="bi bi-eraser me-1"></i>Limpiar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="card mb-3 shadow-sm border-0">
+                        <div class="card-body row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Buscar por</label>
+                                <InputSelect class="form-select" @bind-Value="_filtro.CriterioBusqueda">
+                                    <option value="">-- Seleccione --</option>
+                                    <option value="numero">Número de Orden</option>
+                                    <option value="cedula">Cédula</option>
+                                    <option value="nombre">Nombre</option>
+                                    <option value="estadoPago">Estado de Pago</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Valor</label>
+                                <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda"
+                                           placeholder="Ingrese valor a buscar"
+                                           @onkeypress="@(e => { if (e.Key == "Enter") BuscarOrdenesAsync(); })" />
+                            </div>
+                            <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                                <button type="button" class="btn btn-primary" @onclick="BuscarOrdenesAsync" disabled="@_buscando">
+                                    @if (_buscando)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-search me-1"></i>Buscar
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando">
+                                    <i class="bi bi-eraser me-1"></i>Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body row g-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Desde</label>
-                            <InputDate @bind-Value="_filtro.FechaDesde" class="form-control" @onchange="_ => ValidarRangoFechas()" />
+                            <label class="form-label fw-semibold">Desde (dd/mm/aaaa)</label>
+                            <InputDate @bind-Value="_filtro.FechaDesde" class="form-control" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Hasta</label>
-                            <InputDate @bind-Value="_filtro.FechaHasta" class="form-control" @onchange="_ => ValidarRangoFechas()" />
+                            <label class="form-label fw-semibold">Hasta (dd/mm/aaaa)</label>
+                            <InputDate @bind-Value="_filtro.FechaHasta" class="form-control" />
                         </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="_filtro.IncluirAnuladas" class="form-check-input me-2" />
-                            <label class="form-check-label">Anulado</label>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center mt-4">
-                            <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
-                            <label class="form-check-label">No Anulado</label>
-                        </div>
+                        @if (!esPaciente)
+                        {
+                            <div class="col-md-3 d-flex align-items-center mt-4">
+                                <InputCheckbox @bind-Value="_filtro.IncluirAnuladas" class="form-check-input me-2" />
+                                <label class="form-check-label">Anulado</label>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-center mt-4">
+                                <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
+                                <label class="form-check-label">No Anulado</label>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -226,8 +259,8 @@
                                                 </span>
                                             </td>
                                             <td data-label="Estado Orden">
-                                                <span class="badge bg-@(string.Equals(orden.EstadoOrden, "FINALIZADO", StringComparison.OrdinalIgnoreCase) ? "success" : "info")">
-                                                    @orden.EstadoOrden
+                                                <span class="badge bg-@(string.Equals(orden.EstadoOrden, "FINALIZADO", StringComparison.OrdinalIgnoreCase) || string.Equals(orden.EstadoOrden, "FINALIZADA", StringComparison.OrdinalIgnoreCase) ? "success" : "info")">
+                                                    @TextoEstadoOrden(orden.EstadoOrden)
                                                 </span>
                                             </td>
                                             <td data-label="Estado">
@@ -316,7 +349,11 @@
                                         </div>
                                         <div class="col-md-3 col-6 mb-2">
                                             <label><strong>Estado Orden</strong></label>
-                                            <input class="form-control" value="@_detalleActual.EstadoOrden" disabled />
+                                            <input class="form-control" value="@TextoEstadoOrden(_detalleActual.EstadoOrden)" disabled />
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <label><strong>Género</strong></label>
+                                            <input class="form-control" value="@_detalleActual.GeneroPaciente" disabled />
                                         </div>
                                         <div class="col-md-3 col-6 mb-2">
                                             <label><strong>Resultados habilitados</strong></label>
@@ -519,15 +556,16 @@
 
                                 @if (!_resultadoDetalleActual.Anulado && esAdmin)
                                 {
+                                    var yaAprobado = string.Equals(_resultadoDetalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase);
                                     <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
-                                        <button class="btn btn-success" disabled="@_procesandoRevision" @onclick='() => RevisarResultadoAsync("APROBADO")'>
+                                        <button class="btn btn-success" disabled="@(_procesandoRevision || yaAprobado)" @onclick='() => RevisarResultadoAsync("APROBADO")'>
                                             @if (_procesandoRevision)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-1"></span>
                                             }
                                             <i class="bi bi-check-lg me-1"></i>Aprobar
                                         </button>
-                                        <button class="btn btn-danger" disabled="@_procesandoRevision" @onclick='() => RevisarResultadoAsync("CORRECCION")'>
+                                        <button class="btn btn-danger" disabled='@(_procesandoRevision || yaAprobado)' @onclick='() => RevisarResultadoAsync("CORRECCION")'>
                                             @if (_procesandoRevision)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-1"></span>
@@ -585,12 +623,13 @@
             if (!await SesionService.VerificarOSalirAsync())
                 return;
 
-            _filtro.FechaHasta = DateOnly.FromDateTime(DateTime.Today);
-            _filtro.FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15));
+            _filtro.FechaHasta = null;
+            _filtro.FechaDesde = null;
             _filtro.PageNumber = 1;
             _filtro.PageSize = 10;
             _filtro.SortBy = nameof(OrdenDto.IdOrden);
             _filtro.SortAsc = false;
+            _filtro.CriterioBusqueda = "numero";
 
             _contenidoCargado = true;
             StateHasChanged();
@@ -822,6 +861,9 @@
                 _filtro.IdPaciente = idPaciente;
                 _filtro.IncluirAnuladas = false;
                 _filtro.IncluirVigentes = true;
+                _filtro.CriterioBusqueda = "numero";
+                _filtro.FechaDesde = null;
+                _filtro.FechaHasta = null;
             }
             else
             {
@@ -842,16 +884,24 @@
 
     private async Task LimpiarBusquedaAsync()
     {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+        bool esPaciente = rol == "paciente";
+
         _filtro = new OrdenFiltroDto
         {
-            FechaHasta = DateOnly.FromDateTime(DateTime.Today),
-            FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15)),
+            FechaHasta = null,
+            FechaDesde = null,
             PageNumber = 1,
             PageSize = 10,
             SortBy = nameof(OrdenDto.IdOrden),
             SortAsc = false,
-            IncluirAnuladas = true,
-            IncluirVigentes = true
+            IncluirAnuladas = esPaciente ? false : true,
+            IncluirVigentes = true,
+            CriterioBusqueda = esPaciente ? "numero" : string.Empty,
+            ValorBusqueda = string.Empty
         };
         await BuscarOrdenesAsync();
     }
@@ -881,6 +931,19 @@
             "REVISION" => "En revisión",
             "REGISTRO" => "Registrado",
             _ => "Pendiente"
+        };
+    }
+
+    private string TextoEstadoOrden(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "-";
+        var upper = estado.Trim().ToUpperInvariant();
+        return upper switch
+        {
+            "EN_PROCESO" => "En proceso",
+            "FINALIZADO" => "Finalizado",
+            "FINALIZADA" => "Finalizada",
+            _ => upper[0] + upper[1..].ToLowerInvariant()
         };
     }
 
