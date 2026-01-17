@@ -9,7 +9,7 @@ namespace Lab_APIRest.Controllers.Medicos
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,recepcionista")]
+    [Authorize(Roles = "1,2")]
     public class MedicosController : ControllerBase
     {
         private readonly IMedicoService _medicoService;
@@ -69,7 +69,7 @@ namespace Lab_APIRest.Controllers.Medicos
             }
         }
 
-        [Authorize(Roles = "administrador,recepcionista")]
+        [Authorize(Roles = "1,2")]
         [HttpPost]
         public async Task<ActionResult<MedicoDto>> GuardarMedico([FromBody] MedicoDto medicoDto)
         {
@@ -94,7 +94,7 @@ namespace Lab_APIRest.Controllers.Medicos
             }
         }
 
-        [Authorize(Roles = "administrador,recepcionista")]
+        [Authorize(Roles = "1,2")]
         [HttpPut("{idMedico:int}")]
         public async Task<IActionResult> GuardarMedico(int idMedico, [FromBody] MedicoDto medicoDto)
         {
@@ -121,7 +121,7 @@ namespace Lab_APIRest.Controllers.Medicos
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("anular/{idMedico:int}")]
         public async Task<IActionResult> AnularMedico(int idMedico)
         {

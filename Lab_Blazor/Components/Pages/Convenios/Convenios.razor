@@ -21,14 +21,10 @@
     <Authorized Context="estadoAutenticacion">
         @{
             var usuario = estadoAutenticacion.User;
-            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value
-            ?? usuario.FindFirst("role")?.Value
-            ?? usuario.FindFirst("roles")?.Value
-            ?? "");
-
-            bool esPaciente = rol == "paciente";
-            bool puedeVer = rol is "administrador" or "recepcionista";
-            bool puedeAnular = rol is "administrador";
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? "";
+            bool esPaciente = rol == "4";
+            bool puedeVer = rol is "1" or "2";
+            bool puedeAnular = rol == "1";
         }
 
         @if (!puedeVer)

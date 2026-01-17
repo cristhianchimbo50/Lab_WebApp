@@ -779,27 +779,19 @@ else
 
         if (IsAuthenticated)
         {
-            var rolClaim = user.FindFirst(ClaimTypes.Role)?.Value
-                ?? user.FindFirst("role")?.Value
-                ?? user.FindFirst("roles")?.Value
-                ?? string.Empty;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            _esAdministrador = rol == "1";
+            _esRecepcionista = rol == "2";
+            _esLaboratorista = rol == "3";
+            _esPaciente = rol == "4";
 
-            var roles = rolClaim
-                .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
-
-            _esLaboratorista = TieneRol(roles, "laboratorista");
-            _esPaciente = TieneRol(roles, "paciente");
-            _esAdministrador = TieneRol(roles, "administrador");
-            _esRecepcionista = TieneRol(roles, "recepcionista");
-
-            _nombreUsuario = user.Identity?.Name
-                ?? user.FindFirst("name")?.Value
-                ?? "Paciente";
+             _nombreUsuario = user.Identity?.Name
+                 ?? user.FindFirst("name")?.Value
+                 ?? "Paciente";
             _correoUsuario = user.FindFirst(ClaimTypes.Email)?.Value
                 ?? user.FindFirst("email")?.Value
                 ?? string.Empty;
-        }
+         }
 
         _checkedAuth = true;
         StateHasChanged();

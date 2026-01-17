@@ -8,7 +8,7 @@ namespace Lab_APIRest.Controllers.Convenios
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,recepcionista")]
+    [Authorize(Roles = "1,2")]
     public class ConveniosController : ControllerBase
     {
         private readonly IConvenioService _convenioService;
@@ -56,7 +56,7 @@ namespace Lab_APIRest.Controllers.Convenios
             return Ok(ordenes);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPost]
         public async Task<ActionResult> GuardarConvenio([FromBody] ConvenioRegistroDto convenioRegistro)
         {
@@ -73,7 +73,7 @@ namespace Lab_APIRest.Controllers.Convenios
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("{idConvenio:int}/anular")]
         public async Task<ActionResult> AnularConvenio(int idConvenio)
         {

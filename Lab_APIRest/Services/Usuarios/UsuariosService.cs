@@ -22,7 +22,8 @@ namespace Lab_APIRest.Services.Usuarios
             IdUsuario = entidad.IdUsuario,
             NombreUsuario = entidad.Nombre,
             CorreoUsuario = entidad.CorreoUsuario,
-            Rol = entidad.Rol,
+            IdRol = entidad.IdRol,
+            NombreRol = entidad.IdRolNavigation?.Nombre ?? string.Empty,
             Activo = entidad.Activo ?? false,
             FechaCreacion = entidad.FechaCreacion,
             UltimoAcceso = entidad.UltimoAcceso
@@ -30,10 +31,13 @@ namespace Lab_APIRest.Services.Usuarios
 
         public async Task<List<UsuarioListadoDto>> ListarUsuariosAsync(UsuarioFiltroDto filtro, CancellationToken ct = default)
         {
-            var consulta = _context.Usuario.Where(u => u.Rol != "paciente");
+            var consulta = _context.Usuario
+                .Include(u => u.IdRolNavigation)
+                .Where(u => u.IdRolNavigation.Nombre != "paciente");
+
             if (!string.IsNullOrWhiteSpace(filtro.Nombre)) consulta = consulta.Where(u => u.Nombre.Contains(filtro.Nombre));
             if (!string.IsNullOrWhiteSpace(filtro.Correo)) consulta = consulta.Where(u => u.CorreoUsuario.Contains(filtro.Correo));
-            if (!string.IsNullOrWhiteSpace(filtro.Rol)) consulta = consulta.Where(u => u.Rol == filtro.Rol);
+            if (filtro.IdRol.HasValue) consulta = consulta.Where(u => u.IdRol == filtro.IdRol.Value);
             if (filtro.Activo.HasValue) consulta = consulta.Where(u => (u.Activo ?? false) == filtro.Activo.Value);
 
             return await consulta
@@ -44,7 +48,9 @@ namespace Lab_APIRest.Services.Usuarios
 
         public async Task<UsuarioListadoDto?> ObtenerDetalleUsuarioAsync(int idUsuario, CancellationToken ct = default)
         {
-            var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.Rol != "paciente", ct);
+            var entidad = await _context.Usuario
+                .Include(u => u.IdRolNavigation)
+                .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
             return entidad == null ? null : MapUsuario(entidad);
         }
 
@@ -54,7 +60,7 @@ namespace Lab_APIRest.Services.Usuarios
             {
                 Nombre = usuario.NombreUsuario,
                 CorreoUsuario = usuario.CorreoUsuario,
-                Rol = usuario.Rol,
+                IdRol = usuario.IdRol,
                 Activo = false,
                 ClaveUsuario = null,
                 FechaCreacion = DateTime.UtcNow
@@ -93,11 +99,11 @@ namespace Lab_APIRest.Services.Usuarios
 
         public async Task<bool> GuardarUsuarioAsync(UsuarioEditarDto usuario, CancellationToken ct = default)
         {
-            var entidad = await _context.Usuario.FirstOrDefaultAsync(x => x.IdUsuario == usuario.IdUsuario && x.Rol != "paciente", ct);
+            var entidad = await _context.Usuario.FirstOrDefaultAsync(x => x.IdUsuario == usuario.IdUsuario && x.IdRolNavigation.Nombre != "paciente", ct);
             if (entidad == null) return false;
             entidad.Nombre = usuario.NombreUsuario;
             entidad.CorreoUsuario = usuario.CorreoUsuario;
-            entidad.Rol = usuario.Rol;
+            entidad.IdRol = usuario.IdRol;
             entidad.Activo = usuario.Activo;
             entidad.FechaActualizacion = DateTime.UtcNow;
             if (entidad.Activo == false)
@@ -114,7 +120,7 @@ namespace Lab_APIRest.Services.Usuarios
 
         public async Task<bool> CambiarEstadoUsuarioAsync(int idUsuario, bool activo, string correoUsuarioActual, CancellationToken ct = default)
         {
-            var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.Rol != "paciente", ct);
+            var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
             if (entidad == null) return false;
             if (entidad.CorreoUsuario.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
                 throw new InvalidOperationException("No puedes deshabilitar tu propio usuario.");

@@ -16,7 +16,7 @@ namespace Lab_Blazor.Services.Usuarios
             var parametros = new List<string>();
             if (!string.IsNullOrWhiteSpace(filtro.Nombre)) parametros.Add($"nombre={Uri.EscapeDataString(filtro.Nombre)}");
             if (!string.IsNullOrWhiteSpace(filtro.Correo)) parametros.Add($"correo={Uri.EscapeDataString(filtro.Correo)}");
-            if (!string.IsNullOrWhiteSpace(filtro.Rol)) parametros.Add($"rol={Uri.EscapeDataString(filtro.Rol)}");
+            if (filtro.IdRol.HasValue) parametros.Add($"idRol={filtro.IdRol.Value}");
             if (filtro.Activo.HasValue) parametros.Add($"activo={filtro.Activo.Value.ToString().ToLower()}");
             var url = "api/usuarios" + (parametros.Count > 0 ? "?" + string.Join("&", parametros) : "");
             var req = new HttpRequestMessage(HttpMethod.Get, url); AddTokenHeader(req);

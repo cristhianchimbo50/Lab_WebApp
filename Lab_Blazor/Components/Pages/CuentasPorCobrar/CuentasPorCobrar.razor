@@ -22,11 +22,12 @@
         @{
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("IdRol")?.Value
             ?? user.FindFirst("role")?.Value
             ?? user.FindFirst("roles")?.Value
-            ?? "";
+            ?? string.Empty;
 
-            bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeVer = rol is "1" or "2";
         }
 
         @if (!puedeVer)

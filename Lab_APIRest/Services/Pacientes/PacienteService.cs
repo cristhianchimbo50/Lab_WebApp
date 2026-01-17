@@ -146,12 +146,19 @@ namespace Lab_APIRest.Services.Pacientes
             }
             else
             {
+                var rolPacienteId = await _context.Rol
+                    .Where(r => r.Nombre == "paciente")
+                    .Select(r => r.IdRol)
+                    .FirstOrDefaultAsync();
+                if (rolPacienteId == 0)
+                    rolPacienteId = 4;
+
                 var usuario = new Usuario
                 {
                     CorreoUsuario = dto.CorreoElectronicoPaciente,
                     ClaveUsuario = null,
                     Nombre = dto.NombrePaciente,
-                    Rol = "paciente",
+                    IdRol = rolPacienteId,
                     Activo = false,
                     FechaCreacion = DateTime.UtcNow
                 };

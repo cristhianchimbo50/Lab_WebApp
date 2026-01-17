@@ -24,8 +24,8 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeIngresar = rol is "administrador" or "laboratorista";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+            bool puedeIngresar = rol is "1" or "3";
         }
 
         @if (!puedeIngresar)
@@ -208,27 +208,27 @@
                 var user = authState.User;
                 if (user.Identity?.IsAuthenticated ?? false)
                 {
-                    var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-                    if (rol is "administrador" or "laboratorista")
-                    {
-                        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-                        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-                        if (query.TryGetValue("idResultado", out var idResultadoStr) && int.TryParse(idResultadoStr, out var idResultado))
-                        {
+                    var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+                    if (rol is "1" or "3")
+                     {
+                         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+                         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+                         if (query.TryGetValue("idResultado", out var idResultadoStr) && int.TryParse(idResultadoStr, out var idResultado))
+                         {
                             _modoEdicion = true;
                             _idResultadoEdicion = idResultado;
                             await InicializarDatosEdicionAsync();
-                        }
-                        else
-                        {
+                         }
+                         else
+                         {
                             if (query.TryGetValue("idOrden", out var idOrdenStr))
-                                idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
+                                 idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
                             if (query.TryGetValue("idsExamenes", out var ids))
-                                idsExamenes = ids.Select(int.Parse).ToList();
+                                 idsExamenes = ids.Select(int.Parse).ToList();
                             await InicializarDatosAsync();
-                        }
-                    }
-                }
+                         }
+                     }
+                 }
             }
             catch (HttpRequestException)
             {

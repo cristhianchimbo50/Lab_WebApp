@@ -22,24 +22,28 @@ namespace Lab_APIRest.Infrastructure.Services
             int idUsuario,
             string correoUsuario,
             string nombre,
-            string rol,
+            int idRol,
+            string nombreRol,
             bool esContraseniaTemporal,
             int? idPaciente = null)
         {
-            var claimsList = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, idUsuario.ToString()),
-                new Claim(JwtRegisteredClaimNames.Sub, idUsuario.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, correoUsuario),
-                new Claim(ClaimTypes.Name, nombre ?? ""),
-                new Claim(ClaimTypes.Role, rol ?? ""),
-                new Claim("temp_pwd", esContraseniaTemporal ? "1" : "0"),
+            var rolNormalizado = (nombreRol ?? string.Empty).ToLowerInvariant();
+             var claimsList = new List<Claim>
+             {
+                 new Claim(ClaimTypes.NameIdentifier, idUsuario.ToString()),
+                 new Claim(JwtRegisteredClaimNames.Sub, idUsuario.ToString()),
+                 new Claim(JwtRegisteredClaimNames.Email, correoUsuario),
+                 new Claim(ClaimTypes.Name, nombre ?? ""),
+                 new Claim(ClaimTypes.Role, idRol.ToString()),
+                 new Claim("NombreRol", rolNormalizado),
+                 new Claim("IdRol", idRol.ToString()),
+                 new Claim("temp_pwd", esContraseniaTemporal ? "1" : "0"),
 
-                new Claim("server_key", _serverSessionKey.CurrentKey)
-            };
+                 new Claim("server_key", _serverSessionKey.CurrentKey)
+             };
 
-            if (rol == "paciente" && idPaciente.HasValue)
-                claimsList.Add(new Claim("IdPaciente", idPaciente.Value.ToString()));
+            if (rolNormalizado == "paciente" && idPaciente.HasValue)
+                 claimsList.Add(new Claim("IdPaciente", idPaciente.Value.ToString()));
 
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));

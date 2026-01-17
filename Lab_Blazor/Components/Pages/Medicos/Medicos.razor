@@ -15,7 +15,7 @@
 
 <AuthorizeView>
     <Authorized Context="authState">
-        @{ var user = authState.User; var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? ""; bool puedeVer = rol is "administrador" or "recepcionista"; bool puedeModificar = rol is "administrador"; }
+        @{ var user = authState.User; var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? ""; bool puedeVer = rol is "1" or "2"; bool puedeModificar = rol == "1"; }
 
         @if (!puedeVer)
         {<div class="d-flex justify-content-center align-items-center vh-100"><div class="card shadow-lg text-center border-0" style="max-width: 450px;"><div class="card-body p-4"><i class="bi bi-shield-lock text-primary fs-1 mb-3"></i><h5 class="fw-bold mb-2">Acceso no autorizado</h5><p class="text-muted mb-3">No tienes permisos suficientes para acceder a este módulo.</p><button class="btn btn-outline-primary" @onclick="VolverAtrasAsync"><i class="bi bi-arrow-left"></i> Regresar</button></div></div></div> }
@@ -265,7 +265,7 @@
     private async Task EditarMedicoAsync(MedicoDto medico)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        var authState = await AuthProvider.GetAuthenticationStateAsync(); var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? ""; if (rol != "administrador") { await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger"); return; }
+        var authState = await AuthProvider.GetAuthenticationStateAsync(); var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? ""; if (rol != "1") { await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger"); return; }
         _medicoActual = medico; _modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 

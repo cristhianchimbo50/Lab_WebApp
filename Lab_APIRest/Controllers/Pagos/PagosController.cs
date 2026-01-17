@@ -8,7 +8,7 @@ namespace Lab_APIRest.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,recepcionista")]
+    [Authorize(Roles = "1,2")]
     public class PagosController : ControllerBase
     {
         private readonly IPagoService _pagoService;

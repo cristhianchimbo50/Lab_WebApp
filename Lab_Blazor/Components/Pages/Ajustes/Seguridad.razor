@@ -14,8 +14,8 @@
     <Authorized Context="estadoAutenticacion">
         @{
             var usuario = estadoAutenticacion.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeVer = rol is "1" or "2" or "3" or "4";
         }
 
         @if (!puedeVer)

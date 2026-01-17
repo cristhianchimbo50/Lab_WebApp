@@ -23,12 +23,12 @@
     <Authorized Context="EstadoAutenticacion">
         @{
             var usuario = EstadoAutenticacion.User;
-            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
             var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
-            bool esPaciente = rol == "paciente";
-            bool esAdmin = rol == "administrador";
-            bool esLaboratorista = rol == "laboratorista";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "paciente" or "laboratorista";
+            bool esPaciente = rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase);
+            bool esAdmin = rol == "1";
+            bool esLaboratorista = rol == "3";
+            bool puedeVer = rol is "1" or "2" or "3" or "4";
             bool puedeEditarResultados = esAdmin || esLaboratorista;
         }
 
@@ -416,7 +416,7 @@
                                                                             <i class="bi bi-eye"></i>
                                                                         </button>
                                                                     }
-                                                                    @if (puedeEditarResultados && string.Equals(examen.EstadoResultado, "CORRECCION", StringComparison.OrdinalIgnoreCase))
+                                                                    @if (puedeEditarResultados && string.Equals(examen.EstadoResultado, "CORRECTION", StringComparison.OrdinalIgnoreCase))
                                                                     {
                                                                         <button class="btn btn-warning btn-sm" title="Editar resultado"
                                                                                 @onclick="() => EditarResultadoAsync(examen.IdResultado!.Value)">
@@ -457,10 +457,13 @@
                                                         disabled="@(_detalleActual.Examenes.All(x => x.IdResultado.HasValue) || !_detalleActual.Examenes.Any(x => !x.IdResultado.HasValue))">
                                                     <i class="fas fa-flask me-1"></i> Ingresar Resultados
                                                 </button>
-                                                <button class="btn btn-danger" @onclick="AnularOrdenAsync">
-                                                    <i class="fas fa-ban me-1"></i> Anular Orden
-                                                </button>
-                                            }
+                                                @if (esAdmin)
+                                                {
+                                                    <button class="btn btn-danger" @onclick="AnularOrdenAsync">
+                                                         <i class="fas fa-ban me-1"></i> Anular Orden
+                                                    </button>
+                                                }
+                                             }
                                         </div>
                                     }
                                 </div>
@@ -650,10 +653,10 @@
 
         var estado = await AuthProvider.GetAuthenticationStateAsync();
         var usuario = estado.User;
-        var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
         var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
 
-        if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
+        if (rol == "4" && int.TryParse(idPacienteClaim, out var idPaciente))
         {
             var result = await OrdenesApi.ObtenerDetalleOrdenPorPacienteAsync(idPaciente, idOrden);
             _detalleActual = result.Detalle;
@@ -734,13 +737,13 @@
 
         var estado = await AuthProvider.GetAuthenticationStateAsync();
         var usuario = estado.User;
-        var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
-        if (rol == "paciente" && !_detalleActual.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase))
+        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
+        if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && !_detalleActual.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase))
         {
             await JS.InvokeVoidAsync("alert", "No puede imprimir los resultados hasta completar el pago de la orden.");
             return;
         }
-        if (rol == "paciente" && !_detalleActual.ResultadosHabilitados)
+        if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && !_detalleActual.ResultadosHabilitados)
         {
             await JS.InvokeVoidAsync("alert", "Los resultados aún no están habilitados. Inténtelo más tarde.");
             return;
@@ -853,10 +856,10 @@
             _buscando = true;
             var estado = await AuthProvider.GetAuthenticationStateAsync();
             var usuario = estado.User;
-            var rol = (usuario.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
             var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
 
-            if (rol == "paciente" && int.TryParse(idPacienteClaim, out var idPaciente))
+            if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && int.TryParse(idPacienteClaim, out var idPaciente))
             {
                 _filtro.IdPaciente = idPaciente;
                 _filtro.IncluirAnuladas = false;
@@ -872,8 +875,9 @@
 
             _resultado = await OrdenesApi.ListarOrdenesPaginadosAsync(_filtro);
         }
-        catch
+        catch (Exception ex)
         {
+            await JS.InvokeVoidAsync("console.error", $"Error al buscar las órdenes: {ex.Message}");
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar las órdenes.", "danger");
         }
         finally
@@ -887,8 +891,8 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         var auth = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
-        bool esPaciente = rol == "paciente";
+        var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
+        bool esPaciente = rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase);
 
         _filtro = new OrdenFiltroDto
         {
@@ -953,8 +957,8 @@
         try
         {
             var auth = await AuthProvider.GetAuthenticationStateAsync();
-            var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
-            _resultadoDetalleActual = rol == "paciente"
+            var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
+            _resultadoDetalleActual = (rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase))
                 ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado)
                 : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
             _observacionRevision = _resultadoDetalleActual?.ObservacionRevision ?? string.Empty;
@@ -979,8 +983,8 @@
         if (_resultadoDetalleActual == null) return;
 
         var auth = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = (auth.User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty).ToLowerInvariant();
-        if (rol != "administrador")
+        var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
+        if (rol != "1")
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Solo administradores pueden revisar resultados.", "warning");
             return;

@@ -9,7 +9,7 @@ namespace Lab_APIRest.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,recepcionista")]
+    [Authorize(Roles = "1,2")]
     public class PacientesController : ControllerBase
     {
         private readonly IPacienteService _pacienteService;
@@ -88,7 +88,7 @@ namespace Lab_APIRest.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("anular/{idPaciente:int}")]
         public async Task<IActionResult> AnularPaciente(int idPaciente)
         {

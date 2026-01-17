@@ -11,7 +11,7 @@ namespace Lab_APIRest.Controllers.Reactivos
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,laboratorista")]
+    [Authorize(Roles = "1,3")]
     public class MovimientosController : ControllerBase
     {
         private readonly IMovimientoService _movimientoService;

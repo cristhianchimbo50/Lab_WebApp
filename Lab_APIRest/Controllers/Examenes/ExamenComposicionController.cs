@@ -7,7 +7,7 @@ namespace Lab_APIRest.Controllers.Examenes
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,laboratorista")]
+    [Authorize(Roles = "1,3")]
     public class ExamenComposicionController : ControllerBase
     {
         private readonly IExamenComposicionService _composicionService;
@@ -33,7 +33,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(lista);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPost]
         public async Task<IActionResult> GuardarComposicion([FromBody] ExamenComposicionDto composicionDto)
         {
@@ -50,7 +50,7 @@ namespace Lab_APIRest.Controllers.Examenes
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpDelete]
         public async Task<IActionResult> EliminarComposicion([FromQuery] int idExamenPadre, [FromQuery] int idExamenHijo)
         {

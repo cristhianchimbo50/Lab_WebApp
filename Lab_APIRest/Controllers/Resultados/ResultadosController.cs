@@ -21,7 +21,7 @@ namespace Lab_APIRest.Controllers.Resultados
             _logger = logger;
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [Authorize(Roles = "1,2,3")]
         [HttpGet]
         public async Task<ActionResult<List<ResultadoListadoDto>>> ListarResultados([FromQuery] string? numeroResultado, [FromQuery] string? numeroOrden, [FromQuery] string? cedula, [FromQuery] string? nombre, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] bool? anulado)
         {
@@ -47,14 +47,14 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
+        [Authorize(Roles = "1,2,3,4")]
         [HttpPost("buscar")]
         public async Task<ActionResult<ResultadoPaginadoDto<ResultadoListadoDto>>> ListarResultadosPaginados([FromBody] ResultadoFiltroDto filtro)
         {
             try
             {
-                var rol = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-                if (rol == "paciente")
+                var rol = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("IdRol")?.Value ?? string.Empty;
+                if (rol == "4")
                 {
                     var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
                     if (string.IsNullOrEmpty(idPacienteClaim)) return Forbid();
@@ -70,7 +70,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [Authorize(Roles = "1,2,3")]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ResultadoDetalleDto>> ObtenerDetalleResultado(int id)
         {
@@ -87,16 +87,16 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
+        [Authorize(Roles = "1,2,3,4")]
         [HttpGet("pdf-multiple")]
         public async Task<IActionResult> GenerarResultadosPdf([FromQuery] List<int> ids)
         {
             if (ids == null || !ids.Any()) return BadRequest("Debe proporcionar al menos un ID de resultado.");
             try
             {
-                var rol = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                var rol = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
                 var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
-                if (rol == "paciente")
+                if (rol == "4")
                 {
                     if (string.IsNullOrEmpty(idPacienteClaim)) return Forbid();
                     var idPaciente = int.Parse(idPacienteClaim);
@@ -115,7 +115,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador,laboratorista")]
+        [Authorize(Roles = "1,3")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularResultado(int id)
         {
@@ -132,7 +132,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador,laboratorista")]
+        [Authorize(Roles = "1,3")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> ActualizarResultado(int id, [FromBody] ResultadoActualizarDto dto)
         {
@@ -150,7 +150,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "paciente")]
+        [Authorize(Roles = "4")]
         [HttpGet("mis-resultados")]
         public async Task<ActionResult<List<ResultadoListadoDto>>> ListarResultadosPaciente()
         {
@@ -170,7 +170,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "paciente")]
+        [Authorize(Roles = "4")]
         [HttpGet("mi-detalle/{id:int}")]
         public async Task<ActionResult<ResultadoDetalleDto>> ObtenerDetalleResultadoPaciente(int id)
         {
@@ -190,7 +190,7 @@ namespace Lab_APIRest.Controllers.Resultados
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("{id:int}/revision")]
         public async Task<IActionResult> RevisarResultado(int id, [FromBody] ResultadoRevisionDto revision)
         {

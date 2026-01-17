@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Lab_Contracts.Common;
 
-namespace Lab_APIRest.Controllers
+namespace Lab_APIRest.Controllers.Examenes
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,laboratorista,recepcionista")]
+    [Authorize(Roles = "1,3,2")]
     public class ExamenesController : ControllerBase
     {
         private readonly IExamenService _examenService;
@@ -48,7 +48,7 @@ namespace Lab_APIRest.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         public async Task<ActionResult<ExamenDto>> Crear([FromBody] ExamenDto examen)
         {
             var creado = await _examenService.GuardarExamenAsync(examen);
@@ -56,7 +56,7 @@ namespace Lab_APIRest.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         public async Task<IActionResult> Actualizar(int id, [FromBody] ExamenDto examen)
         {
             var ok = await _examenService.GuardarExamenAsync(id, examen);
@@ -65,7 +65,7 @@ namespace Lab_APIRest.Controllers
         }
 
         [HttpPut("anular/{id:int}")]
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         public async Task<IActionResult> Anular(int id)
         {
             var ok = await _examenService.AnularExamenAsync(id);
@@ -81,7 +81,7 @@ namespace Lab_APIRest.Controllers
         }
 
         [HttpPost("{idPadre:int}/hijos/{idHijo:int}")]
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         public async Task<IActionResult> AsignarHijo(int idPadre, int idHijo)
         {
             await _examenService.AsignarExamenHijoAsync(idPadre, idHijo);
@@ -89,7 +89,7 @@ namespace Lab_APIRest.Controllers
         }
 
         [HttpDelete("{idPadre:int}/hijos/{idHijo:int}")]
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         public async Task<IActionResult> EliminarHijo(int idPadre, int idHijo)
         {
             var ok = await _examenService.EliminarExamenHijoAsync(idPadre, idHijo);

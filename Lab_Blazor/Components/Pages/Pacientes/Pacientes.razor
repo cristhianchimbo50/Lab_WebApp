@@ -19,9 +19,9 @@
     <Authorized Context="authState">
         @{ 
             var user = authState.User; 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? ""; 
-            bool puedeVer = rol is "administrador" or "recepcionista"; 
-            bool puedeModificar = rol is "administrador"; 
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? ""; 
+            bool puedeVer = rol is "1" or "2"; 
+            bool puedeModificar = rol == "1"; 
         }
 
         @if (!puedeVer)
@@ -322,8 +322,8 @@
     private async Task EditarPacienteAsync(PacienteDto paciente)
     {
         var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        if (rol != "administrador")
+        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? "";
+        if (rol != "1")
         {
             await JS.InvokeVoidAsync("alert", "No tienes permisos para editar pacientes.");
             return;

@@ -6,6 +6,7 @@ using Lab_Contracts.Dashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using System.Security.Claims;
 
 namespace Lab_APIRest.Controllers
 {
@@ -22,7 +23,68 @@ namespace Lab_APIRest.Controllers
             _resultadoService = resultadoService;
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        private string? ObtenerRol()
+        {
+            string? GetClaim(string type) => User.FindFirst(type)?.Value;
+            var role = GetClaim(ClaimTypes.Role)
+                ?? GetClaim("IdRol")
+                ?? GetClaim("role")
+                ?? GetClaim("roles");
+
+            if (string.IsNullOrEmpty(role))
+            {
+                role = User.Claims.FirstOrDefault(c => c.Type.Equals("idrol", StringComparison.OrdinalIgnoreCase))?.Value
+                    ?? User.Claims.FirstOrDefault(c => c.Type.Equals("role", StringComparison.OrdinalIgnoreCase))?.Value
+                    ?? User.Claims.FirstOrDefault(c => c.Type.Equals("roles", StringComparison.OrdinalIgnoreCase))?.Value;
+            }
+
+            return role;
+        }
+
+        private static string NormalizarRol(string? rol)
+        {
+            if (string.IsNullOrWhiteSpace(rol)) return string.Empty;
+            var upper = rol.Trim().ToUpperInvariant();
+            return upper switch
+            {
+                "ADMIN" or "ADMINISTRADOR" => "1",
+                "RECEPCIONISTA" => "2",
+                "LABORATORISTA" => "3",
+                "PACIENTE" => "4",
+                _ => upper
+            };
+        }
+
+        private bool TieneRol(params string[] roles)
+        {
+            var rol = NormalizarRol(ObtenerRol());
+            if (string.IsNullOrEmpty(rol)) return false;
+            return roles.Select(NormalizarRol).Any(r => r == rol);
+        }
+
+        private bool EsPaciente() => TieneRol("4");
+
+        private int? ObtenerIdPacienteClaim()
+        {
+            var claim = User.FindFirst("IdPaciente")?.Value
+                ?? User.Claims.FirstOrDefault(c => c.Type.Equals("idpaciente", StringComparison.OrdinalIgnoreCase))?.Value;
+            return int.TryParse(claim, out var id) ? id : null;
+        }
+
+        private ActionResult? AsegurarPacienteActual(out int idPaciente)
+        {
+            idPaciente = ObtenerIdPacienteClaim() ?? -1;
+            return idPaciente > 0 ? null : Forbid();
+        }
+
+        private ActionResult? AsegurarPacienteActual(int idPacienteRuta, out int idPaciente)
+        {
+            var validacion = AsegurarPacienteActual(out idPaciente);
+            if (validacion != null) return validacion;
+            return idPacienteRuta == idPaciente ? null : Forbid();
+        }
+
+        [Authorize(Roles = "1,2,3")]
         [HttpGet]
         public async Task<IActionResult> ListarOrdenes()
         {
@@ -30,15 +92,14 @@ namespace Lab_APIRest.Controllers
             return Ok(lista);
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
+        [Authorize(Roles = "1,2,3,4")]
         [HttpPost("buscar")]
         public async Task<IActionResult> ListarOrdenesPaginados([FromBody] OrdenFiltroDto filtro)
         {
-            if (User.IsInRole("paciente"))
+            if (EsPaciente())
             {
-                var idPacienteClaim = User.FindFirst("IdPaciente")?.Value;
-                if (!int.TryParse(idPacienteClaim, out var idPaciente))
-                    return Forbid();
+                var validacion = AsegurarPacienteActual(out var idPaciente);
+                if (validacion != null) return validacion;
 
                 filtro.IdPaciente = idPaciente;
                 filtro.IncluirAnuladas = false;
@@ -49,16 +110,27 @@ namespace Lab_APIRest.Controllers
             return Ok(resultado);
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [Authorize(Roles = "1,2,3,4")]
         [HttpGet("detalle/{idOrden}")]
         public async Task<IActionResult> ObtenerDetalleOrden(int idOrden)
         {
+            if (EsPaciente())
+            {
+                var validacion = AsegurarPacienteActual(out var idPaciente);
+                if (validacion != null) return validacion;
+
+                var detallePaciente = await _ordenService.ObtenerDetalleOrdenAsync(idOrden);
+                if (detallePaciente == null) return NotFound();
+                if (detallePaciente.IdPaciente != idPaciente) return Forbid();
+                return Ok(detallePaciente);
+            }
+
             var detalle = await _ordenService.ObtenerDetalleOrdenAsync(idOrden);
             if (detalle == null) return NotFound();
             return Ok(detalle);
         }
 
-        [Authorize(Roles = "administrador,recepcionista")]
+        [Authorize(Roles = "1,2")]
         [HttpPost]
         public async Task<IActionResult> GuardarOrden([FromBody] OrdenCompletaDto datosOrden)
         {
@@ -67,7 +139,7 @@ namespace Lab_APIRest.Controllers
             return Ok(respuesta);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("anular/{idOrden}")]
         public async Task<IActionResult> AnularOrden(int idOrden)
         {
@@ -76,7 +148,7 @@ namespace Lab_APIRest.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista,paciente")]
+        [Authorize(Roles = "1,2,3,4")]
         [HttpGet("{idOrden}/ticket-pdf")]
         public async Task<IActionResult> GenerarOrdenTicketPdf(int idOrden)
         {
@@ -85,7 +157,7 @@ namespace Lab_APIRest.Controllers
             return File(pdf, "application/pdf", $"orden_{idOrden}_ticket.pdf");
         }
 
-        [Authorize(Roles = "administrador,laboratorista")]
+        [Authorize(Roles = "1,3")]
         [HttpPost("ingresar-resultado")]
         public async Task<IActionResult> GuardarResultadosOrden([FromBody] ResultadoGuardarDto datosResultado)
         {
@@ -106,7 +178,7 @@ namespace Lab_APIRest.Controllers
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("anular-completo/{idOrden}")]
         public async Task<IActionResult> AnularOrdenCompleta(int idOrden)
         {
@@ -115,29 +187,29 @@ namespace Lab_APIRest.Controllers
             return Ok(new { Mensaje = "Orden anulada correctamente junto con sus detalles, pagos y resultados." });
         }
 
-        [Authorize(Roles = "paciente")]
+        [Authorize(Roles = "4")]
         [HttpGet("paciente/{idPaciente}")]
         public async Task<IActionResult> ListarOrdenesPorPaciente(int idPaciente)
         {
-            var userId = User.FindFirst("IdPaciente")?.Value;
-            if (userId == null || userId != idPaciente.ToString()) return Forbid();
+            var validacion = AsegurarPacienteActual(idPaciente, out _);
+            if (validacion != null) return validacion;
             var lista = await _ordenService.ListarOrdenesPorPacienteAsync(idPaciente);
             return Ok(lista);
         }
 
-        [Authorize(Roles = "paciente")]
+        [Authorize(Roles = "4")]
         [HttpGet("paciente/{idPaciente}/detalle/{idOrden}")]
         public async Task<IActionResult> ObtenerDetalleOrdenPaciente(int idPaciente, int idOrden)
         {
-            var userId = User.FindFirst("IdPaciente")?.Value;
-            if (userId == null || userId != idPaciente.ToString()) return Forbid();
+            var validacion = AsegurarPacienteActual(idPaciente, out _);
+            if (validacion != null) return validacion;
             var detalle = await _ordenService.ObtenerDetalleOrdenAsync(idOrden);
             if (detalle == null) return NotFound();
             var tieneSaldo = detalle.SaldoPendiente > 0;
             return Ok(new { DetalleOrden = detalle, TieneSaldoPendiente = tieneSaldo });
         }
 
-        [Authorize(Roles = "administrador,recepcionista,laboratorista")]
+        [Authorize(Roles = "1,2,3")]
         [HttpPost("{idOrden}/verificar-notificacion")]
         public async Task<IActionResult> VerificarYNotificarResultadosCompletos(int idOrden)
         {
@@ -145,17 +217,17 @@ namespace Lab_APIRest.Controllers
             return Ok(new { Mensaje = "Verificación de resultados completada." });
         }
 
-        [Authorize(Roles = "paciente")]
+        [Authorize(Roles = "4")]
         [HttpGet("paciente/{idPaciente}/resumen")]
         public async Task<IActionResult> ObtenerResumenPaciente(int idPaciente)
         {
-            var userId = User.FindFirst("IdPaciente")?.Value;
-            if (userId == null || userId != idPaciente.ToString()) return Forbid();
+            var validacion = AsegurarPacienteActual(idPaciente, out _);
+            if (validacion != null) return validacion;
             var resumen = await _ordenService.ObtenerDashboardPacienteAsync(idPaciente);
             return Ok(resumen);
         }
 
-        [Authorize(Roles = "laboratorista,administrador")]
+        [Authorize(Roles = "1,3")]
         [HttpGet("laboratorista/resumen")]
         public async Task<IActionResult> ObtenerResumenLaboratorista()
         {
@@ -163,7 +235,7 @@ namespace Lab_APIRest.Controllers
             return Ok(data);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpGet("administrador/resumen")]
         public async Task<IActionResult> ObtenerResumenAdministrador()
         {
@@ -171,7 +243,7 @@ namespace Lab_APIRest.Controllers
             return Ok(data);
         }
 
-        [Authorize(Roles = "recepcionista,administrador")]
+        [Authorize(Roles = "1,2")]
         [HttpGet("recepcionista/resumen")]
         public async Task<IActionResult> ObtenerResumenRecepcionista()
         {

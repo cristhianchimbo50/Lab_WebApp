@@ -7,7 +7,7 @@ namespace Lab_APIRest.Controllers.Examenes
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,laboratorista")]
+    [Authorize(Roles = "1,3")]
     public class ExamenReactivoAsociacionesController : ControllerBase
     {
         private readonly IExamenReactivoAsociacionService _reactivoAsociacionService;
@@ -48,7 +48,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(lista);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPost]
         public async Task<ActionResult<AsociacionReactivoDto>> GuardarAsociacion([FromBody] AsociacionReactivoDto asociacionDto)
         {
@@ -64,7 +64,7 @@ namespace Lab_APIRest.Controllers.Examenes
             }
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("{idExamenReactivo:int}")]
         public async Task<IActionResult> GuardarAsociacion(int idExamenReactivo, [FromBody] AsociacionReactivoDto asociacionDto)
         {
@@ -73,7 +73,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return NoContent();
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpDelete("{idExamenReactivo:int}")]
         public async Task<IActionResult> AnularAsociacion(int idExamenReactivo)
         {
@@ -82,7 +82,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return NoContent();
         }
 
-        [Authorize(Roles = "administrador,laboratorista")]
+        [Authorize(Roles = "1,3")]
         [HttpGet("asociados/{idExamen:int}")]
         public async Task<ActionResult<List<AsociacionReactivoDto>>> ListarAsociacionesPorExamenId(int idExamen)
         {
@@ -90,7 +90,7 @@ namespace Lab_APIRest.Controllers.Examenes
             return Ok(lista);
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPost("asociados/{idExamen:int}")]
         public async Task<IActionResult> GuardarAsociacionesPorExamen(int idExamen, [FromBody] List<AsociacionReactivoDto> asociaciones)
         {

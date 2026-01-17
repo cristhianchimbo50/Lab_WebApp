@@ -8,6 +8,7 @@ namespace Lab_APIRest.Controllers.Ajustes
 {
     [ApiController]
     [Route("api/ajustes/[controller]")]
+    [Authorize(Roles = "1,2,3,4")]
     public class PerfilController : ControllerBase
     {
         private readonly IPerfilService _perfilService;

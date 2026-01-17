@@ -21,11 +21,12 @@
         @{
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("IdRol")?.Value
             ?? user.FindFirst("role")?.Value
             ?? user.FindFirst("roles")?.Value
-            ?? "";
+            ?? string.Empty;
 
-            bool puedeVer = rol is "administrador" or "recepcionista";
+            bool puedeVer = rol is "1" or "2";
         }
 
         @if (!puedeVer)
@@ -333,8 +334,8 @@
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeVer = rol is "1" or "2";
 
             if (puedeVer)
                 await CargarOrdenesAsync();
@@ -401,67 +402,67 @@
     }
 
     private void CalcularSaldoSeleccionado() => _totalSaldoSeleccionado = _ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
-
-    private async Task MostrarModalCobroAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModalCobro = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalCobroAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModalCobro = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task RegistrarCobroAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        decimal saldoTotal = _totalSaldoSeleccionado;
-        decimal cobroTotal = TotalCobro;
-        decimal cambio = 0;
-
-        if (cobroTotal > saldoTotal)
-        {
-            cambio = cobroTotal - saldoTotal;
-            cobroTotal = saldoTotal;
-        }
-
-        var pagoDto = new PagoDto
-        {
-            DineroEfectivo = _dineroEfectivo,
-            Transferencia = _transferencia,
-            Observacion = _observacion
-        };
-
-        bool errores = false;
-
-        foreach (var orden in _ordenesSeleccionadas)
-        {
-            if (!await SesionService.VerificarOSalirAsync()) return;
-
-            pagoDto.IdOrden = orden.IdOrden;
-            var response = await PagosApi.GuardarCobroCuentaPorCobrarAsync(pagoDto);
-            if (response == null)
-                errores = true;
-            if (cobroTotal <= 0)
-                break;
-        }
-
-        if (errores)
-            await JS.InvokeVoidAsync("alert", "Algunos pagos no se registraron correctamente.");
-        else if (cambio > 0)
-            await JS.InvokeVoidAsync("alert", $"Pago registrado correctamente. Cambio: {cambio.ToString("C")}");
-        else
-            await JS.InvokeVoidAsync("alert", "Pago registrado exitosamente.");
-
-        Navigation.NavigateTo(Navigation.Uri, true);
-    }
-
-    private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
-}
+ 
+     private async Task MostrarModalCobroAsync()
+     {
+         if (!await SesionService.VerificarOSalirAsync()) return;
+ 
+         _mostrarModalCobro = true;
+         await JS.InvokeVoidAsync("marcarModalAbierto");
+     }
+ 
+     private async Task CerrarModalCobroAsync()
+     {
+         if (!await SesionService.VerificarOSalirAsync()) return;
+ 
+         _mostrarModalCobro = false;
+         await JS.InvokeVoidAsync("marcarModalCerrado");
+     }
+ 
+     private async Task RegistrarCobroAsync()
+     {
+         if (!await SesionService.VerificarOSalirAsync()) return;
+ 
+         decimal saldoTotal = _totalSaldoSeleccionado;
+         decimal cobroTotal = TotalCobro;
+         decimal cambio = 0;
+ 
+         if (cobroTotal > saldoTotal)
+         {
+             cambio = cobroTotal - saldoTotal;
+             cobroTotal = saldoTotal;
+         }
+ 
+         var pagoDto = new PagoDto
+         {
+             DineroEfectivo = _dineroEfectivo,
+             Transferencia = _transferencia,
+             Observacion = _observacion
+         };
+ 
+         bool errores = false;
+ 
+         foreach (var orden in _ordenesSeleccionadas)
+         {
+             if (!await SesionService.VerificarOSalirAsync()) return;
+ 
+             pagoDto.IdOrden = orden.IdOrden;
+             var response = await PagosApi.GuardarCobroCuentaPorCobrarAsync(pagoDto);
+             if (response == null)
+                 errores = true;
+             if (cobroTotal <= 0)
+                 break;
+         }
+ 
+         if (errores)
+             await JS.InvokeVoidAsync("alert", "Algunos pagos no se registraron correctamente.");
+         else if (cambio > 0)
+             await JS.InvokeVoidAsync("alert", $"Pago registrado correctamente. Cambio: {cambio.ToString("C")}");
+         else
+             await JS.InvokeVoidAsync("alert", "Pago registrado exitosamente.");
+ 
+         Navigation.NavigateTo(Navigation.Uri, true);
+     }
+ 
+     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+ }

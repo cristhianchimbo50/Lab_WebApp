@@ -405,7 +405,7 @@ namespace Lab_APIRest.Services.Ordenes
             if (resumen.ResultadosPorRegistrar > 0)
                 alertas.Add($"{resumen.ResultadosPorRegistrar} orden(es) con resultados pendientes por registrar");
             if (resumen.OrdenesPendientes > 0 && !alertas.Any())
-                alertas.Add($"{resumen.OrdenesPendientes} orden(es) in curso");
+                alertas.Add($"{resumen.OrdenesPendientes} orden(es) en curso");
 
             return new LaboratoristaHomeDto
             {
@@ -453,7 +453,7 @@ namespace Lab_APIRest.Services.Ordenes
                 ResultadosPendientesAprobacion = resultadosNorm.Count(x => x.EstadoNorm == "REVISION"),
                 ResultadosCorreccion = resultadosNorm.Count(x => x.EstadoNorm == "CORRECCION"),
                 ReactivosCriticos = await _context.Reactivo.CountAsync(r => r.Activo && (r.CantidadDisponible ?? 0m) < 3m),
-                UsuariosTotales = await _context.Usuario.CountAsync(u => u.Activo == true && u.Rol != "paciente")
+                UsuariosTotales = await _context.Usuario.CountAsync(u => u.Activo == true && u.IdRolNavigation.Nombre != "paciente")
             };
 
             var pendientes = resultadosNorm

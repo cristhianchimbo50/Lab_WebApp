@@ -17,8 +17,8 @@
     <Authorized Context="estadoAutenticacion">
         @{
             var usuario = estadoAutenticacion.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "recepcionista" or "laboratorista" or "paciente";
+            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeVer = rol is "1" or "2" or "3" or "4";
         }
 
         @if (!puedeVer)
@@ -69,7 +69,7 @@
                                     <i class="bi bi-person-circle display-3 mb-3"></i>
                                     <h5 class="fw-bold">@_perfilUsuario.Nombre</h5>
                                     <p class="mb-1"><i class="bi bi-envelope me-1"></i>@_perfilUsuario.Correo</p>
-                                    <span class="badge bg-light text-primary fw-semibold">@_perfilUsuario.Rol</span>
+                                    <span class="badge bg-light text-primary fw-semibold">@_perfilUsuario.NombreRol</span>
                                 </div>
                             </div>
                             <div class="col-lg-8 bg-white p-4">
@@ -81,7 +81,7 @@
                                             @(_perfilUsuario.Activo ? "ACTIVO" : "INACTIVO")
                                         </div>
                                     </div>
-                                    @if (_perfilUsuario.Rol.Equals("Paciente", StringComparison.OrdinalIgnoreCase))
+                                    @if (_perfilUsuario.IdRol == 4)
                                     {
                                         <div class="col-md-6">
                                             <label class="form-label text-secondary fw-semibold small text-uppercase">Cédula</label>

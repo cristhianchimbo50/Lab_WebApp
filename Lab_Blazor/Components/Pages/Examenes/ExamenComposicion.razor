@@ -20,14 +20,10 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
-            ?? user.FindFirst("role")?.Value
-            ?? user.FindFirst("roles")?.Value
-            ?? "";
-
-            bool esPaciente = rol == "paciente";
-            bool puedeVer = rol == "administrador";
-            bool puedeAnular = rol == "administrador";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+            bool esPaciente = rol == "4";
+            bool puedeVer = rol == "1";
+            bool puedeAnular = rol == "1";
         }
 
         @if (!puedeVer)
@@ -172,8 +168,8 @@
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol == "administrador";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+            bool puedeVer = rol == "1";
 
             if (puedeVer && IdExamenPadre.HasValue)
             {

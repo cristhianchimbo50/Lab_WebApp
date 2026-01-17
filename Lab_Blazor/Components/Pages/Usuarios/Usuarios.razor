@@ -13,8 +13,8 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
-            bool puedeGestionar = rol == "administrador";
+            var rol = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+            bool puedeGestionar = rol == "1";
         }
 
         @if (!puedeGestionar)
@@ -59,9 +59,10 @@
                         {
                             <select class="form-select" @bind="_valorFiltro">
                                 <option value="">-- Todos --</option>
-                                <option value="administrador">Administrador</option>
-                                <option value="recepcionista">Recepcionista</option>
-                                <option value="laboratorista">Laboratorista</option>
+                                <option value="1">Administrador</option>
+                                <option value="2">Recepcionista</option>
+                                <option value="3">Laboratorista</option>
+                                <option value="4">Paciente</option>
                             </select>
                         }
                         else if (_campoFiltro == "activo")
@@ -131,7 +132,7 @@
                                 <tr>
                                     <td>@usuario.NombreUsuario</td>
                                     <td>@usuario.CorreoUsuario</td>
-                                    <td class="text-capitalize">@usuario.Rol</td>
+                                    <td class="text-capitalize">@usuario.NombreRol</td>
                                     <td>
                                         <span class="badge bg-@(usuario.Activo ? "success" : "secondary")">
                                             @(usuario.Activo ? "Activo" : "Inactivo")
@@ -178,7 +179,7 @@
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.NombreUsuario</li>
                                     <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.CorreoUsuario</li>
-                                    <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.Rol</span></li>
+                                    <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.NombreRol</span></li>
                                     <li class="list-group-item"><strong>Activo:</strong> @_detalleUsuario.Activo ? "Sí" : "No"</li>
                                     <li class="list-group-item"><strong>Fecha creación:</strong> @_detalleUsuario.FechaCreacion.ToLocalTime()</li>
                                     <li class="list-group-item"><strong>Último acceso:</strong> @_detalleUsuario.UltimoAcceso?.ToLocalTime().ToString() ?? "-"</li>
@@ -218,12 +219,17 @@
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Rol</label>
-                                    <InputSelect class="form-select" @bind-Value="_usuarioActual.Rol">
-                                        <option value="">Seleccione</option>
-                                        <option value="administrador">Administrador</option>
-                                        <option value="recepcionista">Recepcionista</option>
-                                        <option value="laboratorista">Laboratorista</option>
+                                    <InputSelect class="form-select" @bind-Value="_usuarioActual.IdRol">
+                                        <option value="0">Seleccione</option>
+                                        <option value="1">Administrador</option>
+                                        <option value="2">Recepcionista</option>
+                                        <option value="3">Laboratorista</option>
+                                        <option value="4">Paciente</option>
                                     </InputSelect>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_usuarioActual.Activo" />
+                                    <label class="form-check-label">Activo</label>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -297,11 +303,28 @@
             {
                 case "nombre": _filtro.Nombre = _valorFiltro; break;
                 case "correo": _filtro.Correo = _valorFiltro; break;
-                case "rol": _filtro.Rol = _valorFiltro; break;
+                case "rol":
+                    if (int.TryParse(_valorFiltro, out var idRol)) _filtro.IdRol = idRol;
+                    break;
                 case "activo": _filtro.Activo = _valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
             }
         }
-        _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
+        try
+        {
+            _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
+            _mensaje = null;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden || ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _mensaje = "No autorizado. Inicie sesión como administrador para ver usuarios.";
+            _tipoMensaje = "danger";
+            _usuarios.Clear();
+        }
+        catch (Exception ex)
+        {
+            _mensaje = $"Error al buscar usuarios: {ex.Message}";
+            _tipoMensaje = "danger";
+        }
     }
 
     private void LimpiarFiltro()
@@ -313,7 +336,7 @@
 
     private void AbrirModalNuevo()
     {
-        _usuarioActual = new() { Activo = true };
+        _usuarioActual = new() { Activo = true, IdRol = 0 };
         _esNuevo = true;
         _modalVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
@@ -326,7 +349,8 @@
             IdUsuario = user.IdUsuario,
             NombreUsuario = user.NombreUsuario,
             CorreoUsuario = user.CorreoUsuario,
-            Rol = user.Rol,
+            IdRol = user.IdRol,
+            NombreRol = user.NombreRol,
             Activo = user.Activo
         };
         _esNuevo = false;
@@ -353,7 +377,7 @@
                 {
                     NombreUsuario = _usuarioActual.NombreUsuario,
                     CorreoUsuario = _usuarioActual.CorreoUsuario,
-                    Rol = _usuarioActual.Rol
+                    IdRol = _usuarioActual.IdRol
                 };
 
                 await UsuariosApi.GuardarUsuarioAsync(crearDto);

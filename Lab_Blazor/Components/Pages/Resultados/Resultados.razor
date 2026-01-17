@@ -18,10 +18,10 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool esPaciente = rol == "paciente";
-            bool puedeVer = rol is "administrador" or "laboratorista" or "recepcionista" or "paciente";
-            bool puedeAnular = rol is "administrador" or "laboratorista";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool esPaciente = rol == "4";
+            bool puedeVer = rol is "1" or "2" or "3" or "4";
+            bool puedeAnular = rol is "1" or "3";
         }
 
         @if (!puedeVer)
@@ -289,24 +289,33 @@
     private bool _buscando = false;
     private bool _sesionVerificada = false;
 
-    protected override async void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
             var authState = await AuthProvider.GetAuthenticationStateAsync();
-            if (authState.User.IsInRole("paciente"))
+            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? string.Empty;
+            var idPacienteClaim = authState.User.FindFirst("IdPaciente")?.Value;
+            bool esPaciente = rol == "4";
+
+            if (esPaciente)
             {
                 _criterioBusqueda = "numeroResultado";
                 _incluirAnulados = false;
                 _incluirVigentes = true;
+                if (int.TryParse(idPacienteClaim, out var idPac))
+                {
+                    _filtro.IdPaciente = idPac;
+                }
             }
             else
             {
                 _criterioBusqueda = string.Empty;
                 _incluirAnulados = true;
                 _incluirVigentes = true;
+                _filtro.IdPaciente = null;
             }
             _filtro.FechaHasta = null;
             _filtro.FechaDesde = null;
@@ -326,7 +335,9 @@
         {
             _buscando = true;
             var authState = await AuthProvider.GetAuthenticationStateAsync();
-            bool esPaciente = authState.User.IsInRole("paciente");
+            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? string.Empty;
+            var idPacienteClaim = authState.User.FindFirst("IdPaciente")?.Value;
+            bool esPaciente = rol == "4";
 
             _filtro.NumeroResultado = null;
             _filtro.NumeroOrden = null;
@@ -350,6 +361,16 @@
             else if (!_incluirAnulados && _incluirVigentes) _filtro.Anulado = false;
             else if (!esPaciente) _filtro.Anulado = null;
 
+            if (esPaciente && int.TryParse(idPacienteClaim, out var idPac))
+            {
+                _filtro.IdPaciente = idPac;
+                _filtro.Anulado = false;
+            }
+            else
+            {
+                _filtro.IdPaciente = null;
+            }
+
             _resultado = await ResultadosApi.ListarResultadosPaginadosAsync(_filtro);
             await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados cargados correctamente.", "success");
         }
@@ -365,7 +386,9 @@
         if (!await SesionService.VerificarOSalirAsync()) return;
 
         var auth = await AuthProvider.GetAuthenticationStateAsync();
-        bool esPaciente = auth.User.IsInRole("paciente");
+        var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
+        var idPacienteClaim = auth.User.FindFirst("IdPaciente")?.Value;
+        bool esPaciente = rol == "4";
 
         _criterioBusqueda = esPaciente ? "numeroResultado" : string.Empty;
         _valorBusqueda = "";
@@ -374,6 +397,7 @@
         _incluirAnulados = esPaciente ? false : true;
         _incluirVigentes = true;
         _filtro.PageNumber = 1;
+        _filtro.IdPaciente = esPaciente && int.TryParse(idPacienteClaim, out var idPac) ? idPac : null;
         _resultado = null;
         await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
@@ -413,11 +437,11 @@
         try
         {
             var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            _detalleActual = rol == "paciente" ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado) : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
+            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? string.Empty;
+            _detalleActual = rol == "4" ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado) : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
             _mostrarDetalle = true;
 
-            if (authState.User.IsInRole("paciente") && _detalleActual != null)
+            if (rol == "4" && _detalleActual != null)
             {
                 if (!string.Equals(_detalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase))
                 {

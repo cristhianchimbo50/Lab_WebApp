@@ -28,7 +28,8 @@ namespace Lab_APIRest.Services.Auth
             int IdUsuario,
             string CorreoUsuario,
             string Nombre,
-            string Rol,
+            int IdRol,
+            string RolNombre,
             string? ClaveUsuario,
             bool? Activo
         );
@@ -37,12 +38,14 @@ namespace Lab_APIRest.Services.Auth
             EF.CompileAsyncQuery((LabDbContext ctx, string correo) =>
                 ctx.Usuario
                     .AsNoTracking()
+                    .Include(u => u.IdRolNavigation)
                     .Where(u => u.CorreoUsuario == correo)
                     .Select(u => new UsuarioLoginProjection(
                         u.IdUsuario,
                         u.CorreoUsuario,
                         u.Nombre,
-                        u.Rol,
+                        u.IdRol,
+                        u.IdRolNavigation.Nombre,
                         u.ClaveUsuario,
                         u.Activo
                     ))
@@ -100,7 +103,6 @@ namespace Lab_APIRest.Services.Auth
                 return null;
             }
 
-            // Activo es nullable en el modelo nuevo
             if (usuarioEntidad.Activo != true)
                 return null;
 
@@ -108,7 +110,6 @@ namespace Lab_APIRest.Services.Auth
 
             try
             {
-                // Actualizamos solo UltimoAcceso usando la nueva entidad Usuario
                 var usuarioActualizar = new Usuario
                 {
                     IdUsuario = usuarioEntidad.IdUsuario,
@@ -124,7 +125,10 @@ namespace Lab_APIRest.Services.Auth
             }
 
             int? idPaciente = null;
-            if (usuarioEntidad.Rol == "paciente")
+            var esPaciente = string.Equals(usuarioEntidad.RolNombre, "paciente", StringComparison.OrdinalIgnoreCase)
+                || usuarioEntidad.IdRol == 4;
+
+            if (esPaciente)
             {
                 var pacienteEntidad = await _context.Paciente.AsNoTracking()
                     .Where(p => p.IdUsuario == usuarioEntidad.IdUsuario)
@@ -138,7 +142,8 @@ namespace Lab_APIRest.Services.Auth
                 usuarioEntidad.IdUsuario,
                 usuarioEntidad.CorreoUsuario,
                 usuarioEntidad.Nombre,
-                usuarioEntidad.Rol,
+                usuarioEntidad.IdRol,
+                usuarioEntidad.RolNombre,
                 false,
                 idPaciente
             );
@@ -148,7 +153,8 @@ namespace Lab_APIRest.Services.Auth
                 IdUsuario = usuarioEntidad.IdUsuario,
                 CorreoUsuario = usuarioEntidad.CorreoUsuario,
                 Nombre = usuarioEntidad.Nombre,
-                Rol = usuarioEntidad.Rol,
+                IdRol = usuarioEntidad.IdRol,
+                NombreRol = usuarioEntidad.RolNombre,
                 AccessToken = token,
                 ExpiresAtUtc = expiraUtc,
                 Mensaje = "Inicio de sesión exitoso. La sesión expirará en 1 hora."
@@ -199,7 +205,6 @@ namespace Lab_APIRest.Services.Auth
             using var sha = SHA256.Create();
             var tokenHash = sha.ComputeHash(Encoding.UTF8.GetBytes(dto.Token));
 
-            // Ajuste a nuevos nombres de DbSet y propiedades
             var registros = await _context.TokensUsuarios
                 .Include(r => r.IdUsuarioNavigation)
                 .Where(r => r.TipoToken == "activacion" && !r.Usado)

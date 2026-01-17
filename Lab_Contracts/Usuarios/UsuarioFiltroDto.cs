@@ -4,7 +4,7 @@
     {
         public string? Nombre { get; set; }
         public string? Correo { get; set; }
-        public string? Rol { get; set; }
+        public int? IdRol { get; set; }
         public bool? Activo { get; set; }
     }
 }

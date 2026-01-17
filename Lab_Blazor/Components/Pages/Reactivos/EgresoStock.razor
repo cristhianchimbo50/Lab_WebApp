@@ -18,8 +18,8 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeGestionar = rol is "administrador" or "laboratorista";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeGestionar = rol is "1" or "3";
         }
 
         @if (!puedeGestionar)

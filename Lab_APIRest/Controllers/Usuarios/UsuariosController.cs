@@ -1,11 +1,13 @@
 ﻿using Lab_Contracts.Usuarios;
 using Lab_APIRest.Services.Usuarios;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lab_APIRest.Controllers.Usuarios
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "1")]
     public class UsuariosController : ControllerBase
     {
         private readonly IUsuariosService _usuariosService;

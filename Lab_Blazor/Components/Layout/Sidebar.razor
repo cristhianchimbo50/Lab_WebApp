@@ -9,6 +9,11 @@
     <Authorized Context="authState">
         @{
             var user = authState.User;
+            var rolId = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+            bool esAdmin = rolId == "1";
+            bool esRecep = rolId == "2";
+            bool esLabo = rolId == "3";
+            bool esPaciente = rolId == "4";
         }
 
         <aside class="sidebar d-flex flex-column flex-shrink-0 bg-dark text-white position-fixed top-0 start-0 h-100 shadow">
@@ -42,7 +47,7 @@
                     </li>
                     <hr class="border-secondary" />
 
-                    @if (user.IsInRole("administrador"))
+                    @if (esAdmin)
                     {
                         <li class="mb-1">
                             <NavLink class="nav-link text-white d-flex align-items-center"
@@ -55,9 +60,7 @@
                         </li>
                     }
 
-
-
-                    @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
+                    @if (esAdmin || esRecep)
                     {
                         <li class="mb-1">
                             <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
@@ -95,7 +98,7 @@
                         </li>
                     }
 
-                    @if (user.IsInRole("administrador") || user.IsInRole("laboratorista"))
+                    @if (esAdmin || esLabo)
                     {
                         <li class="mb-1">
                             <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
@@ -130,7 +133,7 @@
                         </li>
                     }
 
-                    @if (user.IsInRole("administrador") || user.IsInRole("recepcionista") || user.IsInRole("laboratorista") || user.IsInRole("paciente"))
+                    @if (esAdmin || esRecep || esLabo || esPaciente)
                     {
                         <li class="mb-1">
                             <button class="btn btn-toggle align-items-center rounded text-start text-white w-100"
@@ -139,12 +142,12 @@
                                     type="button">
                                 <i class="bi bi-file-earmark-medical me-2"></i>
                                 <span class="nav-text">
-                                    @(user.IsInRole("paciente") ? "Mis Órdenes" : "Órdenes Médicas")
+                                    @(esPaciente ? "Mis Órdenes" : "Órdenes Médicas")
                                 </span>
                             </button>
                             <div class="collapse" id="grpOrdenes">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    @if (user.IsInRole("paciente"))
+                                    @if (esPaciente)
                                     {
                                         <li>
                                             <NavLink class="link-light nav-link py-1 px-0"
@@ -160,7 +163,7 @@
                                                      href="/ordenes">Listado</NavLink>
                                         </li>
 
-                                        @if (user.IsInRole("administrador") || user.IsInRole("recepcionista"))
+                                        @if (esAdmin || esRecep)
                                         {
                                             <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/nueva-orden">Nueva Orden</NavLink></li>
                                             <li><NavLink class="link-light nav-link py-1 px-0" activeClass="active" href="/cuentasporcobrar">Cuentas por Cobrar</NavLink></li>
@@ -177,12 +180,12 @@
                                     type="button">
                                 <i class="bi bi-clipboard-check me-2"></i>
                                 <span class="nav-text">
-                                    @(user.IsInRole("paciente") ? "Mis Resultados" : "Resultados")
+                                    @(esPaciente ? "Mis Resultados" : "Resultados")
                                 </span>
                             </button>
                             <div class="collapse" id="grpResultados">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ps-4">
-                                    @if (user.IsInRole("paciente"))
+                                    @if (esPaciente)
                                     {
                                         <li>
                                             <NavLink class="link-light nav-link py-1 px-0"
@@ -295,13 +298,14 @@
     private string GetUserEmail(ClaimsPrincipal user) => user?.FindFirst("email")?.Value ?? "correo@ejemplo.com";
     private string GetUserRol(ClaimsPrincipal user)
     {
+        var nombre = user?.FindFirst("NombreRol")?.Value;
         var rawRol = user?.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        return rawRol switch
+        return nombre ?? rawRol switch
         {
-            "administrador" => "Administrador",
-            "recepcionista" => "Recepcionista",
-            "laboratorista" => "Laboratorista",
-            "paciente" => "Paciente",
+            "1" => "Administrador",
+            "2" => "Recepcionista",
+            "3" => "Laboratorista",
+            "4" => "Paciente",
             _ => rawRol
         };
     }

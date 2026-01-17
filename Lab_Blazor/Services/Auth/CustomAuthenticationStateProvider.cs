@@ -47,14 +47,28 @@ namespace Lab_Blazor.Services.Auth
                 var claimsNormalized = new List<Claim>();
                 foreach (var claim in decodedToken.Claims)
                 {
-                    if (claim.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
-                        claim.Type.Equals("roles", StringComparison.OrdinalIgnoreCase) ||
-                        claim.Type.Equals("rol", StringComparison.OrdinalIgnoreCase))
+                    if (claim.Type.Equals("IdRol", StringComparison.OrdinalIgnoreCase))
+                    {
+                        claimsNormalized.Add(new Claim("IdRol", claim.Value));
                         claimsNormalized.Add(new Claim(ClaimTypes.Role, claim.Value));
+                    }
+                    else if (claim.Type.Equals("NombreRol", StringComparison.OrdinalIgnoreCase))
+                    {
+                        claimsNormalized.Add(new Claim("NombreRol", claim.Value));
+                    }
+                    else if (claim.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
+                             claim.Type.Equals("roles", StringComparison.OrdinalIgnoreCase) ||
+                             claim.Type.Equals("rol", StringComparison.OrdinalIgnoreCase) ||
+                             claim.Type.Equals(ClaimTypes.Role, StringComparison.Ordinal))
+                    {
+                        // ignore legacy role name claims to avoid mismatches
+                    }
                     else
+                    {
                         claimsNormalized.Add(claim);
+                    }
                 }
-                var identity = new ClaimsIdentity(claimsNormalized, "jwt");
+                var identity = new ClaimsIdentity(claimsNormalized, "jwt", ClaimTypes.Name, ClaimTypes.Role);
                 var principal = new ClaimsPrincipal(identity);
 
                 _ = Task.Run(async () =>

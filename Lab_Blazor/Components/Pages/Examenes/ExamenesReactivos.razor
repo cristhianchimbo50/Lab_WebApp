@@ -24,13 +24,14 @@
         @{
             var user = authState.User;
             var rol = user.FindFirst(ClaimTypes.Role)?.Value
+            ?? user.FindFirst("IdRol")?.Value
             ?? user.FindFirst("role")?.Value
             ?? user.FindFirst("roles")?.Value
-            ?? "";
+            ?? string.Empty;
 
-            bool esPaciente = rol == "paciente";
-            bool puedeVer = rol is "administrador" or "laboratorista";
-            bool puedeAnular = rol == "administrador";
+            bool esPaciente = rol == "4";
+            bool puedeVer = rol is "1" or "3";
+            bool puedeAnular = rol == "1";
         }
 
         @if (!puedeVer)
@@ -345,8 +346,8 @@
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
-            bool puedeVer = rol is "administrador" or "laboratorista";
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeVer = rol is "1" or "3";
 
             if (puedeVer)
             {

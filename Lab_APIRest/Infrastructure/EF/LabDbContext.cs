@@ -50,6 +50,8 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<Usuario> Usuario { get; set; }
 
+    public virtual DbSet<Rol> Rol { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=localhost;Database=BD_Lab_p;User Id=sa;Password=randomcch1203;TrustServerCertificate=True;");
@@ -698,14 +700,40 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.FechaFin)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
+            entity.Property(e => e.IdRol).HasColumnName("id_rol");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(255)
                 .HasColumnName("nombre");
-            entity.Property(e => e.Rol)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("rol");
             entity.Property(e => e.UltimoAcceso).HasColumnName("ultimo_acceso");
+
+            entity.HasOne(d => d.IdRolNavigation).WithMany(p => p.Usuario)
+                .HasForeignKey(d => d.IdRol)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_usuario_rol");
+        });
+
+        modelBuilder.Entity<Rol>(entity =>
+        {
+            entity.HasKey(e => e.IdRol).HasName("PK__rol");
+
+            entity.ToTable("rol");
+
+            entity.HasIndex(e => e.Nombre, "UQ_rol_nombre").IsUnique();
+
+            entity.Property(e => e.IdRol).HasColumnName("id_rol");
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(100)
+                .HasColumnName("descripcion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(50)
+                .HasColumnName("nombre");
         });
 
         OnModelCreatingPartial(modelBuilder);

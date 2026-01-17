@@ -11,9 +11,9 @@ public partial class Usuario
 
     public string? ClaveUsuario { get; set; }
 
-    public string Rol { get; set; } = null!;
-
     public string Nombre { get; set; } = null!;
+
+    public int IdRol { get; set; }
 
     public bool? Activo { get; set; }
 
@@ -24,6 +24,8 @@ public partial class Usuario
     public DateTime? FechaActualizacion { get; set; }
 
     public DateTime? FechaFin { get; set; }
+
+    public virtual Rol IdRolNavigation { get; set; } = null!;
 
     public virtual ICollection<Paciente> Paciente { get; set; } = new List<Paciente>();
 

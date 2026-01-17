@@ -9,7 +9,7 @@ namespace Lab_APIRest.Controllers.Reactivos
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "administrador,laboratorista")]
+    [Authorize(Roles = "1,3")]
     public class ReactivosController : ControllerBase
     {
         private readonly IReactivoService _reactivoService;
@@ -67,7 +67,7 @@ namespace Lab_APIRest.Controllers.Reactivos
             return NoContent();
         }
 
-        [Authorize(Roles = "administrador")]
+        [Authorize(Roles = "1")]
         [HttpPut("anular/{id:int}")]
         public async Task<IActionResult> AnularReactivo(int id)
         {

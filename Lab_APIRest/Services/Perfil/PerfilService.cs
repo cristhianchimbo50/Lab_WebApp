@@ -24,7 +24,8 @@ namespace Lab_APIRest.Services.Perfil
                 IdUsuario = usuario.IdUsuario,
                 Nombre = usuario.Nombre,
                 Correo = usuario.CorreoUsuario,
-                Rol = usuario.Rol,
+                IdRol = usuario.IdRol,
+                NombreRol = usuario.IdRolNavigation?.Nombre ?? string.Empty,
                 Activo = usuario.Activo == true,
                 UltimoAcceso = usuario.UltimoAcceso,
                 FechaRegistro = usuario.FechaCreacion
@@ -47,13 +48,14 @@ namespace Lab_APIRest.Services.Perfil
             {
                 var usuario = await _context.Usuario
                     .AsNoTracking()
+                    .Include(u => u.IdRolNavigation)
                     .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario, ct);
 
                 if (usuario == null)
                     return null;
 
                 Paciente? paciente = null;
-                if (usuario.Rol.Equals("paciente", StringComparison.OrdinalIgnoreCase))
+                if (usuario.IdRolNavigation.Nombre.Equals("paciente", StringComparison.OrdinalIgnoreCase))
                 {
                     paciente = await _context.Paciente
                         .AsNoTracking()
