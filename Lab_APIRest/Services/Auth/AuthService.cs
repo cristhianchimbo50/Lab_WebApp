@@ -1,7 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_APIRest.Infrastructure.Services;
-using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -194,7 +193,8 @@ namespace Lab_APIRest.Services.Auth
 
         public async Task<RespuestaMensajeDto> ActivarCuentaAsync(RestablecerContraseniaDto dto, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(dto.Token) ||
+            var token = (dto.Token ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(token) ||
                 string.IsNullOrWhiteSpace(dto.NuevaContrasenia) ||
                 string.IsNullOrWhiteSpace(dto.ConfirmarContrasenia))
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "Datos inválidos." };
@@ -202,15 +202,11 @@ namespace Lab_APIRest.Services.Auth
             if (dto.NuevaContrasenia != dto.ConfirmarContrasenia)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "Las contraseñas no coinciden." };
 
-            using var sha = SHA256.Create();
-            var tokenHash = sha.ComputeHash(Encoding.UTF8.GetBytes(dto.Token));
+            var tokenHash = CalcularHash(token);
 
-            var registros = await _context.TokensUsuarios
+            var registro = await _context.TokensUsuarios
                 .Include(r => r.IdUsuarioNavigation)
-                .Where(r => r.TipoToken == "activacion" && !r.Usado)
-                .ToListAsync(ct);
-
-            var registro = registros.FirstOrDefault(r => r.TokenHash.SequenceEqual(tokenHash));
+                .FirstOrDefaultAsync(r => r.TipoToken == "activacion" && !r.Usado && r.TokenHash == tokenHash, ct);
 
             if (registro == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido o ya fue usado." };
@@ -237,6 +233,12 @@ namespace Lab_APIRest.Services.Auth
                 Exito = true,
                 Mensaje = "Cuenta activada correctamente. Ya puedes iniciar sesión."
             };
+        }
+
+        private static byte[] CalcularHash(string token)
+        {
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(Encoding.UTF8.GetBytes(token));
         }
     }
 }

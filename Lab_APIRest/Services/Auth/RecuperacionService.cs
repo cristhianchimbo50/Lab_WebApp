@@ -1,7 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_APIRest.Infrastructure.Services;
-using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
