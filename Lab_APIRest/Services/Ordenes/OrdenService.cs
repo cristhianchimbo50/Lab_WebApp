@@ -17,13 +17,19 @@ namespace Lab_APIRest.Services.Ordenes
     {
         private readonly LabDbContext _context;
         private readonly PdfTicketService _pdfTicketService;
+        private readonly EmailService _emailService;
         private readonly ILogger<OrdenService> _logger;
         private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
 
-        public OrdenService(LabDbContext context, PdfTicketService pdfTicketService, ILogger<OrdenService> logger)
+        public OrdenService(
+            LabDbContext context,
+            PdfTicketService pdfTicketService,
+            EmailService emailService,
+            ILogger<OrdenService> logger)
         {
             _context = context;
             _pdfTicketService = pdfTicketService;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -270,8 +276,7 @@ namespace Lab_APIRest.Services.Ordenes
                 {
                     string asunto = "Orden registrada - Laboratorio La Inmaculada";
                     string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {paciente.NombrePaciente},</h3><p>Su orden <strong>{entidadOrden.NumeroOrden}</strong> ha sido registrada.</p><p>Fecha de orden: {entidadOrden.FechaOrden:dd/MM/yyyy}</p><p>Gracias por confiar en nosotros.</p><p style='margin-top:20px;'><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
-                    var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-                    await emailService.EnviarCorreoAsync(paciente.CorreoElectronicoPaciente, paciente.NombrePaciente ?? "Paciente", asunto, cuerpo);
+                    await _emailService.EnviarCorreoAsync(paciente.CorreoElectronicoPaciente, paciente.NombrePaciente ?? "Paciente", asunto, cuerpo);
                 }
             }
             catch (Exception ex)

@@ -1012,7 +1012,7 @@
                 _resultadoDetalleActual.FechaRevision = DateTime.Now;
                 _resultadoDetalleActual.NombreRevisor = auth.User.Identity?.Name ?? auth.User.FindFirst(ClaimTypes.Name)?.Value;
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Estado de resultado actualizado.", "success");
-                await RecargarDetalleOrdenAsync();
+                await VerificarYHabilitarResultadosAsync();
             }
             else
             {
@@ -1035,15 +1035,44 @@
         Navigation.NavigateTo($"/resultados/ingresar?idResultado={idResultado}");
     }
 
-    private async Task RecargarDetalleOrdenAsync()
+    private async Task RecargarDetalleOrdenAsync(int? idOrden = null)
     {
-        if (_detalleActual == null) return;
+        var targetId = idOrden ?? _detalleActual?.IdOrden;
+        if (!targetId.HasValue) return;
         if (!await SesionService.VerificarOSalirAsync()) return;
-        _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(_detalleActual.IdOrden);
+        _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(targetId.Value);
         if (_detalleActual?.Examenes != null)
         {
             foreach (var ex in _detalleActual.Examenes)
                 ex.Seleccionado = false;
+        }
+    }
+
+    private async Task VerificarYHabilitarResultadosAsync()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+
+        var idOrden = _detalleActual?.IdOrden ?? _resultadoDetalleActual?.IdOrden;
+        if (!idOrden.HasValue || idOrden.Value <= 0) return;
+
+        await RecargarDetalleOrdenAsync(idOrden.Value);
+        if (_detalleActual == null) return;
+
+        if (!string.Equals(_detalleActual.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase)) return;
+
+        var hayPendientes = _detalleActual.Examenes.Any(e => !e.IdResultado.HasValue || !string.Equals(e.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase));
+        if (hayPendientes || _detalleActual.ResultadosHabilitados) return;
+
+        var resp = await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden.Value);
+        if (resp.IsSuccessStatusCode)
+        {
+            await RecargarDetalleOrdenAsync(idOrden.Value);
+            if (_detalleActual != null)
+            {
+                _detalleActual.ResultadosHabilitados = true;
+                _detalleActual.EstadoOrden = "FINALIZADA";
+            }
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados habilitados para el paciente.", "success");
         }
     }
 }
