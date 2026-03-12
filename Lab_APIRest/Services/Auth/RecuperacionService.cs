@@ -44,9 +44,27 @@ namespace Lab_APIRest.Services.Auth
             _db.TokensUsuarios.Add(registro);
             await _db.SaveChangesAsync(ct);
 
-            var link = $"https://localhost:7283/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
+            var link = $"http://laboratorioinmaculada:9111/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
             var asunto = "Recuperación de Contraseña - Laboratorio Clínico 'La Inmaculada'";
-            var cuerpoHtml = $@"\n                <p>Hola <b>{usuario.Nombre}</b>,</p>\n                <p>Recibimos una solicitud para restablecer tu contraseña.</p>\n                <p>Puedes hacerlo desde el siguiente enlace (válido por 15 minutos):</p>\n                <p><a href='{link}' style='color:#0d6efd'>Restablecer contraseña</a></p>\n                <p>Si no solicitaste este cambio, ignora este mensaje.</p>\n                <br/><p>Saludos,<br/><b>Laboratorio Clínico 'La Inmaculada'</b></p>";
+            var cuerpoHtml = $@"
+                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+
+                <p>Recibimos una solicitud para restablecer tu contraseña.</p>
+
+                <p>Puedes hacerlo desde el siguiente enlace (válido por 15 minutos):</p>
+
+                <p>
+                    <a href=""{link}"" style=""color:#0d6efd;"">
+                        Restablecer contraseña
+                    </a>
+                </p>
+
+                <p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>
+
+                <p>
+                    Saludos,<br/>
+                    <strong>Laboratorio Clínico ""La Inmaculada""</strong>
+                </p>";
 
             await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
 
@@ -78,8 +96,18 @@ namespace Lab_APIRest.Services.Auth
 
             await _db.SaveChangesAsync(ct);
 
-            var asunto = "Contraseña actualizada - Laboratorio Clínico 'La Inmaculada'";
-            var cuerpoHtml = $@"\n                <p>Hola <b>{usuario.Nombre}</b>,</p>\n                <p>Tu contraseña fue restablecida correctamente.</p>\n                <p>Si no realizaste este cambio, comunícate con soporte de inmediato.</p>\n                <br/><p>Saludos,<br/><b>Laboratorio Clínico 'La Inmaculada'</b></p>";
+            var asunto = "Contraseña actualizada - Laboratorio Clínico La Inmaculada";
+            var cuerpoHtml = $@"
+                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+
+                <p>Tu contraseña fue restablecida correctamente.</p>
+
+                <p>Si no realizaste este cambio, comunícate con soporte de inmediato.</p>
+
+                <p>
+                    Saludos,<br/>
+                    <strong>Laboratorio Clínico ""La Inmaculada""</strong>
+                </p>";
 
             await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
 

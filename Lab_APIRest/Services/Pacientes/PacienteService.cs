@@ -183,11 +183,25 @@ namespace Lab_APIRest.Services.Pacientes
                 _context.TokensUsuarios.Add(tokenRegistro);
                 await _context.SaveChangesAsync();
 
-                var dominio = "https://localhost:7283";
+                var dominio = "http://laboratorioinmaculada:9111";
                 var enlace = $"{dominio}/activar-cuenta?token={Uri.EscapeDataString(token)}";
 
                 var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
-                var cuerpo = $@"\n            <p>Hola <b>{dto.NombrePaciente}</b>,</p>\n            <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>\n            <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>\n            <p><a href='{enlace}' target='_blank'>Activar mi cuenta</a></p>\n            <p>Este enlace estará disponible durante 24 horas.</p>";
+                var cuerpo = $@"
+                    <p>Hola <strong>{dto.NombrePaciente}</strong>,</p>
+
+                    <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
+
+                    <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
+
+                    <p>
+                        <a href=""{enlace}"" target=""_blank"">
+                            Activar mi cuenta
+                        </a>
+                    </p>
+
+                    <p>Este enlace estará disponible durante 24 horas.</p>
+                    ";
 
                 await _emailService.EnviarCorreoAsync(dto.CorreoElectronicoPaciente, dto.NombrePaciente, asunto, cuerpo);
             }

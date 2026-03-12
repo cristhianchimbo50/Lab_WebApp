@@ -224,7 +224,13 @@ namespace Lab_APIRest.Services.Auth
             await _context.SaveChangesAsync(ct);
 
             var asunto = "Cuenta activada correctamente";
-            var cuerpo = $@"\n        <p>Hola <b>{usuario.Nombre}</b>,</p>\n        <p>Tu cuenta ha sido activada exitosamente.</p>\n        <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
+
+            var cuerpo = $@"
+                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+
+                <p>Tu cuenta ha sido activada exitosamente.</p>
+
+                <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
 
             await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpo);
 

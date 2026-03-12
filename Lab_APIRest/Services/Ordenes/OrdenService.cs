@@ -275,8 +275,26 @@ namespace Lab_APIRest.Services.Ordenes
                 if (paciente != null && !string.IsNullOrWhiteSpace(paciente.CorreoElectronicoPaciente))
                 {
                     string asunto = "Orden registrada - Laboratorio La Inmaculada";
-                    string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {paciente.NombrePaciente},</h3><p>Su orden <strong>{entidadOrden.NumeroOrden}</strong> ha sido registrada.</p><p>Fecha de orden: {entidadOrden.FechaOrden:dd/MM/yyyy}</p><p>Gracias por confiar en nosotros.</p><p style='margin-top:20px;'><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
-                    await _emailService.EnviarCorreoAsync(paciente.CorreoElectronicoPaciente, paciente.NombrePaciente ?? "Paciente", asunto, cuerpo);
+                    string cuerpo = $@"
+                        <div style=""font-family:Arial, sans-serif; color:#333;"">
+                            <h3>Estimado/a {paciente.NombrePaciente},</h3>
+
+                            <p>
+                                Su orden <strong>{entidadOrden.NumeroOrden}</strong> ha sido registrada.
+                            </p>
+
+                            <p>
+                                Fecha de orden: {entidadOrden.FechaOrden:dd/MM/yyyy}
+                            </p>
+
+                            <p>
+                                Gracias por confiar en nosotros.
+                            </p>
+
+                            <p style=""margin-top:20px;"">
+                                <strong>Laboratorio Clínico La Inmaculada</strong>
+                            </p>
+                        </div>";
                 }
             }
             catch (Exception ex)

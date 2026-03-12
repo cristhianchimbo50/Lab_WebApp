@@ -108,25 +108,25 @@ namespace Lab_APIRest.Services.Resultados
 
             await _context.SaveChangesAsync();
 
-            if (debeNotificar)
-            {
-                try
-                {
-                    var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
-                    var nombre = orden.IdPacienteNavigation?.NombrePaciente;
-                    if (!string.IsNullOrWhiteSpace(correo))
-                    {
-                        string asunto = "Resultados habilitados - Laboratorio La Inmaculada";
-                        string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede revisarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
-                        var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-                        await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error enviando notificación de resultados habilitados para la orden {IdOrden}", idOrden);
-                }
-            }
+            //if (debeNotificar)
+            //{
+            //    try
+            //    {
+            //        var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
+            //        var nombre = orden.IdPacienteNavigation?.NombrePaciente;
+            //        if (!string.IsNullOrWhiteSpace(correo))
+            //        {
+            //            string asunto = "Resultados habilitados - Laboratorio Clínico La Inmaculada";
+            //            string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede revisarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
+            //            var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
+            //            await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        _logger.LogError(ex, "Error enviando notificación de resultados habilitados para la orden {IdOrden}", idOrden);
+            //    }
+            //}
         }
 
         public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto resultado)
