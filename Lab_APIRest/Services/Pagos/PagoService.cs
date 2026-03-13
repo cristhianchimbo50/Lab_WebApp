@@ -131,8 +131,8 @@ namespace Lab_APIRest.Services.Pagos
         {
             IdOrden = o.IdOrden,
             NumeroOrden = o.NumeroOrden,
-            CedulaPaciente = o.IdPacienteNavigation?.CedulaPaciente ?? string.Empty,
-            NombrePaciente = o.IdPacienteNavigation?.NombrePaciente ?? string.Empty,
+            CedulaPaciente = o.IdPacienteNavigation?.IdPersonaNavigation?.Cedula ?? string.Empty,
+            NombrePaciente = $"{o.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {o.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}".Trim(),
             FechaOrden = o.FechaOrden,
             Total = o.Total,
             TotalPagado = o.TotalPagado ?? 0m,
@@ -143,14 +143,14 @@ namespace Lab_APIRest.Services.Pagos
 
         public async Task<List<OrdenDto>> ListarCuentasPorCobrarAsync(PagoFiltroDto filtro)
         {
-            var query = _context.Orden.Include(o => o.IdPacienteNavigation).Where(o => o.SaldoPendiente > 0);
+            var query = _context.Orden.Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation).Where(o => o.SaldoPendiente > 0);
 
             if (!string.IsNullOrEmpty(filtro.NumeroOrden))
                 query = query.Where(o => o.NumeroOrden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrEmpty(filtro.Cedula))
-                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.CedulaPaciente.Contains(filtro.Cedula));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.IdPersonaNavigation!.Cedula.Contains(filtro.Cedula));
             if (!string.IsNullOrEmpty(filtro.NombrePaciente))
-                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.NombrePaciente.Contains(filtro.NombrePaciente));
+                query = query.Where(o => o.IdPacienteNavigation != null && (o.IdPacienteNavigation.IdPersonaNavigation!.Nombres + " " + o.IdPacienteNavigation.IdPersonaNavigation!.Apellidos).Contains(filtro.NombrePaciente));
             if (filtro.FechaInicio.HasValue)
                 query = query.Where(o => o.FechaOrden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
             if (filtro.FechaFin.HasValue)
@@ -161,7 +161,7 @@ namespace Lab_APIRest.Services.Pagos
                 query = query.Where(o => o.EstadoPago == filtro.EstadoPago);
 
             var ordenes = await query
-                .OrderBy(o => o.IdPacienteNavigation!.NombrePaciente)
+                .OrderBy(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres)
                 .ThenBy(o => o.FechaOrden)
                 .ToListAsync();
 
@@ -171,16 +171,16 @@ namespace Lab_APIRest.Services.Pagos
         public async Task<ResultadoPaginadoDto<OrdenDto>> ListarCuentasPorCobrarPaginadosAsync(PagoFiltroDto filtro)
         {
             var query = _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .AsNoTracking()
                 .Where(o => o.SaldoPendiente > 0);
 
             if (!string.IsNullOrEmpty(filtro.NumeroOrden))
                 query = query.Where(o => o.NumeroOrden.Contains(filtro.NumeroOrden));
             if (!string.IsNullOrEmpty(filtro.Cedula))
-                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.CedulaPaciente.Contains(filtro.Cedula));
+                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.IdPersonaNavigation!.Cedula.Contains(filtro.Cedula));
             if (!string.IsNullOrEmpty(filtro.NombrePaciente))
-                query = query.Where(o => o.IdPacienteNavigation != null && o.IdPacienteNavigation.NombrePaciente.Contains(filtro.NombrePaciente));
+                query = query.Where(o => o.IdPacienteNavigation != null && (o.IdPacienteNavigation.IdPersonaNavigation!.Nombres + " " + o.IdPacienteNavigation.IdPersonaNavigation!.Apellidos).Contains(filtro.NombrePaciente));
             if (filtro.FechaInicio.HasValue)
                 query = query.Where(o => o.FechaOrden >= DateOnly.FromDateTime(filtro.FechaInicio.Value.Date));
             if (filtro.FechaFin.HasValue)
@@ -196,7 +196,7 @@ namespace Lab_APIRest.Services.Pagos
             query = filtro.SortBy switch
             {
                 nameof(OrdenDto.NumeroOrden) => asc ? query.OrderBy(o => o.NumeroOrden) : query.OrderByDescending(o => o.NumeroOrden),
-                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.NombrePaciente) : query.OrderByDescending(o => o.IdPacienteNavigation!.NombrePaciente),
+                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres) : query.OrderByDescending(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres),
                 nameof(OrdenDto.FechaOrden) => asc ? query.OrderBy(o => o.FechaOrden) : query.OrderByDescending(o => o.FechaOrden),
                 nameof(OrdenDto.Total) => asc ? query.OrderBy(o => o.Total) : query.OrderByDescending(o => o.Total),
                 _ => query.OrderByDescending(o => o.IdOrden)

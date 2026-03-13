@@ -130,8 +130,8 @@
                             @foreach (var usuario in _usuarios)
                             {
                                 <tr>
-                                    <td>@usuario.NombreUsuario</td>
-                                    <td>@usuario.CorreoUsuario</td>
+                                    <td>@($"{usuario.Nombres} {usuario.Apellidos}")</td>
+                                    <td>@usuario.Correo</td>
                                     <td class="text-capitalize">@usuario.NombreRol</td>
                                     <td>
                                         <span class="badge bg-@(usuario.Activo ? "success" : "secondary")">
@@ -153,7 +153,7 @@
                                             <button class="btn btn-sm @(usuario.Activo ? "btn-outline-danger" : "btn-outline-success")"
                                                     title="@(usuario.Activo ? "Deshabilitar" : "Habilitar")"
                                                     @onclick="() => CambiarEstadoAsync(usuario)"
-                                                    disabled="@(usuario.CorreoUsuario == _usuarioActualCorreo)">
+                                                     disabled="@(usuario.Correo == _usuarioActualCorreo)">
                                                 <i class="bi @(usuario.Activo ? "bi-x-circle-fill" : "bi-check-circle-fill")"></i>
                                             </button>
                                         </div>
@@ -177,8 +177,8 @@
                             @if (_detalleUsuario != null)
                             {
                                 <ul class="list-group list-group-flush">
-                                    <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.NombreUsuario</li>
-                                    <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.CorreoUsuario</li>
+                                    <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.Nombres @_detalleUsuario.Apellidos</li>
+                                    <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.Correo</li>
                                     <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.NombreRol</span></li>
                                     <li class="list-group-item"><strong>Activo:</strong> @_detalleUsuario.Activo ? "Sí" : "No"</li>
                                     <li class="list-group-item"><strong>Fecha creación:</strong> @_detalleUsuario.FechaCreacion.ToLocalTime()</li>
@@ -210,12 +210,28 @@
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="mb-2">
-                                    <label class="form-label">Nombre</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.NombreUsuario" />
+                                    <label class="form-label">Cédula</label>
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Cedula" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Nombres</label>
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Nombres" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Apellidos</label>
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Apellidos" />
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Correo</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.CorreoUsuario" readonly="@(_usuarioActual.IdUsuario != 0)" />
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Correo" readonly="@(_usuarioActual.IdUsuario != 0)" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Teléfono</label>
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Telefono" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Dirección</label>
+                                    <InputText class="form-control" @bind-Value="_usuarioActual.Direccion" />
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Rol</label>
@@ -347,8 +363,13 @@
         _usuarioActual = new()
         {
             IdUsuario = user.IdUsuario,
-            NombreUsuario = user.NombreUsuario,
-            CorreoUsuario = user.CorreoUsuario,
+            IdPersona = user.IdPersona,
+            Cedula = user.Cedula,
+            Nombres = user.Nombres,
+            Apellidos = user.Apellidos,
+            Correo = user.Correo,
+            Telefono = user.Telefono,
+            Direccion = user.Direccion,
             IdRol = user.IdRol,
             NombreRol = user.NombreRol,
             Activo = user.Activo
@@ -375,8 +396,12 @@
             {
                 var crearDto = new UsuarioCrearDto
                 {
-                    NombreUsuario = _usuarioActual.NombreUsuario,
-                    CorreoUsuario = _usuarioActual.CorreoUsuario,
+                    Cedula = _usuarioActual.Cedula,
+                    Nombres = _usuarioActual.Nombres,
+                    Apellidos = _usuarioActual.Apellidos,
+                    Correo = _usuarioActual.Correo,
+                    Telefono = _usuarioActual.Telefono,
+                    Direccion = _usuarioActual.Direccion,
                     IdRol = _usuarioActual.IdRol
                 };
 
@@ -409,7 +434,7 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        if (usuario.CorreoUsuario == _usuarioActualCorreo)
+        if (usuario.Correo == _usuarioActualCorreo)
         {
             _mensaje = "No puedes deshabilitar tu propio usuario.";
             _tipoMensaje = "warning";

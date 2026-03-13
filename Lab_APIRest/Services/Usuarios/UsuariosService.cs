@@ -20,8 +20,13 @@ namespace Lab_APIRest.Services.Usuarios
         private static UsuarioListadoDto MapUsuario(Usuario entidad) => new()
         {
             IdUsuario = entidad.IdUsuario,
-            NombreUsuario = entidad.Nombre,
-            CorreoUsuario = entidad.CorreoUsuario,
+            IdPersona = entidad.IdPersona,
+            Cedula = entidad.IdPersonaNavigation?.Cedula ?? string.Empty,
+            Nombres = entidad.IdPersonaNavigation?.Nombres ?? string.Empty,
+            Apellidos = entidad.IdPersonaNavigation?.Apellidos ?? string.Empty,
+            Correo = entidad.IdPersonaNavigation?.Correo ?? string.Empty,
+            Telefono = entidad.IdPersonaNavigation?.Telefono ?? string.Empty,
+            Direccion = entidad.IdPersonaNavigation?.Direccion ?? string.Empty,
             IdRol = entidad.IdRol,
             NombreRol = entidad.IdRolNavigation?.Nombre ?? string.Empty,
             Activo = entidad.Activo ?? false,
@@ -35,15 +40,16 @@ namespace Lab_APIRest.Services.Usuarios
             {
                 var consulta = _context.Usuario
                     .Include(u => u.IdRolNavigation)
+                    .Include(u => u.IdPersonaNavigation)
                     .Where(u => u.IdRolNavigation.Nombre != "paciente");
 
-                if (!string.IsNullOrWhiteSpace(filtro.Nombre)) consulta = consulta.Where(u => u.Nombre.Contains(filtro.Nombre));
-                if (!string.IsNullOrWhiteSpace(filtro.Correo)) consulta = consulta.Where(u => u.CorreoUsuario.Contains(filtro.Correo));
+                if (!string.IsNullOrWhiteSpace(filtro.Nombre)) consulta = consulta.Where(u => u.IdPersonaNavigation!.Nombres.Contains(filtro.Nombre) || u.IdPersonaNavigation!.Apellidos.Contains(filtro.Nombre));
+                if (!string.IsNullOrWhiteSpace(filtro.Correo)) consulta = consulta.Where(u => u.IdPersonaNavigation!.Correo.Contains(filtro.Correo));
                 if (filtro.IdRol.HasValue) consulta = consulta.Where(u => u.IdRol == filtro.IdRol.Value);
                 if (filtro.Activo.HasValue) consulta = consulta.Where(u => (u.Activo ?? false) == filtro.Activo.Value);
 
                 return await consulta
-                    .OrderBy(u => u.Nombre)
+                    .OrderBy(u => u.IdPersonaNavigation!.Nombres)
                     .Select(u => MapUsuario(u))
                     .ToListAsync(ct);
             }
@@ -63,6 +69,7 @@ namespace Lab_APIRest.Services.Usuarios
             {
                 var entidad = await _context.Usuario
                     .Include(u => u.IdRolNavigation)
+                    .Include(u => u.IdPersonaNavigation)
                     .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
                 return entidad == null ? null : MapUsuario(entidad);
             }
@@ -80,13 +87,28 @@ namespace Lab_APIRest.Services.Usuarios
         {
             try
             {
+                await using var transaccion = await _context.Database.BeginTransactionAsync(ct);
+
+                var persona = new Persona
+                {
+                    Cedula = usuario.Cedula,
+                    Nombres = usuario.Nombres,
+                    Apellidos = usuario.Apellidos,
+                    Correo = usuario.Correo,
+                    Telefono = usuario.Telefono,
+                    Direccion = usuario.Direccion,
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
+                };
+                _context.Persona.Add(persona);
+                await _context.SaveChangesAsync(ct);
+
                 var entidad = new Usuario
                 {
-                    Nombre = usuario.NombreUsuario,
-                    CorreoUsuario = usuario.CorreoUsuario,
+                    IdPersona = persona.IdPersona,
                     IdRol = usuario.IdRol,
                     Activo = false,
-                    ClaveUsuario = null,
+                    PasswordHash = null,
                     FechaCreacion = DateTime.UtcNow
                 };
 
@@ -115,7 +137,7 @@ namespace Lab_APIRest.Services.Usuarios
 
                 var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
                 var cuerpo = $@"
-                    <p>Hola <strong>{entidad.Nombre}</strong>,</p>
+                    <p>Hola <strong>{persona.Nombres} {persona.Apellidos}</strong>,</p>
 
                     <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
 
@@ -131,7 +153,9 @@ namespace Lab_APIRest.Services.Usuarios
 
                     <p>Si no solicitaste este registro, puedes ignorar este mensaje.</p>";
 
-                await _emailService.EnviarCorreoAsync(entidad.CorreoUsuario, entidad.Nombre, asunto, cuerpo);
+                await _emailService.EnviarCorreoAsync(persona.Correo, $"{persona.Nombres} {persona.Apellidos}", asunto, cuerpo);
+
+                await transaccion.CommitAsync(ct);
 
                 return entidad.IdUsuario;
             }
@@ -149,10 +173,22 @@ namespace Lab_APIRest.Services.Usuarios
         {
             try
             {
-                var entidad = await _context.Usuario.FirstOrDefaultAsync(x => x.IdUsuario == usuario.IdUsuario && x.IdRolNavigation.Nombre != "paciente", ct);
+                await using var transaccion = await _context.Database.BeginTransactionAsync(ct);
+
+                var entidad = await _context.Usuario
+                    .Include(u => u.IdPersonaNavigation)
+                    .FirstOrDefaultAsync(x => x.IdUsuario == usuario.IdUsuario && x.IdRolNavigation.Nombre != "paciente", ct);
                 if (entidad == null) return false;
-                entidad.Nombre = usuario.NombreUsuario;
-                entidad.CorreoUsuario = usuario.CorreoUsuario;
+
+                var persona = entidad.IdPersonaNavigation;
+                persona.Cedula = usuario.Cedula;
+                persona.Nombres = usuario.Nombres;
+                persona.Apellidos = usuario.Apellidos;
+                persona.Correo = usuario.Correo;
+                persona.Telefono = usuario.Telefono;
+                persona.Direccion = usuario.Direccion;
+                persona.FechaActualizacion = DateTime.UtcNow;
+
                 entidad.IdRol = usuario.IdRol;
                 entidad.Activo = usuario.Activo;
                 entidad.FechaActualizacion = DateTime.UtcNow;
@@ -164,7 +200,9 @@ namespace Lab_APIRest.Services.Usuarios
                 {
                     entidad.FechaFin = null;
                 }
+
                 await _context.SaveChangesAsync(ct);
+                await transaccion.CommitAsync(ct);
                 return true;
             }
             catch (DbUpdateException ex)
@@ -183,7 +221,8 @@ namespace Lab_APIRest.Services.Usuarios
             {
                 var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
                 if (entidad == null) return false;
-                if (entidad.CorreoUsuario.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
+                if (!string.IsNullOrWhiteSpace(correoUsuarioActual) &&
+                    entidad.IdPersonaNavigation?.Correo.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
                     throw new InvalidOperationException("No puedes deshabilitar tu propio usuario.");
                 entidad.Activo = activo;
                 entidad.FechaActualizacion = DateTime.UtcNow;

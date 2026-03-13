@@ -8,7 +8,7 @@ namespace Lab_Contracts.Pacientes
         public bool IncluirVigentes { get; set; } = true;
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
-        public string? SortBy { get; set; } = nameof(PacienteDto.NombrePaciente);
+        public string? SortBy { get; set; } = nameof(PacienteDto.Nombres);
         public bool SortAsc { get; set; } = true;
     }
 }

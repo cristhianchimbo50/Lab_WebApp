@@ -6,37 +6,36 @@ namespace Lab_Contracts.Pacientes
     {
         public int IdPaciente { get; set; }
 
+        public int IdPersona { get; set; }
+
         [Required(ErrorMessage = "La cedula es obligatoria")]
         [StringLength(20, ErrorMessage = "La cedula no puede superar 20 caracteres")]
-        public string CedulaPaciente { get; set; } = string.Empty;
+        public string Cedula { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El nombre es obligatorio")]
-        [StringLength(100, ErrorMessage = "El nombre es muy largo")]
-        public string NombrePaciente { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Los nombres son obligatorios")]
+        [StringLength(150, ErrorMessage = "Los nombres son muy largos")]
+        public string Nombres { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
-        public DateTime FechaNacPaciente { get; set; }
-
-        [Range(0, 130, ErrorMessage = "La edad no es valida")]
-        public int EdadPaciente { get; set; }
-
-        [StringLength(150, ErrorMessage = "La direccion es muy larga")]
-        public string DireccionPaciente { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Los apellidos son obligatorios")]
+        [StringLength(150, ErrorMessage = "Los apellidos son muy largos")]
+        public string Apellidos { get; set; } = string.Empty;
 
         [EmailAddress(ErrorMessage = "Correo no valido")]
-        public string CorreoElectronicoPaciente { get; set; } = string.Empty;
+        public string Correo { get; set; } = string.Empty;
 
         [StringLength(30, ErrorMessage = "El telefono es muy largo")]
-        public string TelefonoPaciente { get; set; } = string.Empty;
+        public string Telefono { get; set; } = string.Empty;
+
+        [StringLength(255, ErrorMessage = "La direccion es muy larga")]
+        public string Direccion { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
+        public DateTime FechaNacimiento { get; set; }
 
         public int? IdGenero { get; set; }
 
         public string? NombreGenero { get; set; }
 
-        public DateTime? FechaRegistro { get; set; }
-
-        public bool Anulado { get; set; }
-
-        public int? IdUsuario { get; set; }
+        public bool Activo { get; set; }
     }
 }

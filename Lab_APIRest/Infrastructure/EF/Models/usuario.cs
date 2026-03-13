@@ -7,13 +7,11 @@ public partial class Usuario
 {
     public int IdUsuario { get; set; }
 
-    public string CorreoUsuario { get; set; } = null!;
-
-    public string? ClaveUsuario { get; set; }
-
-    public string Nombre { get; set; } = null!;
+    public string? PasswordHash { get; set; }
 
     public int IdRol { get; set; }
+
+    public int IdPersona { get; set; }
 
     public bool? Activo { get; set; }
 
@@ -27,7 +25,7 @@ public partial class Usuario
 
     public virtual Rol IdRolNavigation { get; set; } = null!;
 
-    public virtual ICollection<Paciente> Paciente { get; set; } = new List<Paciente>();
+    public virtual Persona IdPersonaNavigation { get; set; } = null!;
 
     public virtual ICollection<TokensUsuarios> TokensUsuarios { get; set; } = new List<TokensUsuarios>();
 

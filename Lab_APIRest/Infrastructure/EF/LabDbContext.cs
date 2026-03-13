@@ -30,6 +30,20 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<ExamenReactivo> ExamenReactivo { get; set; }
 
+    public virtual DbSet<Estudio> Estudio { get; set; }
+
+    public virtual DbSet<GrupoExamen> GrupoExamen { get; set; }
+
+    public virtual DbSet<TipoMuestra> TipoMuestra { get; set; }
+
+    public virtual DbSet<TipoExamen> TipoExamen { get; set; }
+
+    public virtual DbSet<Tecnica> Tecnica { get; set; }
+
+    public virtual DbSet<TipoRegistro> TipoRegistro { get; set; }
+
+    public virtual DbSet<ReferenciaExamen> ReferenciaExamen { get; set; }
+
     public virtual DbSet<Genero> Genero { get; set; }
 
     public virtual DbSet<Medico> Medico { get; set; }
@@ -46,11 +60,17 @@ public partial class LabDbContext : DbContext
 
     public virtual DbSet<Resultado> Resultado { get; set; }
 
+    public virtual DbSet<EstadoOrden> EstadoOrden { get; set; }
+
+    public virtual DbSet<EstadoResultado> EstadoResultado { get; set; }
+
     public virtual DbSet<TokensUsuarios> TokensUsuarios { get; set; }
 
     public virtual DbSet<Usuario> Usuario { get; set; }
 
     public virtual DbSet<Rol> Rol { get; set; }
+
+    public virtual DbSet<Persona> Persona { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -84,6 +104,268 @@ public partial class LabDbContext : DbContext
                 .HasForeignKey(d => d.IdMedico)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__convenio__id_medico");
+        });
+
+        modelBuilder.Entity<Estudio>(entity =>
+        {
+            entity.HasKey(e => e.IdEstudio).HasName("PK__estudio");
+
+            entity.ToTable("estudio", tb => tb.HasTrigger("tr_estudio_fecha_fin"));
+
+            entity.Property(e => e.IdEstudio).HasColumnName("id_estudio");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<GrupoExamen>(entity =>
+        {
+            entity.HasKey(e => e.IdGrupoExamen).HasName("PK__grupo_examen");
+
+            entity.ToTable("grupo_examen", tb => tb.HasTrigger("tr_grupo_examen_fecha_fin"));
+
+            entity.Property(e => e.IdGrupoExamen).HasColumnName("id_grupo_examen");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<TipoMuestra>(entity =>
+        {
+            entity.HasKey(e => e.IdTipoMuestra).HasName("PK__tipo_muestra");
+
+            entity.ToTable("tipo_muestra", tb => tb.HasTrigger("tr_tipo_muestra_fecha_fin"));
+
+            entity.Property(e => e.IdTipoMuestra).HasColumnName("id_tipo_muestra");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<TipoExamen>(entity =>
+        {
+            entity.HasKey(e => e.IdTipoExamen).HasName("PK__tipo_examen");
+
+            entity.ToTable("tipo_examen", tb => tb.HasTrigger("tr_tipo_examen_fecha_fin"));
+
+            entity.Property(e => e.IdTipoExamen).HasColumnName("id_tipo_examen");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<Tecnica>(entity =>
+        {
+            entity.HasKey(e => e.IdTecnica).HasName("PK__tecnica");
+
+            entity.ToTable("tecnica", tb => tb.HasTrigger("tr_tecnica_fecha_fin"));
+
+            entity.Property(e => e.IdTecnica).HasColumnName("id_tecnica");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<TipoRegistro>(entity =>
+        {
+            entity.HasKey(e => e.IdTipoRegistro).HasName("PK__tipo_registro");
+
+            entity.ToTable("tipo_registro", tb => tb.HasTrigger("tr_tipo_registro_fecha_fin"));
+
+            entity.Property(e => e.IdTipoRegistro).HasColumnName("id_tipo_registro");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(50)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<ReferenciaExamen>(entity =>
+        {
+            entity.HasKey(e => e.IdReferenciaExamen).HasName("PK__referencia_examen");
+
+            entity.ToTable("referencia_examen", tb => tb.HasTrigger("tr_referencia_examen_fecha_fin"));
+
+            entity.Property(e => e.IdReferenciaExamen).HasColumnName("id_referencia_examen");
+            entity.Property(e => e.IdExamen).HasColumnName("id_examen");
+            entity.Property(e => e.ValorMin)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("valor_min");
+            entity.Property(e => e.ValorMax)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("valor_max");
+            entity.Property(e => e.ValorTexto)
+                .HasMaxLength(255)
+                .HasColumnName("valor_texto");
+            entity.Property(e => e.Unidad)
+                .HasMaxLength(50)
+                .HasColumnName("unidad");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+
+            entity.HasOne(d => d.IdExamenNavigation).WithMany(p => p.ReferenciaExamen)
+                .HasForeignKey(d => d.IdExamen)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_referencia_examen_examen");
+        });
+
+        modelBuilder.Entity<Persona>(entity =>
+        {
+            entity.HasKey(e => e.IdPersona).HasName("PK__persona");
+
+            entity.ToTable("persona", tb => tb.HasTrigger("tr_persona_fecha_fin"));
+
+            entity.HasIndex(e => e.Cedula, "UQ_persona_cedula").IsUnique();
+            entity.HasIndex(e => e.Correo, "UQ_persona_correo").IsUnique();
+
+            entity.Property(e => e.IdPersona).HasColumnName("id_persona");
+            entity.Property(e => e.Cedula)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("cedula");
+            entity.Property(e => e.Nombres)
+                .HasMaxLength(150)
+                .HasColumnName("nombres");
+            entity.Property(e => e.Apellidos)
+                .HasMaxLength(150)
+                .HasColumnName("apellidos");
+            entity.Property(e => e.Correo)
+                .HasMaxLength(150)
+                .HasColumnName("correo");
+            entity.Property(e => e.Telefono)
+                .HasMaxLength(50)
+                .HasColumnName("telefono");
+            entity.Property(e => e.Direccion)
+                .HasMaxLength(255)
+                .HasColumnName("direccion");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+        });
+
+        modelBuilder.Entity<EstadoOrden>(entity =>
+        {
+            entity.HasKey(e => e.IdEstadoOrden).HasName("PK__estado_orden");
+
+            entity.ToTable("estado_orden");
+
+            entity.Property(e => e.IdEstadoOrden).HasColumnName("id_estado_orden");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(255)
+                .HasColumnName("descripcion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(50)
+                .HasColumnName("nombre");
         });
 
         modelBuilder.Entity<DetalleOrden>(entity =>
@@ -170,10 +452,6 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
-            entity.Property(e => e.Estudio)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("estudio");
             entity.Property(e => e.FechaActualizacion)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_actualizacion");
@@ -187,35 +465,44 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.NombreExamen)
                 .HasMaxLength(255)
                 .HasColumnName("nombre_examen");
+            entity.Property(e => e.TituloExamen)
+                .HasMaxLength(200)
+                .IsUnicode(false)
+                .HasColumnName("titulo_examen");
             entity.Property(e => e.Precio)
                 .HasColumnType("decimal(10, 2)")
                 .HasColumnName("precio");
-            entity.Property(e => e.Tecnica)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("tecnica");
-            entity.Property(e => e.TiempoEntrega)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("tiempo_entrega");
-            entity.Property(e => e.TipoExamen)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("tipo_examen");
-            entity.Property(e => e.TipoMuestra)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("tipo_muestra");
-            entity.Property(e => e.TituloExamen)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("titulo_examen");
-            entity.Property(e => e.Unidad)
-                .HasMaxLength(50)
-                .HasColumnName("unidad");
-            entity.Property(e => e.ValorReferencia)
-                .HasMaxLength(100)
-                .HasColumnName("valor_referencia");
+            entity.Property(e => e.TiempoEntregaMinutos).HasColumnName("tiempo_entrega_minutos");
+            entity.Property(e => e.IdEstudio).HasColumnName("id_estudio");
+            entity.Property(e => e.IdGrupoExamen).HasColumnName("id_grupo_examen");
+            entity.Property(e => e.IdTipoMuestra).HasColumnName("id_tipo_muestra");
+            entity.Property(e => e.IdTipoExamen).HasColumnName("id_tipo_examen");
+            entity.Property(e => e.IdTecnica).HasColumnName("id_tecnica");
+            entity.Property(e => e.IdTipoRegistro).HasColumnName("id_tipo_registro");
+
+            entity.HasOne(d => d.IdEstudioNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdEstudio)
+                .HasConstraintName("FK_examen_estudio");
+
+            entity.HasOne(d => d.IdGrupoExamenNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdGrupoExamen)
+                .HasConstraintName("FK_examen_grupo_examen");
+
+            entity.HasOne(d => d.IdTipoMuestraNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdTipoMuestra)
+                .HasConstraintName("FK_examen_tipo_muestra");
+
+            entity.HasOne(d => d.IdTipoExamenNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdTipoExamen)
+                .HasConstraintName("FK_examen_tipo_examen");
+
+            entity.HasOne(d => d.IdTecnicaNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdTecnica)
+                .HasConstraintName("FK_examen_tecnica");
+
+            entity.HasOne(d => d.IdTipoRegistroNavigation).WithMany(p => p.Examen)
+                .HasForeignKey(d => d.IdTipoRegistro)
+                .HasConstraintName("FK_examen_tipo_registro");
         });
 
         modelBuilder.Entity<ExamenComposicion>(entity =>
@@ -400,13 +687,12 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
+            entity.Property(e => e.IdEstadoOrden)
+                .HasDefaultValue(1)
+                .HasColumnName("id_estado_orden");
             entity.Property(e => e.EstadoPago)
                 .HasMaxLength(20)
                 .HasColumnName("estado_pago");
-            entity.Property(e => e.EstadoOrden)
-                .HasMaxLength(30)
-                .HasDefaultValue("EN_PROCESO")
-                .HasColumnName("estado_orden");
             entity.Property(e => e.FechaFin)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
@@ -451,6 +737,11 @@ public partial class LabDbContext : DbContext
                 .HasForeignKey(d => d.IdPaciente)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__orden_paciente");
+
+            entity.HasOne(d => d.IdEstadoOrdenNavigation).WithMany(p => p.Orden)
+                .HasForeignKey(d => d.IdEstadoOrden)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_orden_estado_orden");
         });
 
         modelBuilder.Entity<Paciente>(entity =>
@@ -459,31 +750,15 @@ public partial class LabDbContext : DbContext
 
             entity.ToTable("paciente", tb => tb.HasTrigger("tr_paciente_fecha_fin"));
 
-            entity.HasIndex(e => e.CedulaPaciente, "UQ__paciente").IsUnique();
-
-            entity.HasIndex(e => e.CedulaPaciente, "UQ_paciente_cedula_paciente").IsUnique();
-
-            entity.HasIndex(e => e.NombrePaciente, "idx_paciente_nombre");
-
             entity.Property(e => e.IdPaciente).HasColumnName("id_paciente");
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
-            entity.Property(e => e.CedulaPaciente)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("cedula_paciente");
-            entity.Property(e => e.CorreoElectronicoPaciente)
-                .HasMaxLength(150)
-                .HasColumnName("correo_electronico_paciente");
-            entity.Property(e => e.DireccionPaciente)
-                .HasMaxLength(150)
-                .HasColumnName("direccion_paciente");
             entity.Property(e => e.FechaActualizacion)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_actualizacion");
             entity.Property(e => e.FechaCreacion)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_creacion");
             entity.Property(e => e.FechaFin)
@@ -491,21 +766,16 @@ public partial class LabDbContext : DbContext
                 .HasColumnName("fecha_fin");
             entity.Property(e => e.FechaNacPaciente).HasColumnName("fecha_nac_paciente");
             entity.Property(e => e.IdGenero).HasColumnName("id_genero");
-            entity.Property(e => e.IdUsuario).HasColumnName("id_usuario");
-            entity.Property(e => e.NombrePaciente)
-                .HasMaxLength(100)
-                .HasColumnName("nombre_paciente");
-            entity.Property(e => e.TelefonoPaciente)
-                .HasMaxLength(20)
-                .HasColumnName("telefono_paciente");
+            entity.Property(e => e.IdPersona).HasColumnName("id_persona");
 
             entity.HasOne(d => d.IdGeneroNavigation).WithMany(p => p.Paciente)
                 .HasForeignKey(d => d.IdGenero)
                 .HasConstraintName("FK_paciente_genero");
 
-            entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.Paciente)
-                .HasForeignKey(d => d.IdUsuario)
-                .HasConstraintName("FK_paciente_usuario");
+            entity.HasOne(d => d.IdPersonaNavigation).WithMany(p => p.Paciente)
+                .HasForeignKey(d => d.IdPersona)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_paciente_persona");
         });
 
         modelBuilder.Entity<Pago>(entity =>
@@ -576,6 +846,34 @@ public partial class LabDbContext : DbContext
                 .HasColumnName("unidad");
         });
 
+        modelBuilder.Entity<EstadoResultado>(entity =>
+        {
+            entity.HasKey(e => e.IdEstadoResultado).HasName("PK__estado_resultado");
+
+            entity.ToTable("estado_resultado");
+
+            entity.Property(e => e.IdEstadoResultado).HasColumnName("id_estado_resultado");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(255)
+                .HasColumnName("descripcion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_actualizacion");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_creacion");
+            entity.Property(e => e.FechaFin)
+                .HasColumnType("datetime")
+                .HasColumnName("fecha_fin");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(50)
+                .HasColumnName("nombre");
+        });
+
         modelBuilder.Entity<Resultado>(entity =>
         {
             entity.HasKey(e => e.IdResultado).HasName("PK__resultado");
@@ -586,9 +884,9 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
-            entity.Property(e => e.EstadoResultado)
-                .HasMaxLength(30)
-                .HasColumnName("estado_resultado");
+            entity.Property(e => e.IdEstadoResultado)
+                .HasDefaultValue(1)
+                .HasColumnName("id_estado_resultado");
             entity.Property(e => e.FechaFin)
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
@@ -618,6 +916,11 @@ public partial class LabDbContext : DbContext
             entity.HasOne(d => d.IdRevisorNavigation).WithMany(p => p.Resultado)
                 .HasForeignKey(d => d.IdRevisor)
                 .HasConstraintName("FK_resultado_revisor");
+
+            entity.HasOne(d => d.IdEstadoResultadoNavigation).WithMany(p => p.Resultado)
+                .HasForeignKey(d => d.IdEstadoResultado)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_resultado_estado_resultado");
         });
 
         modelBuilder.Entity<TokensUsuarios>(entity =>
@@ -671,25 +974,13 @@ public partial class LabDbContext : DbContext
 
             entity.ToTable("usuario", tb => tb.HasTrigger("tr_usuario_fecha_fin"));
 
-            entity.HasIndex(e => e.CorreoUsuario, "UQ__usuario").IsUnique();
-
-            entity.HasIndex(e => e.CorreoUsuario, "UQ_usuario_correo_usuario")
-                .IsUnique()
-                .HasFilter("([correo_usuario] IS NOT NULL)");
-
-            entity.HasIndex(e => e.CorreoUsuario, "idx_usuario_correo");
-
             entity.Property(e => e.IdUsuario).HasColumnName("id_usuario");
             entity.Property(e => e.Activo)
                 .HasDefaultValue(true)
                 .HasColumnName("activo");
-            entity.Property(e => e.ClaveUsuario)
+            entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
-                .HasColumnName("clave_usuario");
-            entity.Property(e => e.CorreoUsuario)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("correo_usuario");
+                .HasColumnName("password_hash");
             entity.Property(e => e.FechaActualizacion)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
@@ -701,15 +992,18 @@ public partial class LabDbContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("fecha_fin");
             entity.Property(e => e.IdRol).HasColumnName("id_rol");
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(255)
-                .HasColumnName("nombre");
+            entity.Property(e => e.IdPersona).HasColumnName("id_persona");
             entity.Property(e => e.UltimoAcceso).HasColumnName("ultimo_acceso");
 
             entity.HasOne(d => d.IdRolNavigation).WithMany(p => p.Usuario)
                 .HasForeignKey(d => d.IdRol)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_usuario_rol");
+
+            entity.HasOne(d => d.IdPersonaNavigation).WithMany(p => p.Usuario)
+                .HasForeignKey(d => d.IdPersona)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_usuario_persona");
         });
 
         modelBuilder.Entity<Rol>(entity =>

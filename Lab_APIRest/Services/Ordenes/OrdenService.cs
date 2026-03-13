@@ -8,7 +8,6 @@ using Lab_Contracts.Pacientes;
 using Lab_Contracts.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Ordenes
@@ -20,6 +19,12 @@ namespace Lab_APIRest.Services.Ordenes
         private readonly EmailService _emailService;
         private readonly ILogger<OrdenService> _logger;
         private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
+
+        private const int EstadoOrdenEnProcesoId = 1;
+        private const int EstadoOrdenFinalizadaId = 2;
+        private const int EstadoOrdenAnuladaId = 3;
+
+        private const int EstadoResultadoAprobadoId = 4;
 
         public OrdenService(
             LabDbContext context,
@@ -38,14 +43,14 @@ namespace Lab_APIRest.Services.Ordenes
             IdOrden = entidadOrden.IdOrden,
             NumeroOrden = entidadOrden.NumeroOrden,
             IdPaciente = entidadOrden.IdPaciente,
-            CedulaPaciente = entidadOrden.IdPacienteNavigation?.CedulaPaciente,
-            NombrePaciente = entidadOrden.IdPacienteNavigation?.NombrePaciente,
+            CedulaPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Cedula,
+            NombrePaciente = $"{entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}",
             FechaOrden = entidadOrden.FechaOrden,
             Total = entidadOrden.Total,
             TotalPagado = entidadOrden.TotalPagado ?? 0m,
             SaldoPendiente = entidadOrden.SaldoPendiente ?? 0m,
             EstadoPago = entidadOrden.EstadoPago,
-            EstadoOrden = entidadOrden.EstadoOrden,
+            EstadoOrden = entidadOrden.IdEstadoOrdenNavigation?.Nombre ?? string.Empty,
             ResultadosHabilitados = entidadOrden.ResultadosHabilitados,
             Anulado = !entidadOrden.Activo,
             IdConvenio = entidadOrden.IdConvenio != null,
@@ -62,13 +67,14 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<List<object>> ListarOrdenesAsync()
         {
             var lista = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
+                .Include(o => o.IdEstadoOrdenNavigation)
                 .Select(entidadOrden => new
                 {
                     IdOrden = entidadOrden.IdOrden,
                     NumeroOrden = entidadOrden.NumeroOrden,
-                    CedulaPaciente = entidadOrden.IdPacienteNavigation!.CedulaPaciente,
-                    NombrePaciente = entidadOrden.IdPacienteNavigation!.NombrePaciente,
+                    CedulaPaciente = entidadOrden.IdPacienteNavigation!.IdPersonaNavigation!.Cedula,
+                    NombrePaciente = $"{entidadOrden.IdPacienteNavigation!.IdPersonaNavigation!.Nombres} {entidadOrden.IdPacienteNavigation!.IdPersonaNavigation!.Apellidos}",
                     FechaOrden = entidadOrden.FechaOrden,
                     Total = entidadOrden.Total,
                     TotalPagado = entidadOrden.TotalPagado ?? 0m,
@@ -85,7 +91,8 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<ResultadoPaginadoDto<OrdenDto>> ListarOrdenesPaginadosAsync(OrdenFiltroDto filtro)
         {
             var query = _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
+                .Include(o => o.IdEstadoOrdenNavigation)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -108,8 +115,8 @@ namespace Lab_APIRest.Services.Ordenes
                 switch (filtro.CriterioBusqueda)
                 {
                     case "numero": query = query.Where(o => (o.NumeroOrden ?? "").ToLower().Contains(val)); break;
-                    case "cedula": query = query.Where(o => (o.IdPacienteNavigation!.CedulaPaciente ?? "").ToLower().Contains(val)); break;
-                    case "nombre": query = query.Where(o => (o.IdPacienteNavigation!.NombrePaciente ?? "").ToLower().Contains(val)); break;
+                    case "cedula": query = query.Where(o => (o.IdPacienteNavigation!.IdPersonaNavigation!.Cedula ?? "").ToLower().Contains(val)); break;
+                    case "nombre": query = query.Where(o => ((o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres + " " + o.IdPacienteNavigation!.IdPersonaNavigation!.Apellidos) ?? "").ToLower().Contains(val)); break;
                     case "estadoPago": query = query.Where(o => (o.EstadoPago ?? "").ToLower().Contains(val)); break;
                 }
             }
@@ -122,8 +129,8 @@ namespace Lab_APIRest.Services.Ordenes
             query = filtro.SortBy switch
             {
                 nameof(OrdenDto.NumeroOrden) => asc ? query.OrderBy(o => o.NumeroOrden) : query.OrderByDescending(o => o.NumeroOrden),
-                nameof(OrdenDto.CedulaPaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.CedulaPaciente) : query.OrderByDescending(o => o.IdPacienteNavigation!.CedulaPaciente),
-                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.NombrePaciente) : query.OrderByDescending(o => o.IdPacienteNavigation!.NombrePaciente),
+                nameof(OrdenDto.CedulaPaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Cedula) : query.OrderByDescending(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Cedula),
+                nameof(OrdenDto.NombrePaciente) => asc ? query.OrderBy(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres) : query.OrderByDescending(o => o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres),
                 nameof(OrdenDto.FechaOrden) => asc ? query.OrderBy(o => o.FechaOrden) : query.OrderByDescending(o => o.FechaOrden),
                 nameof(OrdenDto.Total) => asc ? query.OrderBy(o => o.Total) : query.OrderByDescending(o => o.Total),
                 nameof(OrdenDto.TotalPagado) => asc ? query.OrderBy(o => o.TotalPagado) : query.OrderByDescending(o => o.TotalPagado),
@@ -137,6 +144,7 @@ namespace Lab_APIRest.Services.Ordenes
             var items = await query.Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdEstadoOrdenNavigation)
                 .ToListAsync();
 
             var dtoItems = items.Select(MapOrden).ToList();
@@ -154,8 +162,10 @@ namespace Lab_APIRest.Services.Ordenes
         {
             var entidadOrden = await _context.Orden
                 .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Include(o => o.IdMedicoNavigation)
-                .Include(o => o.DetalleOrden).ThenInclude(d => d.IdExamenNavigation)
+                .Include(o => o.IdEstadoOrdenNavigation)
+                .Include(o => o.DetalleOrden)!.ThenInclude(d => d.IdExamenNavigation)!.ThenInclude(e => e.IdEstudioNavigation)
                 .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
             if (entidadOrden == null) return null;
 
@@ -173,7 +183,7 @@ namespace Lab_APIRest.Services.Ordenes
                     d.IdResultadoNavigation.IdResultado,
                     d.IdResultadoNavigation.NumeroResultado,
                     d.IdResultadoNavigation.FechaResultado,
-                    d.IdResultadoNavigation.EstadoResultado
+                    Estado = d.IdResultadoNavigation.IdEstadoResultadoNavigation.Nombre
                 })
                 .ToListAsync();
 
@@ -187,14 +197,14 @@ namespace Lab_APIRest.Services.Ordenes
                 NumeroOrden = entidadOrden.NumeroOrden,
                 FechaOrden = entidadOrden.FechaOrden,
                 EstadoPago = entidadOrden.EstadoPago,
-                EstadoOrden = entidadOrden.EstadoOrden,
+                EstadoOrden = entidadOrden.IdEstadoOrdenNavigation?.Nombre ?? string.Empty,
                 ResultadosHabilitados = entidadOrden.ResultadosHabilitados,
                 IdPaciente = entidadOrden.IdPaciente ?? 0,
-                CedulaPaciente = entidadOrden.IdPacienteNavigation?.CedulaPaciente,
-                NombrePaciente = entidadOrden.IdPacienteNavigation?.NombrePaciente,
-                DireccionPaciente = entidadOrden.IdPacienteNavigation?.DireccionPaciente,
-                CorreoPaciente = entidadOrden.IdPacienteNavigation?.CorreoElectronicoPaciente,
-                TelefonoPaciente = entidadOrden.IdPacienteNavigation?.TelefonoPaciente,
+                CedulaPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Cedula,
+                NombrePaciente = $"{entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}",
+                DireccionPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Direccion,
+                CorreoPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Correo,
+                TelefonoPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Telefono,
                 GeneroPaciente = entidadOrden.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
                 IdMedico = entidadOrden.IdMedico,
                 NombreMedico = entidadOrden.IdMedicoNavigation?.NombreMedico,
@@ -219,10 +229,10 @@ namespace Lab_APIRest.Services.Ordenes
                     {
                         IdExamen = d.IdExamen,
                         NombreExamen = d.IdExamenNavigation!.NombreExamen ?? string.Empty,
-                        NombreEstudio = d.IdExamenNavigation!.Estudio,
+                        NombreEstudio = d.IdExamenNavigation!.IdEstudioNavigation?.Nombre,
                         IdResultado = info?.IdResultado,
                         NumeroResultado = info?.NumeroResultado,
-                        EstadoResultado = info?.EstadoResultado ?? "PENDIENTE"
+                        EstadoResultado = info?.Estado ?? "PENDIENTE"
                     };
                 }).ToList()
             };
@@ -257,7 +267,7 @@ namespace Lab_APIRest.Services.Ordenes
                 IdMedico = dto.IdMedico,
                 Observacion = dto.Observacion,
                 EstadoPago = dto.EstadoPago,
-                EstadoOrden = "EN_PROCESO",
+                IdEstadoOrden = EstadoOrdenEnProcesoId,
                 ResultadosHabilitados = false,
                 Activo = true,
                 NumeroOrden = numeroOrden,
@@ -271,13 +281,13 @@ namespace Lab_APIRest.Services.Ordenes
 
             try
             {
-                var paciente = await _context.Paciente.FirstOrDefaultAsync(p => p.IdPaciente == entidadOrden.IdPaciente);
-                if (paciente != null && !string.IsNullOrWhiteSpace(paciente.CorreoElectronicoPaciente))
+                var paciente = await _context.Paciente.Include(p => p.IdPersonaNavigation).FirstOrDefaultAsync(p => p.IdPaciente == entidadOrden.IdPaciente);
+                if (paciente != null && !string.IsNullOrWhiteSpace(paciente.IdPersonaNavigation?.Correo))
                 {
                     string asunto = "Orden registrada - Laboratorio La Inmaculada";
                     string cuerpo = $@"
                         <div style=""font-family:Arial, sans-serif; color:#333;"">
-                            <h3>Estimado/a {paciente.NombrePaciente},</h3>
+                            <h3>Estimado/a {paciente.IdPersonaNavigation?.Nombres} {paciente.IdPersonaNavigation?.Apellidos},</h3>
 
                             <p>
                                 Su orden <strong>{entidadOrden.NumeroOrden}</strong> ha sido registrada.
@@ -308,7 +318,7 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<byte[]?> GenerarOrdenTicketPdfAsync(int idOrden)
         {
             var entidadOrden = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Include(o => o.IdMedicoNavigation)
                 .Include(o => o.DetalleOrden).ThenInclude(d => d.IdExamenNavigation)
                 .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
@@ -325,8 +335,8 @@ namespace Lab_APIRest.Services.Ordenes
             {
                 NumeroOrden = entidadOrden.NumeroOrden,
                 FechaOrden = entidadOrden.FechaOrden.ToDateTime(TimeOnly.MinValue),
-                NombrePaciente = entidadOrden.IdPacienteNavigation?.NombrePaciente ?? "(Sin nombre)",
-                CedulaPaciente = entidadOrden.IdPacienteNavigation?.CedulaPaciente ?? "(Sin cédula)",
+                NombrePaciente = $"{entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}" ?? "(Sin nombre)",
+                CedulaPaciente = entidadOrden.IdPacienteNavigation?.IdPersonaNavigation?.Cedula ?? "(Sin cédula)",
                 EdadPaciente = edadPaciente,
                 NombreMedico = entidadOrden.IdMedicoNavigation?.NombreMedico ?? "(Sin médico)",
                 Total = entidadOrden.Total,
@@ -346,7 +356,7 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task<List<object>> ListarOrdenesPorPacienteAsync(int idPaciente)
         {
             var lista = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Where(o => o.IdPaciente == idPaciente)
                 .Select(entidadOrden => new
                 {
@@ -406,7 +416,7 @@ namespace Lab_APIRest.Services.Ordenes
             };
 
             var ordenesRecientes = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Include(o => o.IdMedicoNavigation)
                 .Where(o => o.Activo)
                 .OrderByDescending(o => o.FechaOrden)
@@ -415,7 +425,7 @@ namespace Lab_APIRest.Services.Ordenes
                 {
                     IdOrden = o.IdOrden,
                     NumeroOrden = o.NumeroOrden ?? string.Empty,
-                    NombrePaciente = o.IdPacienteNavigation!.NombrePaciente,
+                    NombrePaciente = $"{o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres} {o.IdPacienteNavigation!.IdPersonaNavigation!.Apellidos}",
                     Medico = o.IdMedicoNavigation != null ? o.IdMedicoNavigation.NombreMedico : string.Empty,
                     EstadoPago = o.EstadoPago ?? string.Empty,
                     ListoParaEntrega = o.ResultadosHabilitados == true
@@ -457,6 +467,7 @@ namespace Lab_APIRest.Services.Ordenes
             var resultados = await _context.Resultado
                 .AsNoTracking()
                 .Where(r => r.Activo)
+                .Include(r => r.IdEstadoResultadoNavigation)
                 .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
                 .Include(r => r.DetalleResultado)!.ThenInclude(d => d.IdExamenNavigation)
                 .OrderByDescending(r => r.FechaResultado)
@@ -466,7 +477,7 @@ namespace Lab_APIRest.Services.Ordenes
                 .Select(r => new
                 {
                     Resultado = r,
-                    EstadoNorm = NormalizarEstado(r.EstadoResultado)
+                    EstadoNorm = NormalizarEstado(r.IdEstadoResultadoNavigation?.Nombre)
                 })
                 .ToList();
 
@@ -490,11 +501,13 @@ namespace Lab_APIRest.Services.Ordenes
                     IdResultado = x.Resultado.IdResultado,
                     IdOrden = x.Resultado.IdOrden,
                     NumeroOrden = x.Resultado.IdOrdenNavigation!.NumeroOrden ?? string.Empty,
-                    Paciente = x.Resultado.IdOrdenNavigation!.IdPacienteNavigation!.NombrePaciente ?? string.Empty,
+                    Paciente = x.Resultado.IdOrdenNavigation!.IdPacienteNavigation != null
+                        ? $"{x.Resultado.IdOrdenNavigation.IdPacienteNavigation.IdPersonaNavigation!.Nombres} {x.Resultado.IdOrdenNavigation.IdPacienteNavigation.IdPersonaNavigation!.Apellidos}"
+                        : string.Empty,
                     TipoExamen = x.Resultado.DetalleResultado
                         .Select(d => d.IdExamenNavigation!.TituloExamen ?? d.IdExamenNavigation!.NombreExamen)
                         .FirstOrDefault() ?? string.Empty,
-                    Estado = x.Resultado.EstadoResultado ?? "PENDIENTE"
+                    Estado = x.Resultado.IdEstadoResultadoNavigation?.Nombre ?? "PENDIENTE"
                 })
                 .ToList();
 
@@ -519,7 +532,7 @@ namespace Lab_APIRest.Services.Ordenes
         public async Task VerificarYNotificarResultadosCompletosAsync(int idOrden)
         {
             var orden = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Include(o => o.DetalleOrden)
                 .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
             if (orden == null) return;
@@ -528,14 +541,14 @@ namespace Lab_APIRest.Services.Ordenes
             if (!examenesOrden.Any()) return;
 
             var examenesAprobados = await _context.Resultado
-                .Where(r => r.IdOrden == idOrden && r.Activo && r.EstadoResultado == "APROBADO")
+                .Where(r => r.IdOrden == idOrden && r.Activo && r.IdEstadoResultado == EstadoResultadoAprobadoId)
                 .SelectMany(r => r.DetalleResultado)
                 .Select(dr => dr.IdExamen)
                 .Distinct()
                 .ToListAsync();
 
             bool todosAprobados = examenesOrden.All(examenesAprobados.Contains);
-            orden.EstadoOrden = todosAprobados ? "FINALIZADO" : "EN_PROCESO";
+            orden.IdEstadoOrden = todosAprobados ? EstadoOrdenFinalizadaId : EstadoOrdenEnProcesoId;
 
             bool habilitar = todosAprobados && string.Equals(orden.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase);
             bool debeNotificar = habilitar && !orden.ResultadosHabilitados && !_ordenesNotificadas.ContainsKey(idOrden);
@@ -545,15 +558,15 @@ namespace Lab_APIRest.Services.Ordenes
 
             if (debeNotificar)
             {
-                var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
-                var nombre = orden.IdPacienteNavigation?.NombrePaciente;
+                var correo = orden.IdPacienteNavigation?.IdPersonaNavigation?.Correo;
+                var nombre = $"{orden.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {orden.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}".Trim();
                 if (!string.IsNullOrWhiteSpace(correo))
                 {
                     string asunto = "Resultados habilitados - Laboratorio La Inmaculada";
                     string cuerpo = $@"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede consultarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
 
                     var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-                    await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
+                    await emailService.EnviarCorreoAsync(correo, string.IsNullOrWhiteSpace(nombre) ? "Paciente" : nombre, asunto, cuerpo);
                     _ordenesNotificadas.TryAdd(idOrden, true);
                 }
             }
@@ -572,7 +585,7 @@ namespace Lab_APIRest.Services.Ordenes
 
             var ordenesRecientes = await _context.Orden
                 .AsNoTracking()
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Include(o => o.IdMedicoNavigation)
                 .Where(o => o.Activo)
                 .OrderByDescending(o => o.FechaOrden)
@@ -581,7 +594,7 @@ namespace Lab_APIRest.Services.Ordenes
                 {
                     IdOrden = o.IdOrden,
                     NumeroOrden = o.NumeroOrden ?? string.Empty,
-                    Paciente = o.IdPacienteNavigation != null ? o.IdPacienteNavigation.NombrePaciente : string.Empty,
+                    Paciente = o.IdPacienteNavigation != null ? $"{o.IdPacienteNavigation.IdPersonaNavigation!.Nombres} {o.IdPacienteNavigation.IdPersonaNavigation!.Apellidos}" : string.Empty,
                     Medico = o.IdMedicoNavigation != null ? o.IdMedicoNavigation.NombreMedico : string.Empty,
                     EstadoPago = o.EstadoPago ?? "-",
                     ListoParaEntrega = o.ResultadosHabilitados == true

@@ -60,17 +60,8 @@ namespace Lab_Blazor.Services.Pacientes
             var resp = await _http.SendAsync(req);
             if (resp.IsSuccessStatusCode)
             {
-                try
-                {
-                    var contenido = await resp.Content.ReadFromJsonAsync<JsonElement>();
-                    var dto = new PacienteDto();
-                    if (contenido.TryGetProperty("idPaciente", out var Id)) dto.IdPaciente = Id.GetInt32();
-                    if (contenido.TryGetProperty("nombrePaciente", out var Nombre)) dto.NombrePaciente = Nombre.GetString() ?? "";
-                    if (contenido.TryGetProperty("correoElectronicoPaciente", out var Correo)) dto.CorreoElectronicoPaciente = Correo.GetString() ?? "";
-                    string mensaje = contenido.TryGetProperty("mensaje", out var Msg) ? Msg.GetString() ?? "Paciente registrado correctamente." : "Paciente registrado correctamente.";
-                    return (true, mensaje, dto);
-                }
-                catch { return (true, "Paciente registrado correctamente.", null); }
+                var dto = await resp.Content.ReadFromJsonAsync<PacienteDto?>();
+                return (true, "Paciente registrado correctamente.", dto);
             }
             string errorMsg = resp.StatusCode == System.Net.HttpStatusCode.Conflict ? await resp.Content.ReadAsStringAsync() : $"Error {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}";
             return (false, errorMsg, null);

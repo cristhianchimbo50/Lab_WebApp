@@ -25,11 +25,13 @@ namespace Lab_APIRest.Services.Auth
 
         private sealed record UsuarioLoginProjection(
             int IdUsuario,
-            string CorreoUsuario,
-            string Nombre,
+            int IdPersona,
+            string Correo,
+            string Nombres,
+            string Apellidos,
             int IdRol,
             string RolNombre,
-            string? ClaveUsuario,
+            string? PasswordHash,
             bool? Activo
         );
 
@@ -38,14 +40,17 @@ namespace Lab_APIRest.Services.Auth
                 ctx.Usuario
                     .AsNoTracking()
                     .Include(u => u.IdRolNavigation)
-                    .Where(u => u.CorreoUsuario == correo)
+                    .Include(u => u.IdPersonaNavigation)
+                    .Where(u => u.IdPersonaNavigation.Correo == correo)
                     .Select(u => new UsuarioLoginProjection(
                         u.IdUsuario,
-                        u.CorreoUsuario,
-                        u.Nombre,
+                        u.IdPersona,
+                        u.IdPersonaNavigation.Correo,
+                        u.IdPersonaNavigation.Nombres,
+                        u.IdPersonaNavigation.Apellidos,
                         u.IdRol,
                         u.IdRolNavigation.Nombre,
-                        u.ClaveUsuario,
+                        u.PasswordHash,
                         u.Activo
                     ))
             );
@@ -89,13 +94,13 @@ namespace Lab_APIRest.Services.Auth
                 return null;
             }
 
-            if (string.IsNullOrEmpty(usuarioEntidad.ClaveUsuario))
+            if (string.IsNullOrEmpty(usuarioEntidad.PasswordHash))
             {
                 RegistrarIntentoFallido(emailNorm);
                 return null;
             }
 
-            var claveOk = _hasher.VerifyHashedPassword(null!, usuarioEntidad.ClaveUsuario!, solicitud.Clave) != PasswordVerificationResult.Failed;
+            var claveOk = _hasher.VerifyHashedPassword(null!, usuarioEntidad.PasswordHash!, solicitud.Clave) != PasswordVerificationResult.Failed;
             if (!claveOk)
             {
                 RegistrarIntentoFallido(emailNorm);
@@ -130,7 +135,7 @@ namespace Lab_APIRest.Services.Auth
             if (esPaciente)
             {
                 var pacienteEntidad = await _context.Paciente.AsNoTracking()
-                    .Where(p => p.IdUsuario == usuarioEntidad.IdUsuario)
+                    .Where(p => p.IdPersona == usuarioEntidad.IdPersona)
                     .Select(p => new { p.IdPaciente })
                     .FirstOrDefaultAsync(ct);
                 if (pacienteEntidad != null)
@@ -139,8 +144,8 @@ namespace Lab_APIRest.Services.Auth
 
             (string token, DateTime expiraUtc) = _tokenService.CreateToken(
                 usuarioEntidad.IdUsuario,
-                usuarioEntidad.CorreoUsuario,
-                usuarioEntidad.Nombre,
+                usuarioEntidad.Correo,
+                $"{usuarioEntidad.Nombres} {usuarioEntidad.Apellidos}",
                 usuarioEntidad.IdRol,
                 usuarioEntidad.RolNombre,
                 false,
@@ -150,8 +155,8 @@ namespace Lab_APIRest.Services.Auth
             return new LoginResponseDto
             {
                 IdUsuario = usuarioEntidad.IdUsuario,
-                CorreoUsuario = usuarioEntidad.CorreoUsuario,
-                Nombre = usuarioEntidad.Nombre,
+                CorreoUsuario = usuarioEntidad.Correo,
+                Nombre = $"{usuarioEntidad.Nombres} {usuarioEntidad.Apellidos}",
                 IdRol = usuarioEntidad.IdRol,
                 NombreRol = usuarioEntidad.RolNombre,
                 AccessToken = token,
@@ -171,20 +176,22 @@ namespace Lab_APIRest.Services.Auth
         public async Task<CambiarContraseniaResponseDto> CambiarContraseniaAsync(CambiarContraseniaDto cambio, CancellationToken ct)
         {
             var correo = cambio.CorreoUsuario.Trim().ToLowerInvariant();
-            var usuarioEntidad = await _context.Usuario.FirstOrDefaultAsync(u => u.CorreoUsuario.ToLower() == correo, ct);
+            var usuarioEntidad = await _context.Usuario
+                .Include(u => u.IdPersonaNavigation)
+                .FirstOrDefaultAsync(u => u.IdPersonaNavigation.Correo.ToLower() == correo, ct);
 
             if (usuarioEntidad == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            if (string.IsNullOrEmpty(usuarioEntidad.ClaveUsuario))
+            if (string.IsNullOrEmpty(usuarioEntidad.PasswordHash))
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Credenciales inválidas." };
 
-            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.ClaveUsuario!, cambio.ContraseniaActual);
+            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.PasswordHash!, cambio.ContraseniaActual);
             if (verificacion == PasswordVerificationResult.Failed)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
             var nuevaHash = _hasher.HashPassword(null!, cambio.NuevaContrasenia);
-            usuarioEntidad.ClaveUsuario = nuevaHash;
+            usuarioEntidad.PasswordHash = nuevaHash;
 
             await _context.SaveChangesAsync(ct);
 
@@ -215,7 +222,7 @@ namespace Lab_APIRest.Services.Auth
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
             var usuario = registro.IdUsuarioNavigation;
-            usuario.ClaveUsuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            usuario.PasswordHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
             usuario.Activo = true;
 
             registro.Usado = true;
@@ -223,16 +230,20 @@ namespace Lab_APIRest.Services.Auth
 
             await _context.SaveChangesAsync(ct);
 
+            var persona = await _context.Persona.FirstOrDefaultAsync(p => p.IdPersona == usuario.IdPersona, ct);
+
             var asunto = "Cuenta activada correctamente";
 
             var cuerpo = $@"
-                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+                <p>Hola <strong>{persona?.Nombres} {persona?.Apellidos}</strong>,</p>
 
                 <p>Tu cuenta ha sido activada exitosamente.</p>
 
                 <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpo);
+            var correoDestino = persona?.Correo ?? string.Empty;
+            var nombreDestino = $"{persona?.Nombres} {persona?.Apellidos}".Trim();
+            await _emailService.EnviarCorreoAsync(correoDestino, nombreDestino, asunto, cuerpo);
 
             return new RespuestaMensajeDto
             {

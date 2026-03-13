@@ -25,7 +25,9 @@ namespace Lab_APIRest.Services.Auth
         {
             var correo = (dto.Correo ?? string.Empty).Trim().ToLowerInvariant();
 
-            var usuario = await _db.Usuario.FirstOrDefaultAsync(u => u.CorreoUsuario.ToLower() == correo && u.Activo == true, ct);
+            var usuario = await _db.Usuario
+                .Include(u => u.IdPersonaNavigation)
+                .FirstOrDefaultAsync(u => u.IdPersonaNavigation.Correo.ToLower() == correo && u.Activo == true, ct);
             if (usuario == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El correo no está registrado o el usuario está inactivo." };
 
@@ -47,7 +49,7 @@ namespace Lab_APIRest.Services.Auth
             var link = $"http://laboratorioinmaculada:9111/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
             var asunto = "Recuperación de Contraseña - Laboratorio Clínico 'La Inmaculada'";
             var cuerpoHtml = $@"
-                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+                <p>Hola <strong>{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}</strong>,</p>
 
                 <p>Recibimos una solicitud para restablecer tu contraseña.</p>
 
@@ -66,7 +68,7 @@ namespace Lab_APIRest.Services.Auth
                     <strong>Laboratorio Clínico ""La Inmaculada""</strong>
                 </p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
+            await _emailService.EnviarCorreoAsync(usuario.IdPersonaNavigation!.Correo, $"{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}", asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Se ha enviado un enlace de recuperación a tu correo electrónico." };
         }
@@ -89,7 +91,7 @@ namespace Lab_APIRest.Services.Auth
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
             var usuario = registro.IdUsuarioNavigation;
-            usuario.ClaveUsuario = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            usuario.PasswordHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
 
             registro.Usado = true;
             registro.UsadoEn = DateTime.UtcNow;
@@ -98,7 +100,7 @@ namespace Lab_APIRest.Services.Auth
 
             var asunto = "Contraseña actualizada - Laboratorio Clínico La Inmaculada";
             var cuerpoHtml = $@"
-                <p>Hola <strong>{usuario.Nombre}</strong>,</p>
+                <p>Hola <strong>{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}</strong>,</p>
 
                 <p>Tu contraseña fue restablecida correctamente.</p>
 
@@ -109,7 +111,7 @@ namespace Lab_APIRest.Services.Auth
                     <strong>Laboratorio Clínico ""La Inmaculada""</strong>
                 </p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.CorreoUsuario, usuario.Nombre, asunto, cuerpoHtml);
+            await _emailService.EnviarCorreoAsync(usuario.IdPersonaNavigation!.Correo, $"{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}", asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }

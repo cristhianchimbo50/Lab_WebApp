@@ -7,21 +7,11 @@ public partial class Paciente
 {
     public int IdPaciente { get; set; }
 
-    public string CedulaPaciente { get; set; } = null!;
-
-    public string NombrePaciente { get; set; } = null!;
-
     public DateOnly FechaNacPaciente { get; set; }
 
-    public string? DireccionPaciente { get; set; }
-
-    public string? CorreoElectronicoPaciente { get; set; }
-
-    public string? TelefonoPaciente { get; set; }
-
-    public int? IdUsuario { get; set; }
-
     public int? IdGenero { get; set; }
+
+    public int IdPersona { get; set; }
 
     public DateTime FechaCreacion { get; set; }
 
@@ -33,7 +23,7 @@ public partial class Paciente
 
     public virtual Genero? IdGeneroNavigation { get; set; }
 
-    public virtual Usuario? IdUsuarioNavigation { get; set; }
+    public virtual Persona IdPersonaNavigation { get; set; } = null!;
 
     public virtual ICollection<Orden> Orden { get; set; } = new List<Orden>();
 }

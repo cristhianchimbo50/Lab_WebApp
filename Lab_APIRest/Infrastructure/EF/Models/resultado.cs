@@ -19,7 +19,7 @@ public partial class Resultado
 
     public int IdOrden { get; set; }
 
-    public string EstadoResultado { get; set; } = null!;
+    public int IdEstadoResultado { get; set; }
 
     public string? ObservacionRevision { get; set; }
 
@@ -32,4 +32,6 @@ public partial class Resultado
     public virtual Orden IdOrdenNavigation { get; set; } = null!;
 
     public virtual Usuario? IdRevisorNavigation { get; set; }
+
+    public virtual EstadoResultado IdEstadoResultadoNavigation { get; set; } = null!;
 }

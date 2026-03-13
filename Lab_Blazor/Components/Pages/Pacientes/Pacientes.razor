@@ -121,13 +121,13 @@
                         <table class="table align-middle tabla-pacientes">
                             <thead>
                                 <tr>
-                                    <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.CedulaPaciente))">Cédula @OrdenIcono(nameof(PacienteDto.CedulaPaciente))</th>
-                                    <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.NombrePaciente))">Nombre @OrdenIcono(nameof(PacienteDto.NombrePaciente))</th>
-                                    <th style="width:7%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.EdadPaciente))">Edad @OrdenIcono(nameof(PacienteDto.EdadPaciente))</th>
+                                    <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.Cedula))">Cédula @OrdenIcono(nameof(PacienteDto.Cedula))</th>
+                                    <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.Nombres))">Nombre @OrdenIcono(nameof(PacienteDto.Nombres))</th>
+                                    <th style="width:7%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.FechaNacimiento))">Edad @OrdenIcono(nameof(PacienteDto.FechaNacimiento))</th>
                                     <th style="width:10%;">Género</th>
                                     <th style="width:15%">Dirección</th>
-                                    <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.CorreoElectronicoPaciente))">Correo @OrdenIcono(nameof(PacienteDto.CorreoElectronicoPaciente))</th>
-                                    <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.TelefonoPaciente))">Teléfono @OrdenIcono(nameof(PacienteDto.TelefonoPaciente))</th>
+                                    <th style="width:15%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.Correo))">Correo @OrdenIcono(nameof(PacienteDto.Correo))</th>
+                                    <th style="width:10%; cursor:pointer;" @onclick="() => OrdenarPor(nameof(PacienteDto.Telefono))">Teléfono @OrdenIcono(nameof(PacienteDto.Telefono))</th>
                                     <th style="width:8%">Estado</th>
                                     <th style="width:10%">Acciones</th>
                                 </tr>
@@ -136,19 +136,19 @@
                                 @foreach (var paciente in _resultado.Items)
                                 {
                                     <tr>
-                                        <td data-label="Cédula">@paciente.CedulaPaciente</td>
-                                        <td data-label="Nombre">@paciente.NombrePaciente</td>
-                                        <td data-label="Edad">@paciente.EdadPaciente</td>
+                                        <td data-label="Cédula">@paciente.Cedula</td>
+                                        <td data-label="Nombre">@($"{paciente.Nombres} {paciente.Apellidos}")</td>
+                                        <td data-label="Edad">@CalcularEdad(paciente.FechaNacimiento)</td>
                                         <td data-label="Género">@paciente.NombreGenero</td>
-                                        <td data-label="Dirección">@paciente.DireccionPaciente</td>
-                                        <td data-label="Correo">@paciente.CorreoElectronicoPaciente</td>
-                                        <td data-label="Teléfono">@paciente.TelefonoPaciente</td>
-                                        <td data-label="Estado"><span class="badge bg-@(paciente.Anulado ? "danger" : "success")">@(paciente.Anulado ? "Deshabilitado" : "Activo")</span></td>
+                                        <td data-label="Dirección">@paciente.Direccion</td>
+                                        <td data-label="Correo">@paciente.Correo</td>
+                                        <td data-label="Teléfono">@paciente.Telefono</td>
+                                        <td data-label="Estado"><span class="badge bg-@(paciente.Activo ? "success" : "danger")">@(paciente.Activo ? "Activo" : "Deshabilitado")</span></td>
                                         <td data-label="Acciones">
                                             @if (puedeModificar)
                                             {
                                                 <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarPacienteAsync(paciente)"><i class="bi bi-pencil-square"></i></button>
-                                                @if (paciente.Anulado)
+                                                @if (!paciente.Activo)
                                                 {
                                                     <button class="btn btn-success btn-sm" @onclick="() => ConfirmarReactivacionAsync(paciente)"><i class="bi bi-check-circle-fill"></i></button>
                                                 }
@@ -179,12 +179,13 @@
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Cédula</label><InputText class="form-control" @bind-Value="_pacienteActual.CedulaPaciente" /></div>
-                                    <div class="col-md-6"><label class="form-label">Nombre</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.NombrePaciente" @oninput="(e => _pacienteActual.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="_pacienteActual.FechaNacPaciente" TValue="DateTime" /></div>
-                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.TelefonoPaciente" /></div>
-                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.CorreoElectronicoPaciente" readonly="@(_pacienteActual.IdPaciente != 0)" disabled="@(_pacienteActual.IdPaciente != 0)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="_pacienteActual.DireccionPaciente" /></div>
+                                    <div class="col-md-6"><label class="form-label">Cédula</label><InputText class="form-control" @bind-Value="_pacienteActual.Cedula" /></div>
+                                    <div class="col-md-6"><label class="form-label">Nombres</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Nombres" @oninput="(e => _pacienteActual.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Apellidos</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Apellidos" @oninput="(e => _pacienteActual.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="_pacienteActual.FechaNacimiento" TValue="DateTime" /></div>
+                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.Telefono" /></div>
+                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.Correo" readonly="@(_pacienteActual.IdPaciente != 0)" disabled="@(_pacienteActual.IdPaciente != 0)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="_pacienteActual.Direccion" /></div>
                                     <div class="col-md-6">
                                         <label class="form-label">Género</label>
                                         <InputSelect class="form-select" @bind-Value="_pacienteActual.IdGenero">
@@ -214,7 +215,7 @@
     {
         PageNumber = 1,
         PageSize = 10,
-        SortBy = nameof(PacienteDto.NombrePaciente),
+        SortBy = nameof(PacienteDto.Nombres),
         SortAsc = true,
         IncluirAnulados = true,
         IncluirVigentes = true
@@ -272,7 +273,7 @@
 
     private async Task LimpiarBusquedaAsync()
     {
-        _filtro = new PacienteFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+        _filtro = new PacienteFiltroDto { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.Nombres), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
         _resultado = null;
         await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
     }
@@ -308,7 +309,7 @@
 
     private async Task MostrarModalNuevoAsync()
     {
-        _pacienteActual = new PacienteDto { FechaNacPaciente = DateTime.Today.AddYears(-20) };
+        _pacienteActual = new PacienteDto { FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
         _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -371,9 +372,9 @@
     private async Task ConfirmarReactivacionAsync(PacienteDto paciente)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.NombrePaciente}?"))
+        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.Nombres} {paciente.Apellidos}?"))
         {
-            paciente.Anulado = false;
+            paciente.Activo = true;
             var resultadoOp = await PacientesApiService.GuardarPacienteAsync(paciente.IdPaciente, paciente);
             if (resultadoOp.IsSuccessStatusCode)
             {
@@ -394,5 +395,13 @@
             int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
             return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} pacientes";
         }
+    }
+
+    private int CalcularEdad(DateTime fechaNacimiento)
+    {
+        var hoy = DateTime.Today;
+        int edad = hoy.Year - fechaNacimiento.Year;
+        if (fechaNacimiento > hoy.AddYears(-edad)) edad--;
+        return edad;
     }
 }

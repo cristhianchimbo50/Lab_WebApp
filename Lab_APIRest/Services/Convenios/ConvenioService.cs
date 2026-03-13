@@ -35,7 +35,7 @@ namespace Lab_APIRest.Services.Convenios
             IdConvenio = idConvenio,
             IdOrden = o.IdOrden,
             NumeroOrden = o.NumeroOrden,
-            Paciente = o.IdPacienteNavigation?.NombrePaciente,
+            Paciente = $"{o.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {o.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}".Trim(),
             FechaOrden = o.FechaOrden,
             Subtotal = o.Total
         };
@@ -96,7 +96,7 @@ namespace Lab_APIRest.Services.Convenios
             var convenio = await _context.Convenio.Include(c => c.IdMedicoNavigation).FirstOrDefaultAsync(c => c.IdConvenio == idConvenio);
             if (convenio == null) return null;
             var ordenes = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Where(o => o.IdConvenio == idConvenio)
                 .ToListAsync();
             return new ConvenioDetalleDto
@@ -115,13 +115,13 @@ namespace Lab_APIRest.Services.Convenios
         public async Task<IEnumerable<OrdenDisponibleDto>> ListarOrdenesDisponiblesAsync(int idMedico)
         {
             return await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
+                .Include(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
                 .Where(o => o.IdMedico == idMedico && o.IdConvenio == null && o.Activo)
                 .Select(o => new OrdenDisponibleDto
                 {
                     IdOrden = o.IdOrden,
                     NumeroOrden = o.NumeroOrden,
-                    Paciente = o.IdPacienteNavigation!.NombrePaciente,
+                    Paciente = $"{o.IdPacienteNavigation!.IdPersonaNavigation!.Nombres} {o.IdPacienteNavigation!.IdPersonaNavigation!.Apellidos}".Trim(),
                     FechaOrden = o.FechaOrden,
                     Total = o.Total
                 })

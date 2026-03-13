@@ -21,7 +21,7 @@ public partial class Orden
 
     public string EstadoPago { get; set; } = null!;
 
-    public string EstadoOrden { get; set; } = "EN_PROCESO";
+    public int IdEstadoOrden { get; set; }
 
     public DateTime? FechaFinalizacion { get; set; }
 
@@ -48,4 +48,6 @@ public partial class Orden
     public virtual ICollection<Pago> Pago { get; set; } = new List<Pago>();
 
     public virtual ICollection<Resultado> Resultado { get; set; } = new List<Resultado>();
+
+    public virtual EstadoOrden IdEstadoOrdenNavigation { get; set; } = null!;
 }

@@ -22,8 +22,8 @@ namespace Lab_APIRest.Services.Perfil
             var perfil = new PerfilDto
             {
                 IdUsuario = usuario.IdUsuario,
-                Nombre = usuario.Nombre,
-                Correo = usuario.CorreoUsuario,
+                Nombre = usuario.IdPersonaNavigation != null ? $"{usuario.IdPersonaNavigation.Nombres} {usuario.IdPersonaNavigation.Apellidos}" : string.Empty,
+                Correo = usuario.IdPersonaNavigation?.Correo,
                 IdRol = usuario.IdRol,
                 NombreRol = usuario.IdRolNavigation?.Nombre ?? string.Empty,
                 Activo = usuario.Activo == true,
@@ -33,10 +33,10 @@ namespace Lab_APIRest.Services.Perfil
 
             if (paciente != null)
             {
-                perfil.Cedula = paciente.CedulaPaciente;
+                perfil.Cedula = paciente.IdPersonaNavigation?.Cedula;
                 perfil.FechaNacimiento = paciente.FechaNacPaciente;
-                perfil.Direccion = paciente.DireccionPaciente;
-                perfil.Telefono = paciente.TelefonoPaciente;
+                perfil.Direccion = paciente.IdPersonaNavigation?.Direccion;
+                perfil.Telefono = paciente.IdPersonaNavigation?.Telefono;
                 perfil.FechaRegistro = paciente.FechaCreacion; // prioriza registro paciente
             }
             return perfil;
@@ -49,6 +49,7 @@ namespace Lab_APIRest.Services.Perfil
                 var usuario = await _context.Usuario
                     .AsNoTracking()
                     .Include(u => u.IdRolNavigation)
+                    .Include(u => u.IdPersonaNavigation)
                     .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario, ct);
 
                 if (usuario == null)
@@ -59,7 +60,8 @@ namespace Lab_APIRest.Services.Perfil
                 {
                     paciente = await _context.Paciente
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(p => p.IdUsuario == idUsuario && p.Activo, ct);
+                        .Include(p => p.IdPersonaNavigation)
+                        .FirstOrDefaultAsync(p => p.IdPersona == usuario.IdPersona && p.Activo, ct);
                 }
 
                 var perfil = MapPerfil(usuario, paciente);

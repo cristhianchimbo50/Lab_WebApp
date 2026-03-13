@@ -21,25 +21,24 @@ namespace Lab_APIRest.Services.Pacientes
         private static PacienteDto MapPaciente(Paciente entidadPaciente) => new()
         {
             IdPaciente = entidadPaciente.IdPaciente,
-            CedulaPaciente = entidadPaciente.CedulaPaciente,
-            NombrePaciente = entidadPaciente.NombrePaciente,
-            FechaNacPaciente = entidadPaciente.FechaNacPaciente.ToDateTime(TimeOnly.MinValue),
-            EdadPaciente = CalcularEdad(entidadPaciente.FechaNacPaciente.ToDateTime(TimeOnly.MinValue)),
-            DireccionPaciente = entidadPaciente.DireccionPaciente ?? string.Empty,
-            CorreoElectronicoPaciente = entidadPaciente.CorreoElectronicoPaciente ?? string.Empty,
-            TelefonoPaciente = entidadPaciente.TelefonoPaciente ?? string.Empty,
-            FechaRegistro = entidadPaciente.FechaCreacion,
-            Anulado = !entidadPaciente.Activo,
-            IdUsuario = entidadPaciente.IdUsuario,
+            IdPersona = entidadPaciente.IdPersona,
+            Cedula = entidadPaciente.IdPersonaNavigation?.Cedula ?? string.Empty,
+            Nombres = entidadPaciente.IdPersonaNavigation?.Nombres ?? string.Empty,
+            Apellidos = entidadPaciente.IdPersonaNavigation?.Apellidos ?? string.Empty,
+            Correo = entidadPaciente.IdPersonaNavigation?.Correo ?? string.Empty,
+            Telefono = entidadPaciente.IdPersonaNavigation?.Telefono ?? string.Empty,
+            Direccion = entidadPaciente.IdPersonaNavigation?.Direccion ?? string.Empty,
+            FechaNacimiento = entidadPaciente.FechaNacPaciente.ToDateTime(TimeOnly.MinValue),
             IdGenero = entidadPaciente.IdGenero,
-            NombreGenero = entidadPaciente.IdGeneroNavigation?.Nombre
+            NombreGenero = entidadPaciente.IdGeneroNavigation?.Nombre,
+            Activo = entidadPaciente.Activo
         };
 
         public async Task<List<PacienteDto>> ListarPacientesAsync()
         {
             var lista = await _context.Paciente
-                .Include(p => p.IdUsuarioNavigation)
                 .Include(p => p.IdGeneroNavigation)
+                .Include(p => p.IdPersonaNavigation)
                 .ToListAsync();
             return lista.Select(MapPaciente).ToList();
         }
@@ -47,8 +46,8 @@ namespace Lab_APIRest.Services.Pacientes
         public async Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente)
         {
             var entidadPaciente = await _context.Paciente
-                .Include(p => p.IdUsuarioNavigation)
                 .Include(p => p.IdGeneroNavigation)
+                .Include(p => p.IdPersonaNavigation)
                 .FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
             return entidadPaciente == null ? null : MapPaciente(entidadPaciente);
         }
@@ -59,16 +58,18 @@ namespace Lab_APIRest.Services.Pacientes
                 return new List<PacienteDto>();
 
             var campoLower = criterio.ToLower();
-            IQueryable<Paciente> query = _context.Paciente.Include(p => p.IdGeneroNavigation);
+            IQueryable<Paciente> query = _context.Paciente
+                .Include(p => p.IdGeneroNavigation)
+                .Include(p => p.IdPersonaNavigation);
             switch (campoLower)
             {
                 case "cedula":
-                    var porCedula = await query.FirstOrDefaultAsync(x => x.CedulaPaciente == valor);
+                    var porCedula = await query.FirstOrDefaultAsync(x => x.IdPersonaNavigation!.Cedula == valor);
                     return porCedula == null ? new List<PacienteDto>() : new List<PacienteDto> { MapPaciente(porCedula) };
                 case "nombre":
-                    return await query.Where(p => p.NombrePaciente.Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
+                    return await query.Where(p => (p.IdPersonaNavigation!.Nombres + " " + p.IdPersonaNavigation!.Apellidos).Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
                 case "correo":
-                    return await query.Where(p => p.CorreoElectronicoPaciente != null && p.CorreoElectronicoPaciente.Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
+                    return await query.Where(p => p.IdPersonaNavigation!.Correo.Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
                 default:
                     return new List<PacienteDto>();
             }
@@ -77,8 +78,8 @@ namespace Lab_APIRest.Services.Pacientes
         public async Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro)
         {
             var query = _context.Paciente
-                .Include(p => p.IdUsuarioNavigation)
                 .Include(p => p.IdGeneroNavigation)
+                .Include(p => p.IdPersonaNavigation)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -95,9 +96,9 @@ namespace Lab_APIRest.Services.Pacientes
                 var val = filtro.ValorBusqueda.ToLower();
                 switch (filtro.CriterioBusqueda)
                 {
-                    case "cedula": query = query.Where(p => (p.CedulaPaciente ?? "").ToLower().Contains(val)); break;
-                    case "nombre": query = query.Where(p => (p.NombrePaciente ?? "").ToLower().Contains(val)); break;
-                    case "correo": query = query.Where(p => (p.CorreoElectronicoPaciente ?? "").ToLower().Contains(val)); break;
+                    case "cedula": query = query.Where(p => (p.IdPersonaNavigation!.Cedula ?? "").ToLower().Contains(val)); break;
+                    case "nombre": query = query.Where(p => ((p.IdPersonaNavigation!.Nombres + " " + p.IdPersonaNavigation!.Apellidos) ?? "").ToLower().Contains(val)); break;
+                    case "correo": query = query.Where(p => (p.IdPersonaNavigation!.Correo ?? "").ToLower().Contains(val)); break;
                 }
             }
 
@@ -106,11 +107,12 @@ namespace Lab_APIRest.Services.Pacientes
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(PacienteDto.CedulaPaciente) => asc ? query.OrderBy(p => p.CedulaPaciente) : query.OrderByDescending(p => p.CedulaPaciente),
-                nameof(PacienteDto.NombrePaciente) => asc ? query.OrderBy(p => p.NombrePaciente) : query.OrderByDescending(p => p.NombrePaciente),
-                nameof(PacienteDto.EdadPaciente) => asc ? query.OrderBy(p => p.FechaNacPaciente) : query.OrderByDescending(p => p.FechaNacPaciente),
-                nameof(PacienteDto.CorreoElectronicoPaciente) => asc ? query.OrderBy(p => p.CorreoElectronicoPaciente) : query.OrderByDescending(p => p.CorreoElectronicoPaciente),
-                nameof(PacienteDto.TelefonoPaciente) => asc ? query.OrderBy(p => p.TelefonoPaciente) : query.OrderByDescending(p => p.TelefonoPaciente),
+                nameof(PacienteDto.Cedula) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Cedula) : query.OrderByDescending(p => p.IdPersonaNavigation!.Cedula),
+                nameof(PacienteDto.Nombres) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Nombres) : query.OrderByDescending(p => p.IdPersonaNavigation!.Nombres),
+                nameof(PacienteDto.Apellidos) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Apellidos) : query.OrderByDescending(p => p.IdPersonaNavigation!.Apellidos),
+                nameof(PacienteDto.FechaNacimiento) => asc ? query.OrderBy(p => p.FechaNacPaciente) : query.OrderByDescending(p => p.FechaNacPaciente),
+                nameof(PacienteDto.Correo) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Correo) : query.OrderByDescending(p => p.IdPersonaNavigation!.Correo),
+                nameof(PacienteDto.Telefono) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Telefono) : query.OrderByDescending(p => p.IdPersonaNavigation!.Telefono),
                 _ => asc ? query.OrderBy(p => p.IdPaciente) : query.OrderByDescending(p => p.IdPaciente)
             };
 
@@ -132,127 +134,61 @@ namespace Lab_APIRest.Services.Pacientes
 
         public async Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto dto)
         {
-            if (!ValidarCedula(dto.CedulaPaciente))
+            if (!ValidarCedula(dto.Cedula))
                 return (false, "La cédula ingresada no es válida.", null);
 
-            var usuarioExistente = await _context.Usuario
-                .FirstOrDefaultAsync(u => u.CorreoUsuario == dto.CorreoElectronicoPaciente);
+            await using var transaccion = await _context.Database.BeginTransactionAsync();
 
-            int idUsuario;
-
-            if (usuarioExistente != null)
+            var persona = new Persona
             {
-                idUsuario = usuarioExistente.IdUsuario;
-            }
-            else
-            {
-                var rolPacienteId = await _context.Rol
-                    .Where(r => r.Nombre == "paciente")
-                    .Select(r => r.IdRol)
-                    .FirstOrDefaultAsync();
-                if (rolPacienteId == 0)
-                    rolPacienteId = 4;
-
-                var usuario = new Usuario
-                {
-                    CorreoUsuario = dto.CorreoElectronicoPaciente,
-                    ClaveUsuario = null,
-                    Nombre = dto.NombrePaciente,
-                    IdRol = rolPacienteId,
-                    Activo = false,
-                    FechaCreacion = DateTime.UtcNow
-                };
-                _context.Usuario.Add(usuario);
-                await _context.SaveChangesAsync();
-
-                idUsuario = usuario.IdUsuario;
-
-                var randomBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
-                var token = Convert.ToBase64String(randomBytes);
-                var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-
-                var tokenRegistro = new TokensUsuarios
-                {
-                    IdUsuario = usuario.IdUsuario,
-                    TokenHash = tokenHash,
-                    TipoToken = "activacion",
-                    FechaSolicitud = DateTime.UtcNow,
-                    FechaExpiracion = DateTime.UtcNow.AddHours(24),
-                    Usado = false
-                };
-                _context.TokensUsuarios.Add(tokenRegistro);
-                await _context.SaveChangesAsync();
-
-                var dominio = "http://laboratorioinmaculada:9111";
-                var enlace = $"{dominio}/activar-cuenta?token={Uri.EscapeDataString(token)}";
-
-                var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
-                var cuerpo = $@"
-                    <p>Hola <strong>{dto.NombrePaciente}</strong>,</p>
-
-                    <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
-
-                    <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
-
-                    <p>
-                        <a href=""{enlace}"" target=""_blank"">
-                            Activar mi cuenta
-                        </a>
-                    </p>
-
-                    <p>Este enlace estará disponible durante 24 horas.</p>
-                    ";
-
-                await _emailService.EnviarCorreoAsync(dto.CorreoElectronicoPaciente, dto.NombrePaciente, asunto, cuerpo);
-            }
-
-            if (await _context.Paciente.AnyAsync(p => p.IdUsuario == idUsuario))
-                return (false, "Este usuario ya está registrado como paciente.", null);
+                Cedula = dto.Cedula,
+                Nombres = dto.Nombres,
+                Apellidos = dto.Apellidos,
+                Correo = dto.Correo,
+                Telefono = dto.Telefono,
+                Direccion = dto.Direccion,
+                Activo = true,
+                FechaCreacion = DateTime.UtcNow
+            };
+            _context.Persona.Add(persona);
+            await _context.SaveChangesAsync();
 
             var entidadPaciente = new Paciente
             {
-                CedulaPaciente = dto.CedulaPaciente,
-                NombrePaciente = dto.NombrePaciente,
-                FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacPaciente),
-                DireccionPaciente = dto.DireccionPaciente,
-                CorreoElectronicoPaciente = dto.CorreoElectronicoPaciente,
-                TelefonoPaciente = dto.TelefonoPaciente,
-                FechaCreacion = DateTime.UtcNow,
+                IdPersona = persona.IdPersona,
+                FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacimiento),
+                IdGenero = dto.IdGenero,
                 Activo = true,
-                IdUsuario = idUsuario,
-                IdGenero = dto.IdGenero
+                FechaCreacion = DateTime.UtcNow
             };
 
             _context.Paciente.Add(entidadPaciente);
             await _context.SaveChangesAsync();
 
-            dto.IdPaciente = entidadPaciente.IdPaciente;
-            dto.EdadPaciente = CalcularEdad(dto.FechaNacPaciente);
-            dto.FechaRegistro = entidadPaciente.FechaCreacion;
-            dto.Anulado = false;
-            dto.IdUsuario = idUsuario;
+            await transaccion.CommitAsync();
 
-            var mensaje = usuarioExistente != null
-                ? "El paciente se vinculó correctamente con su cuenta existente."
-                : "Paciente registrado correctamente. Se envió el enlace de activación.";
-
-            return (true, mensaje, dto);
+            return (true, "Paciente registrado correctamente", MapPaciente(entidadPaciente));
         }
 
         public async Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto)
         {
-            var entidadPaciente = await _context.Paciente.FindAsync(idPaciente);
+            var entidadPaciente = await _context.Paciente
+                .Include(p => p.IdPersonaNavigation)
+                .FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
             if (entidadPaciente == null) return false;
 
-            entidadPaciente.CedulaPaciente = dto.CedulaPaciente;
-            entidadPaciente.NombrePaciente = dto.NombrePaciente;
-            entidadPaciente.FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacPaciente);
-            entidadPaciente.DireccionPaciente = dto.DireccionPaciente;
-            entidadPaciente.TelefonoPaciente = dto.TelefonoPaciente;
-            entidadPaciente.CorreoElectronicoPaciente = dto.CorreoElectronicoPaciente;
-            entidadPaciente.IdUsuario = dto.IdUsuario;
+            var persona = entidadPaciente.IdPersonaNavigation!;
+            persona.Cedula = dto.Cedula;
+            persona.Nombres = dto.Nombres;
+            persona.Apellidos = dto.Apellidos;
+            persona.Correo = dto.Correo;
+            persona.Telefono = dto.Telefono;
+            persona.Direccion = dto.Direccion;
+            persona.FechaActualizacion = DateTime.UtcNow;
+
+            entidadPaciente.FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacimiento);
             entidadPaciente.IdGenero = dto.IdGenero;
-            entidadPaciente.Activo = !dto.Anulado;
+            entidadPaciente.Activo = dto.Activo;
             entidadPaciente.FechaActualizacion = DateTime.UtcNow;
             if (!entidadPaciente.Activo)
             {
@@ -262,6 +198,7 @@ namespace Lab_APIRest.Services.Pacientes
             {
                 entidadPaciente.FechaFin = null;
             }
+
             await _context.SaveChangesAsync();
             return true;
         }

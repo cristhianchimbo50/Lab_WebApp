@@ -95,11 +95,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label fw-semibold">Nombre</label>
-                                            <input class="form-control" value="@_pacienteSeleccionado.NombrePaciente" disabled />
+                                            <input class="form-control" value="@($"{_pacienteSeleccionado.Nombres} {_pacienteSeleccionado.Apellidos}")" disabled />
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label fw-semibold">Cédula</label>
-                                            <input class="form-control" value="@_pacienteSeleccionado.CedulaPaciente" disabled />
+                                            <input class="form-control" value="@_pacienteSeleccionado.Cedula" disabled />
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label fw-semibold">Género</label>
@@ -107,15 +107,15 @@
                                         </div>
                                         <div class="col-md-5">
                                             <label class="form-label fw-semibold">Correo Electrónico</label>
-                                            <input class="form-control" value="@_pacienteSeleccionado.CorreoElectronicoPaciente" disabled />
+                                            <input class="form-control" value="@_pacienteSeleccionado.Correo" disabled />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label fw-semibold">Teléfono</label>
-                                            <input class="form-control" value="@_pacienteSeleccionado.TelefonoPaciente" disabled />
+                                            <input class="form-control" value="@_pacienteSeleccionado.Telefono" disabled />
                                         </div>
                                         <div class="col-md-8">
                                             <label class="form-label fw-semibold">Dirección</label>
-                                            <input class="form-control" value="@_pacienteSeleccionado.DireccionPaciente" disabled />
+                                            <input class="form-control" value="@_pacienteSeleccionado.Direccion" disabled />
                                         </div>
                                     </div>
                                 </div>
@@ -166,31 +166,37 @@
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <label class="form-label">Cédula</label>
-                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.CedulaPaciente" readonly />
+                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Cedula" readonly />
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label">Nombre</label>
+                                                <label class="form-label">Nombres</label>
                                                 <InputText class="form-control text-uppercase"
-                                                           @bind-Value="_pacienteNuevo.NombrePaciente"
-                                                           @oninput="(e => _pacienteNuevo.NombrePaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @bind-Value="_pacienteNuevo.Nombres"
+                                                           @oninput="(e => _pacienteNuevo.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Apellidos</label>
+                                                <InputText class="form-control text-uppercase"
+                                                           @bind-Value="_pacienteNuevo.Apellidos"
+                                                           @oninput="(e => _pacienteNuevo.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Fecha Nacimiento</label>
-                                                <InputDate class="form-control" @bind-Value="_pacienteNuevo.FechaNacPaciente" TValue="DateTime" />
+                                                <InputDate class="form-control" @bind-Value="_pacienteNuevo.FechaNacimiento" TValue="DateTime" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Correo</label>
-                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.CorreoElectronicoPaciente" />
+                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Correo" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Teléfono</label>
-                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.TelefonoPaciente" />
+                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Telefono" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Dirección</label>
                                                 <InputText class="form-control text-uppercase"
-                                                           @bind-Value="_pacienteNuevo.DireccionPaciente"
-                                                           @oninput="(e => _pacienteNuevo.DireccionPaciente = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @bind-Value="_pacienteNuevo.Direccion"
+                                                           @oninput="(e => _pacienteNuevo.Direccion = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Género</label>
@@ -275,9 +281,9 @@
                                                     @foreach (var paciente in _resultadoPacientes.Items)
                                                     {
                                                         <tr>
-                                                            <td>@paciente.CedulaPaciente</td>
-                                                            <td>@paciente.NombrePaciente</td>
-                                                            <td>@paciente.CorreoElectronicoPaciente</td>
+                                                             <td>@paciente.Cedula</td>
+                                                             <td>@($"{paciente.Nombres} {paciente.Apellidos}")</td>
+                                                             <td>@paciente.Correo</td>
                                                             <td>@paciente.NombreGenero</td>
                                                             <td>
                                                                 <button class="btn btn-success btn-sm" @onclick="() => SeleccionarPacienteAsync(paciente)"><i class="bi bi-check-lg"></i></button>
@@ -589,7 +595,7 @@
     private bool _mostrarModalMedico;
     private bool _mostrarModalExamen;
     private bool _mostrarModalPago;
-    private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.NombrePaciente), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+    private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.Nombres), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
     private ResultadoPaginadoDto<PacienteDto>? _resultadoPacientes;
     private ExamenFiltroDto _filtroExamen = new() { CriterioBusqueda = "nombre", PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = false, IncluirVigentes = true };
     private ResultadoPaginadoDto<ExamenDto>? _resultadoExamenes;
@@ -632,7 +638,7 @@
                 await JS.InvokeVoidAsync("alert", "La cédula ingresada no es válida.");
                 return;
             }
-            _pacienteNuevo = new PacienteDto { CedulaPaciente = _cedulaPaciente, FechaNacPaciente = DateTime.Today.AddYears(-20) };
+            _pacienteNuevo = new PacienteDto { Cedula = _cedulaPaciente, FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
             _mostrarModalRegistrarPaciente = true;
             await JS.InvokeVoidAsync("marcarModalAbierto");
         }
@@ -664,7 +670,7 @@
     private async Task SeleccionarPacienteAsync(PacienteDto paciente)
     {
         _pacienteSeleccionado = paciente;
-        _cedulaPaciente = paciente.CedulaPaciente;
+        _cedulaPaciente = paciente.Cedula;
         _mostrarModalBuscarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
@@ -738,11 +744,11 @@
             await JS.InvokeVoidAsync("alert", $"Error al crear médico: {mensaje}");
         }
     }
-    private void AbrirModalPago()
+    private async Task AbrirModalPago(EditContext? _ = null)
     {
         if (_pacienteSeleccionado == null || _medicoSeleccionado == null || !_examenesSeleccionados.Any())
         {
-            JS.InvokeVoidAsync("alert", "Debe seleccionar paciente, médico y al menos un examen.");
+            await JS.InvokeVoidAsync("alert", "Debe seleccionar paciente, médico y al menos un examen.");
             return;
         }
         _montoEfectivo = 0;
@@ -843,14 +849,14 @@
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
-    private async Task RegistrarNuevoPacienteAsync()
+    private async Task RegistrarNuevoPacienteAsync(EditContext? _ = null)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
         var resultado = await PacientesApi.GuardarPacienteAsync(_pacienteNuevo);
         if (resultado.Exito && resultado.Paciente != null)
         {
             _pacienteSeleccionado = resultado.Paciente;
-            _cedulaPaciente = resultado.Paciente.CedulaPaciente;
+            _cedulaPaciente = resultado.Paciente.Cedula;
             _mostrarModalRegistrarPaciente = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
         }

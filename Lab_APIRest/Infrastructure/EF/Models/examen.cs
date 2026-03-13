@@ -9,23 +9,23 @@ public partial class Examen
 
     public string? NombreExamen { get; set; }
 
-    public string? ValorReferencia { get; set; }
-
-    public string? Unidad { get; set; }
+    public string? TituloExamen { get; set; }
 
     public decimal Precio { get; set; }
 
-    public string? Estudio { get; set; }
+    public int? TiempoEntregaMinutos { get; set; }
 
-    public string? TipoMuestra { get; set; }
+    public int? IdEstudio { get; set; }
 
-    public string? TiempoEntrega { get; set; }
+    public int? IdGrupoExamen { get; set; }
 
-    public string? TipoExamen { get; set; }
+    public int? IdTipoMuestra { get; set; }
 
-    public string? Tecnica { get; set; }
+    public int? IdTipoExamen { get; set; }
 
-    public string? TituloExamen { get; set; }
+    public int? IdTecnica { get; set; }
+
+    public int? IdTipoRegistro { get; set; }
 
     public DateTime FechaCreacion { get; set; }
 
@@ -34,6 +34,20 @@ public partial class Examen
     public DateTime? FechaFin { get; set; }
 
     public bool Activo { get; set; }
+
+    public virtual Estudio? IdEstudioNavigation { get; set; }
+
+    public virtual GrupoExamen? IdGrupoExamenNavigation { get; set; }
+
+    public virtual TipoMuestra? IdTipoMuestraNavigation { get; set; }
+
+    public virtual TipoExamen? IdTipoExamenNavigation { get; set; }
+
+    public virtual Tecnica? IdTecnicaNavigation { get; set; }
+
+    public virtual TipoRegistro? IdTipoRegistroNavigation { get; set; }
+
+    public virtual ICollection<ReferenciaExamen> ReferenciaExamen { get; set; } = new List<ReferenciaExamen>();
 
     public virtual ICollection<DetalleOrden> DetalleOrden { get; set; } = new List<DetalleOrden>();
 

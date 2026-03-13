@@ -142,11 +142,11 @@
                                 @foreach (var examen in _resultado.Items)
                                 {
                                     <tr>
-                                        <td data-label="Nombre" class="text-truncate">@examen.NombreExamen</td>
-                                        <td data-label="Estudio" class="text-truncate">@examen.Estudio</td>
-                                        <td data-label="Tipo de Muestra" class="text-truncate">@examen.TipoMuestra</td>
-                                        <td data-label="Tipo de Examen" class="text-truncate">@examen.TipoExamen</td>
-                                        <td data-label="Técnica" class="text-truncate">@examen.Tecnica</td>
+                                         <td data-label="Nombre" class="text-truncate">@examen.NombreExamen</td>
+                                         <td data-label="Estudio" class="text-truncate">@examen.NombreEstudio ?? examen.Estudio</td>
+                                         <td data-label="Tipo de Muestra" class="text-truncate">@examen.NombreTipoMuestra ?? examen.TipoMuestra</td>
+                                         <td data-label="Tipo de Examen" class="text-truncate">@examen.NombreTipoExamen ?? examen.TipoExamen</td>
+                                         <td data-label="Técnica" class="text-truncate">@examen.NombreTecnica ?? examen.Tecnica</td>
                                         <td data-label="Precio" class="text-truncate">$@examen.Precio</td>
                                         <td data-label="Estado">
                                             <span class="badge bg-@(examen.Anulado ? "danger" : "success")">
@@ -206,65 +206,45 @@
                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreExamen"
                                                    @oninput="(e => _examenActual.NombreExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Estudio</label>
-                                        <input list="listaEstudios" class="form-control text-uppercase"
-                                               @bind="_examenActual.Estudio"
-                                               @oninput="ValidarEstudioAsync" />
-                                        <datalist id="listaEstudios">
-                                            @foreach (var item in _estudiosDisponibles)
-                                            {
-                                                <option value="@item"></option>
-                                            }
-                                        </datalist>
-                                    </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Estudio</label>
+                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreEstudio"
+                                                    @oninput="(e => _examenActual.NombreEstudio = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                     </div>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label">Tipo de Muestra</label>
-                                        <input list="listaMuestras" class="form-control text-uppercase"
-                                               @bind="_examenActual.TipoMuestra"
-                                               @oninput="ValidarTipoMuestraAsync" />
-                                        <datalist id="listaMuestras">
-                                            @foreach (var item in _tiposMuestraDisponibles)
-                                            {
-                                                <option value="@item"></option>
-                                            }
-                                        </datalist>
-                                    </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Tipo de Muestra</label>
+                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTipoMuestra"
+                                                    @oninput="(e => _examenActual.NombreTipoMuestra = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                     </div>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label">Tipo de Examen</label>
-                                        <input list="listaTiposExamen" class="form-control text-uppercase"
-                                               @bind="_examenActual.TipoExamen"
-                                               @oninput="ValidarTipoExamenAsync" />
-                                        <datalist id="listaTiposExamen">
-                                            @foreach (var item in _tiposExamenDisponibles)
-                                            {
-                                                <option value="@item"></option>
-                                            }
-                                        </datalist>
-                                    </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Tipo de Examen</label>
+                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTipoExamen"
+                                                    @oninput="(e => _examenActual.NombreTipoExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                     </div>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label">Técnica</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Tecnica" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Valor Referencia</label>
-                                        <InputText class="form-control" @bind-Value="_examenActual.ValorReferencia" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Unidad</label>
-                                        <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Unidad" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Precio</label>
-                                        <InputNumber class="form-control" @bind-Value="_examenActual.Precio" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Tiempo de Entrega (días)</label>
-                                        <InputText class="form-control" @bind-Value="_examenActual.TiempoEntrega" />
-                                    </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Técnica</label>
+                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTecnica"
+                                                    @oninput="(e => _examenActual.NombreTecnica = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                     </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Valor Referencia</label>
+                                         <InputText class="form-control" @bind-Value="_examenActual.ValorReferencia" />
+                                     </div>
+                                     <div class="col-md-4">
+                                         <label class="form-label">Unidad</label>
+                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Unidad" />
+                                     </div>
+                                     <div class="col-md-4">
+                                         <label class="form-label">Precio</label>
+                                         <InputNumber class="form-control" @bind-Value="_examenActual.Precio" />
+                                     </div>
+                                     <div class="col-md-4">
+                                         <label class="form-label">Tiempo de Entrega (minutos)</label>
+                                         <InputNumber class="form-control" @bind-Value="_examenActual.TiempoEntregaMinutos" TValue="int?" />
+                                     </div>
                                 </div>
 
                                 <hr class="my-3" />
@@ -294,8 +274,8 @@
                                                 @foreach (var hijo in _hijosSeleccionados)
                                                 {
                                                     <tr>
-                                                        <td>@hijo.NombreExamen</td>
-                                                        <td>@hijo.Estudio</td>
+                                                         <td>@hijo.NombreExamen</td>
+                                                         <td>@(hijo.NombreEstudio ?? hijo.Estudio)</td>
                                                         <td>
                                                             <button type="button" class="btn btn-danger btn-sm"
                                                                     @onclick="() => QuitarHijo(hijo.IdExamen)">
@@ -361,10 +341,10 @@
                                         <tbody>
                                             @foreach (var hijo in _resultadosBusquedaHijos)
                                             {
-                                                <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijoAsync(hijo)">
-                                                    <td>@hijo.NombreExamen</td>
-                                                    <td>@hijo.Estudio</td>
-                                                </tr>
+                                                 <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijoAsync(hijo)">
+                                                     <td>@hijo.NombreExamen</td>
+                                                     <td>@(hijo.NombreEstudio ?? hijo.Estudio)</td>
+                                                 </tr>
                                             }
                                         </tbody>
                                     </table>
@@ -414,21 +394,21 @@
         var examenes = await ExamenesApiService.ListarExamenesAsync();
 
         _estudiosDisponibles = examenes
-            .Select(e => e.Estudio?.ToUpper())
+            .Select(e => (e.NombreEstudio ?? e.Estudio)?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .OrderBy(x => x)
             .ToList();
 
         _tiposMuestraDisponibles = examenes
-            .Select(e => e.TipoMuestra?.ToUpper())
+            .Select(e => (e.NombreTipoMuestra ?? e.TipoMuestra)?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .OrderBy(x => x)
             .ToList();
 
         _tiposExamenDisponibles = examenes
-            .Select(e => e.TipoExamen?.ToUpper())
+            .Select(e => (e.NombreTipoExamen ?? e.TipoExamen)?.ToUpper())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .OrderBy(x => x)
@@ -493,6 +473,20 @@
     private async Task ValidarYGuardarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+
+        // Construir referencia básica desde los campos de compatibilidad
+        if (!string.IsNullOrWhiteSpace(_examenActual.ValorReferencia) || !string.IsNullOrWhiteSpace(_examenActual.Unidad))
+        {
+            _examenActual.Referencias = new List<ReferenciaExamenDto>
+            {
+                new()
+                {
+                    ValorTexto = _examenActual.ValorReferencia,
+                    Unidad = _examenActual.Unidad,
+                    Activo = true
+                }
+            };
+        }
 
         HttpResponseMessage result;
 

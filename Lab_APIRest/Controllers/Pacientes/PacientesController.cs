@@ -73,8 +73,8 @@ namespace Lab_APIRest.Controllers
                 {
                     Mensaje = "Paciente registrado correctamente. Se ha enviado un correo con el enlace de activación.",
                     resultado.Paciente!.IdPaciente,
-                    resultado.Paciente!.NombrePaciente,
-                    resultado.Paciente!.CorreoElectronicoPaciente
+                    Nombre = $"{resultado.Paciente!.Nombres} {resultado.Paciente!.Apellidos}",
+                    resultado.Paciente!.Correo
                 }
             );
         }
