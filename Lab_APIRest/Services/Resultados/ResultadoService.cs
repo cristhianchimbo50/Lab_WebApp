@@ -31,64 +31,64 @@ namespace Lab_APIRest.Services.Resultados
             _logger = logger;
         }
 
-        private static ResultadoListadoDto MapListado(Resultado r) => new()
+        private static ResultadoListadoDto MapListado(resultado r) => new()
         {
-            IdResultado = r.IdResultado,
-            NumeroResultado = r.NumeroResultado,
-            NumeroOrden = r.IdOrdenNavigation?.NumeroOrden ?? string.Empty,
-            CedulaPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Cedula ?? string.Empty,
-            NombrePaciente = $"{r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}",
-            FechaResultado = r.FechaResultado,
-            Anulado = !r.Activo,
-            Observaciones = r.Observaciones ?? string.Empty,
-            IdPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPaciente ?? 0,
-            EstadoResultado = r.IdEstadoResultadoNavigation?.Nombre ?? "REVISION"
+            IdResultado = r.id_resultado,
+            NumeroResultado = r.numero_resultado,
+            NumeroOrden = r.orden_navigation?.numero_orden ?? string.Empty,
+            CedulaPaciente = r.orden_navigation?.paciente_navigation?.persona_navigation?.cedula ?? string.Empty,
+            NombrePaciente = $"{r.orden_navigation?.paciente_navigation?.persona_navigation?.nombres} {r.orden_navigation?.paciente_navigation?.persona_navigation?.apellidos}",
+            FechaResultado = r.fecha_resultado,
+            Anulado = !r.activo,
+            Observaciones = r.observaciones ?? string.Empty,
+            IdPaciente = r.orden_navigation?.paciente_navigation?.id_paciente ?? 0,
+            EstadoResultado = r.estado_resultado_navigation?.nombre ?? "REVISION"
         };
 
-        private static DetalleResultadoDto MapDetalle(DetalleResultado d)
+        private static DetalleResultadoDto MapDetalle(detalle_resultado d)
         {
-            var referencia = d.IdExamenNavigation?.ReferenciaExamen?.FirstOrDefault(r => r.Activo);
-            var valorRef = referencia?.ValorTexto ??
-                (referencia?.ValorMin.HasValue == true || referencia?.ValorMax.HasValue == true
-                    ? $"{referencia?.ValorMin}-{referencia?.ValorMax}"
+            var referencia = d.examen_navigation?.referencia_examen?.FirstOrDefault(r => r.activo);
+            var valorRef = referencia?.valor_texto ??
+                (referencia?.valor_min.HasValue == true || referencia?.valor_max.HasValue == true
+                    ? $"{referencia?.valor_min}-{referencia?.valor_max}"
                     : string.Empty);
 
             return new DetalleResultadoDto
             {
-                IdExamen = d.IdExamen,
-                NombreExamen = d.IdExamenNavigation?.NombreExamen ?? string.Empty,
-                Valor = d.Valor,
-                Unidad = referencia?.Unidad ?? string.Empty,
+                IdExamen = d.id_examen,
+                NombreExamen = d.examen_navigation?.nombre_examen ?? string.Empty,
+                Valor = d.valor,
+                Unidad = referencia?.unidad ?? string.Empty,
                 Observacion = string.Empty,
                 ValorReferencia = valorRef ?? string.Empty,
                 Anulado = false,
-                TituloExamen = d.IdExamenNavigation?.TituloExamen
+                TituloExamen = d.examen_navigation?.titulo_examen
             };
         }
 
-        private static ResultadoDetalleDto MapDetalleResultado(Resultado r) => new()
+        private static ResultadoDetalleDto MapDetalleResultado(resultado r) => new()
         {
-            IdResultado = r.IdResultado,
-            NumeroResultado = r.NumeroResultado,
-            CedulaPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Cedula ?? string.Empty,
-            NombrePaciente = $"{r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Nombres} {r.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Apellidos}",
-            GeneroPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
-            FechaResultado = r.FechaResultado,
-            Observaciones = r.Observaciones ?? string.Empty,
-            Anulado = !r.Activo,
-            Detalles = r.DetalleResultado.Select(MapDetalle).ToList(),
-            IdPaciente = r.IdOrdenNavigation?.IdPacienteNavigation?.IdPaciente ?? 0,
-            NumeroOrden = r.IdOrdenNavigation?.NumeroOrden ?? string.Empty,
-            EstadoPago = r.IdOrdenNavigation?.EstadoPago ?? string.Empty,
-            EstadoResultado = r.IdEstadoResultadoNavigation?.Nombre ?? "REVISION",
-            ObservacionRevision = r.ObservacionRevision,
-            FechaRevision = r.FechaRevision,
-            IdRevisor = r.IdRevisor,
-            NombreRevisor = r.IdRevisorNavigation?.IdPersonaNavigation != null
-                ? $"{r.IdRevisorNavigation.IdPersonaNavigation.Nombres} {r.IdRevisorNavigation.IdPersonaNavigation.Apellidos}"
+            IdResultado = r.id_resultado,
+            NumeroResultado = r.numero_resultado,
+            CedulaPaciente = r.orden_navigation?.paciente_navigation?.persona_navigation?.cedula ?? string.Empty,
+            NombrePaciente = $"{r.orden_navigation?.paciente_navigation?.persona_navigation?.nombres} {r.orden_navigation?.paciente_navigation?.persona_navigation?.apellidos}",
+            GeneroPaciente = r.orden_navigation?.paciente_navigation?.persona_navigation?.genero_navigation?.nombre,
+            FechaResultado = r.fecha_resultado,
+            Observaciones = r.observaciones ?? string.Empty,
+            Anulado = !r.activo,
+            Detalles = r.detalle_resultado.Select(MapDetalle).ToList(),
+            IdPaciente = r.orden_navigation?.paciente_navigation?.id_paciente ?? 0,
+            NumeroOrden = r.orden_navigation?.numero_orden ?? string.Empty,
+            EstadoPago = r.orden_navigation?.estado_pago_navigation?.nombre ?? string.Empty,
+            EstadoResultado = r.estado_resultado_navigation?.nombre ?? "REVISION",
+            ObservacionRevision = r.observacion_revision,
+            FechaRevision = r.fecha_revision,
+            IdRevisor = r.id_revisor,
+            NombreRevisor = r.revisor_navigation?.persona_navigation != null
+                ? $"{r.revisor_navigation.persona_navigation.nombres} {r.revisor_navigation.persona_navigation.apellidos}"
                 : null,
-            IdOrden = r.IdOrden,
-            ResultadosHabilitados = r.IdOrdenNavigation?.ResultadosHabilitados ?? false
+            IdOrden = r.id_orden,
+            ResultadosHabilitados = r.orden_navigation?.resultados_habilitados ?? false
         };
 
         private static int CalcularEdad(DateOnly? fechaNac)
@@ -101,52 +101,36 @@ namespace Lab_APIRest.Services.Resultados
             return edad;
         }
 
+        private const int EstadoPagoPagadoId = 3;
+
         private async Task ActualizarOrdenSegunResultadosAsync(int idOrden)
         {
             var orden = await _context.Orden
-                .Include(o => o.IdPacienteNavigation)
-                .Include(o => o.DetalleOrden)
-                .Include(o => o.Resultado.Where(r => r.Activo))!.ThenInclude(r => r.DetalleResultado)
-                .Include(o => o.Resultado.Where(r => r.Activo))!.ThenInclude(r => r.IdEstadoResultadoNavigation)
-                .FirstOrDefaultAsync(o => o.IdOrden == idOrden);
+                .Include(o => o.paciente_navigation)
+                .Include(o => o.detalle_orden)
+                .Include(o => o.resultado.Where(r => r.activo))!.ThenInclude(r => r.detalle_resultado)
+                .Include(o => o.resultado.Where(r => r.activo))!.ThenInclude(r => r.estado_resultado_navigation)
+                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
             if (orden == null) return;
 
-            var examenesOrden = orden.DetalleOrden.Select(d => d.IdExamen).Distinct().ToList();
-            var examenesAprobados = orden.Resultado
-                .Where(r => r.IdEstadoResultado == EstadoResultadoAprobadoId)
-                .SelectMany(r => r.DetalleResultado)
-                .Select(d => d.IdExamen)
+            var examenesOrden = orden.detalle_orden.Select(d => d.id_examen).Distinct().ToList();
+            var examenesAprobados = orden.resultado
+                .Where(r => r.id_estado_resultado == EstadoResultadoAprobadoId)
+                .SelectMany(r => r.detalle_resultado)
+                .Select(d => d.id_examen)
                 .Distinct()
                 .ToList();  
 
             bool todosAprobados = examenesOrden.Any() && examenesOrden.All(examenesAprobados.Contains);
-            orden.IdEstadoOrden = todosAprobados ? EstadoOrdenFinalizadaId : EstadoOrdenEnProcesoId;
+            orden.id_estado_orden = todosAprobados ? EstadoOrdenFinalizadaId : EstadoOrdenEnProcesoId;
 
-            bool habilitar = todosAprobados && string.Equals(orden.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase);
-            bool debeNotificar = habilitar && !orden.ResultadosHabilitados;
-            orden.ResultadosHabilitados = habilitar;
+            bool habilitar = todosAprobados && orden.id_estado_pago == EstadoPagoPagadoId;
+            bool debeNotificar = habilitar && !orden.resultados_habilitados;
+            orden.resultados_habilitados = habilitar;
 
             await _context.SaveChangesAsync();
 
-            //if (debeNotificar)
-            //{
-            //    try
-            //    {
-            //        var correo = orden.IdPacienteNavigation?.CorreoElectronicoPaciente;
-            //        var nombre = orden.IdPacienteNavigation?.NombrePaciente;
-            //        if (!string.IsNullOrWhiteSpace(correo))
-            //        {
-            //            string asunto = "Resultados habilitados - Laboratorio Clínico La Inmaculada";
-            //            string cuerpo = $"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.NumeroOrden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede revisarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
-            //            var emailService = new EmailService(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-            //            await emailService.EnviarCorreoAsync(correo, nombre ?? "Paciente", asunto, cuerpo);
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        _logger.LogError(ex, "Error enviando notificación de resultados habilitados para la orden {IdOrden}", idOrden);
-            //    }
-            //}
+
         }
 
         public async Task<bool> GuardarResultadosAsync(ResultadoGuardarDto resultado)
@@ -154,30 +138,30 @@ namespace Lab_APIRest.Services.Resultados
             await using var transaccion = await _context.Database.BeginTransactionAsync();
             try
             {
-                var ultimo = await _context.Resultado.OrderByDescending(r => r.IdResultado).FirstOrDefaultAsync();
-                var correlativo = (ultimo?.IdResultado ?? 0) + 1;
+                var ultimo = await _context.Resultado.OrderByDescending(r => r.id_resultado).FirstOrDefaultAsync();
+                var correlativo = (ultimo?.id_resultado ?? 0) + 1;
 
                 string numeroGenerado = $"RES-{correlativo:D5}";
 
-                var entidadResultado = new Resultado
+                var entidadResultado = new resultado
                 {
-                    IdOrden = resultado.IdOrden,
-                    NumeroResultado = numeroGenerado,
-                    FechaResultado = resultado.FechaResultado ?? DateTime.UtcNow,
-                    Observaciones = resultado.ObservacionesGenerales,
-                    Activo = true,
-                    IdEstadoResultado = EstadoResultadoRevisionId
+                    id_orden = resultado.IdOrden,
+                    numero_resultado = numeroGenerado,
+                    fecha_resultado = resultado.FechaResultado ?? DateTime.UtcNow,
+                    observaciones = resultado.ObservacionesGenerales,
+                    activo = true,
+                    id_estado_resultado = EstadoResultadoRevisionId
                 };
                 _context.Resultado.Add(entidadResultado);
                 await _context.SaveChangesAsync();
 
                 foreach (var examen in resultado.Examenes)
                 {
-                    var detalle = new DetalleResultado
+                    var detalle = new detalle_resultado
                     {
-                        IdResultado = entidadResultado.IdResultado,
-                        IdExamen = examen.IdExamen,
-                        Valor = examen.Valor ?? string.Empty
+                        id_resultado = entidadResultado.id_resultado,
+                        id_examen = examen.IdExamen,
+                        valor = examen.Valor ?? string.Empty
                     };
                     _context.DetalleResultado.Add(detalle);
                 }
@@ -199,25 +183,25 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<List<ResultadoListadoDto>> ListarResultadosAsync(ResultadoFiltroDto filtro)
         {
             var consulta = _context.Resultado
-                .Include(r => r.IdEstadoResultadoNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.estado_resultado_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
-                consulta = consulta.Where(r => r.NumeroResultado.Contains(filtro.NumeroResultado));
+                consulta = consulta.Where(r => r.numero_resultado.Contains(filtro.NumeroResultado));
             if (!string.IsNullOrWhiteSpace(filtro.NumeroOrden))
-                consulta = consulta.Where(r => r.IdOrdenNavigation != null && r.IdOrdenNavigation.NumeroOrden.Contains(filtro.NumeroOrden));
+                consulta = consulta.Where(r => r.orden_navigation != null && r.orden_navigation.numero_orden.Contains(filtro.NumeroOrden));
             if (filtro.IdPaciente.HasValue)
-                consulta = consulta.Where(r => r.IdOrdenNavigation != null && r.IdOrdenNavigation.IdPaciente == filtro.IdPaciente.Value);
+                consulta = consulta.Where(r => r.orden_navigation != null && r.orden_navigation.id_paciente == filtro.IdPaciente.Value);
             if (filtro.FechaDesde.HasValue)
-                consulta = consulta.Where(r => r.FechaResultado >= filtro.FechaDesde.Value);
+                consulta = consulta.Where(r => r.fecha_resultado >= filtro.FechaDesde.Value);
             if (filtro.FechaHasta.HasValue)
-                consulta = consulta.Where(r => r.FechaResultado <= filtro.FechaHasta.Value);
+                consulta = consulta.Where(r => r.fecha_resultado <= filtro.FechaHasta.Value);
             if (filtro.Anulado.HasValue)
-                consulta = consulta.Where(r => r.Activo == !filtro.Anulado.Value);
+                consulta = consulta.Where(r => r.activo == !filtro.Anulado.Value);
 
             return await consulta
-                .OrderByDescending(r => r.IdResultado)
+                .OrderByDescending(r => r.id_resultado)
                 .Select(r => MapListado(r))
                 .ToListAsync();
         }
@@ -225,33 +209,33 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoPaginadoDto<ResultadoListadoDto>> ListarResultadosPaginadosAsync(ResultadoFiltroDto filtro)
         {
             var consulta = _context.Resultado
-                .Include(r => r.IdEstadoResultadoNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)
+                .Include(r => r.estado_resultado_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)
                 .AsNoTracking()
                 .AsQueryable();
 
             if (filtro.IdPaciente.HasValue)
-                consulta = consulta.Where(r => r.IdOrdenNavigation != null && r.IdOrdenNavigation.IdPaciente == filtro.IdPaciente.Value);
+                consulta = consulta.Where(r => r.orden_navigation != null && r.orden_navigation.id_paciente == filtro.IdPaciente.Value);
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
-                consulta = consulta.Where(r => r.NumeroResultado.Contains(filtro.NumeroResultado));
+                consulta = consulta.Where(r => r.numero_resultado.Contains(filtro.NumeroResultado));
             if (!string.IsNullOrWhiteSpace(filtro.NumeroOrden))
-                consulta = consulta.Where(r => r.IdOrdenNavigation != null && r.IdOrdenNavigation.NumeroOrden.Contains(filtro.NumeroOrden));
+                consulta = consulta.Where(r => r.orden_navigation != null && r.orden_navigation.numero_orden.Contains(filtro.NumeroOrden));
             if (filtro.FechaDesde.HasValue)
-                consulta = consulta.Where(r => r.FechaResultado >= filtro.FechaDesde.Value);
+                consulta = consulta.Where(r => r.fecha_resultado >= filtro.FechaDesde.Value);
             if (filtro.FechaHasta.HasValue)
-                consulta = consulta.Where(r => r.FechaResultado <= filtro.FechaHasta.Value);
+                consulta = consulta.Where(r => r.fecha_resultado <= filtro.FechaHasta.Value);
             if (filtro.Anulado.HasValue)
-                consulta = consulta.Where(r => r.Activo == !filtro.Anulado.Value);
+                consulta = consulta.Where(r => r.activo == !filtro.Anulado.Value);
 
             var total = await consulta.CountAsync();
             bool asc = filtro.SortAsc;
             consulta = filtro.SortBy switch
             {
-                nameof(ResultadoListadoDto.NumeroResultado) => asc ? consulta.OrderBy(r => r.NumeroResultado) : consulta.OrderByDescending(r => r.NumeroResultado),
-                nameof(ResultadoListadoDto.NumeroOrden) => asc ? consulta.OrderBy(r => r.IdOrdenNavigation!.NumeroOrden) : consulta.OrderByDescending(r => r.IdOrdenNavigation!.NumeroOrden),
-                nameof(ResultadoListadoDto.CedulaPaciente) => asc ? consulta.OrderBy(r => r.IdOrdenNavigation!.IdPacienteNavigation!.IdPersonaNavigation!.Cedula) : consulta.OrderByDescending(r => r.IdOrdenNavigation!.IdPacienteNavigation!.IdPersonaNavigation!.Cedula),
-                nameof(ResultadoListadoDto.NombrePaciente) => asc ? consulta.OrderBy(r => r.IdOrdenNavigation!.IdPacienteNavigation!.IdPersonaNavigation!.Nombres) : consulta.OrderByDescending(r => r.IdOrdenNavigation!.IdPacienteNavigation!.IdPersonaNavigation!.Nombres),
-                _ => asc ? consulta.OrderBy(r => r.FechaResultado) : consulta.OrderByDescending(r => r.FechaResultado)
+                nameof(ResultadoListadoDto.NumeroResultado) => asc ? consulta.OrderBy(r => r.numero_resultado) : consulta.OrderByDescending(r => r.numero_resultado),
+                nameof(ResultadoListadoDto.NumeroOrden) => asc ? consulta.OrderBy(r => r.orden_navigation!.numero_orden) : consulta.OrderByDescending(r => r.orden_navigation!.numero_orden),
+                nameof(ResultadoListadoDto.CedulaPaciente) => asc ? consulta.OrderBy(r => r.orden_navigation!.paciente_navigation!.persona_navigation!.cedula) : consulta.OrderByDescending(r => r.orden_navigation!.paciente_navigation!.persona_navigation!.cedula),
+                nameof(ResultadoListadoDto.NombrePaciente) => asc ? consulta.OrderBy(r => r.orden_navigation!.paciente_navigation!.persona_navigation!.nombres) : consulta.OrderByDescending(r => r.orden_navigation!.paciente_navigation!.persona_navigation!.nombres),
+                _ => asc ? consulta.OrderBy(r => r.fecha_resultado) : consulta.OrderByDescending(r => r.fecha_resultado)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
@@ -274,42 +258,46 @@ namespace Lab_APIRest.Services.Resultados
         public async Task<ResultadoDetalleDto?> ObtenerDetalleResultadoAsync(int idResultado)
         {
             var entidad = await _context.Resultado
-                .Include(r => r.IdEstadoResultadoNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
-                .Include(r => r.IdRevisorNavigation)
-                .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)!.ThenInclude(e => e.ReferenciaExamen)
-                .FirstOrDefaultAsync(r => r.IdResultado == idResultado);
-            return entidad == null ? null : MapDetalleResultado(entidad);
+                .Include(r => r.estado_resultado_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)!.ThenInclude(per => per.genero_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.medico_navigation)
+                .Include(r => r.revisor_navigation)
+                .Include(r => r.detalle_resultado).ThenInclude(d => d.examen_navigation)!.ThenInclude(e => e.referencia_examen)
+                .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
+            if (entidad == null) return null;
+
+            int edad = CalcularEdad(entidad.orden_navigation?.paciente_navigation?.persona_navigation?.fecha_nacimiento);
+
+            return MapDetalleResultado(entidad);
         }
 
         public async Task<ResultadoCompletoDto?> ObtenerResultadoCompletoAsync(int idResultado)
         {
             var entidad = await _context.Resultado
-                .Include(r => r.IdEstadoResultadoNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdGeneroNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdPacienteNavigation)!.ThenInclude(p => p.IdPersonaNavigation)
-                .Include(r => r.IdOrdenNavigation)!.ThenInclude(o => o.IdMedicoNavigation)
-                .Include(r => r.IdRevisorNavigation)
-                .Include(r => r.DetalleResultado).ThenInclude(d => d.IdExamenNavigation)!.ThenInclude(e => e.ReferenciaExamen)
-                .FirstOrDefaultAsync(r => r.IdResultado == idResultado);
+                .Include(r => r.estado_resultado_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)!.ThenInclude(per => per.genero_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.medico_navigation)
+                .Include(r => r.revisor_navigation)
+                .Include(r => r.detalle_resultado).ThenInclude(d => d.examen_navigation)!.ThenInclude(e => e.referencia_examen)
+                .FirstOrDefaultAsync(r => r.id_resultado == idResultado);
             if (entidad == null) return null;
 
-            int edad = CalcularEdad(entidad.IdOrdenNavigation?.IdPacienteNavigation?.FechaNacPaciente);
+            int edad = CalcularEdad(entidad.orden_navigation?.paciente_navigation?.persona_navigation?.fecha_nacimiento);
 
             return new ResultadoCompletoDto
             {
-                NumeroOrden = entidad.IdOrdenNavigation?.NumeroOrden ?? string.Empty,
-                NumeroResultado = entidad.NumeroResultado,
-                FechaResultado = entidad.FechaResultado,
-                NombrePaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation != null
-                    ? $"{entidad.IdOrdenNavigation.IdPacienteNavigation.IdPersonaNavigation!.Nombres} {entidad.IdOrdenNavigation.IdPacienteNavigation.IdPersonaNavigation!.Apellidos}"
+                NumeroOrden = entidad.orden_navigation?.numero_orden ?? string.Empty,
+                NumeroResultado = entidad.numero_resultado,
+                FechaResultado = entidad.fecha_resultado,
+                NombrePaciente = entidad.orden_navigation?.paciente_navigation != null
+                    ? $"{entidad.orden_navigation.paciente_navigation.persona_navigation!.nombres} {entidad.orden_navigation.paciente_navigation.persona_navigation!.apellidos}"
                     : string.Empty,
-                CedulaPaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation?.IdPersonaNavigation?.Cedula ?? string.Empty,
-                GeneroPaciente = entidad.IdOrdenNavigation?.IdPacienteNavigation?.IdGeneroNavigation?.Nombre,
+                CedulaPaciente = entidad.orden_navigation?.paciente_navigation?.persona_navigation?.cedula ?? string.Empty,
+                GeneroPaciente = entidad.orden_navigation?.paciente_navigation?.persona_navigation?.genero_navigation?.nombre,
                 EdadPaciente = edad,
-                MedicoSolicitante = entidad.IdOrdenNavigation?.IdMedicoNavigation?.NombreMedico ?? string.Empty,
+                MedicoSolicitante = entidad.orden_navigation?.medico_navigation?.nombre_medico ?? string.Empty,
                 Detalles = new List<ResultadoDetalleDto> { MapDetalleResultado(entidad) }
             };
         }
@@ -328,10 +316,10 @@ namespace Lab_APIRest.Services.Resultados
 
         public async Task<bool> AnularResultadoAsync(int idResultado)
         {
-            var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.IdResultado == idResultado);
-            if (entidad == null || !entidad.Activo) return false;
-            entidad.Activo = false;
-            entidad.FechaFin = DateTime.UtcNow;
+            var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.id_resultado == idResultado);
+            if (entidad == null || !entidad.activo) return false;
+            entidad.activo = false;
+            entidad.fecha_fin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -343,19 +331,19 @@ namespace Lab_APIRest.Services.Resultados
             if (estadoNormalizado != "APROBADO" && estadoNormalizado != "CORRECCION")
                 throw new ArgumentException("Estado de resultado no soportado", nameof(estado));
 
-            var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.IdResultado == idResultado && r.Activo);
+            var entidad = await _context.Resultado.FirstOrDefaultAsync(r => r.id_resultado == idResultado && r.activo);
             if (entidad == null) return false;
 
-            if (entidad.IdEstadoResultado == EstadoResultadoAprobadoId && estadoNormalizado == "CORRECCION")
+            if (entidad.id_estado_resultado == EstadoResultadoAprobadoId && estadoNormalizado == "CORRECCION")
                 return false;
 
-            entidad.IdEstadoResultado = estadoNormalizado == "APROBADO" ? EstadoResultadoAprobadoId : EstadoResultadoCorreccionId;
-            entidad.ObservacionRevision = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
-            entidad.IdRevisor = idRevisor;
-            entidad.FechaRevision = DateTime.UtcNow;
+            entidad.id_estado_resultado = estadoNormalizado == "APROBADO" ? EstadoResultadoAprobadoId : EstadoResultadoCorreccionId;
+            entidad.observacion_revision = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
+            entidad.id_revisor = idRevisor;
+            entidad.fecha_revision = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            await ActualizarOrdenSegunResultadosAsync(entidad.IdOrden);
+            await ActualizarOrdenSegunResultadosAsync(entidad.id_orden);
             return true;
         }
 
@@ -365,28 +353,28 @@ namespace Lab_APIRest.Services.Resultados
             try
             {
                 var entidad = await _context.Resultado
-                    .Include(r => r.DetalleResultado)
-                    .FirstOrDefaultAsync(r => r.IdResultado == resultado.IdResultado && r.Activo);
+                    .Include(r => r.detalle_resultado)
+                    .FirstOrDefaultAsync(r => r.id_resultado == resultado.IdResultado && r.activo);
                 if (entidad == null) return false;
-                if (entidad.IdEstadoResultado != EstadoResultadoCorreccionId) return false;
+                if (entidad.id_estado_resultado != EstadoResultadoCorreccionId) return false;
 
-                entidad.FechaResultado = resultado.FechaResultado ?? DateTime.UtcNow;
-                entidad.Observaciones = resultado.ObservacionesGenerales;
-                entidad.IdEstadoResultado = EstadoResultadoRevisionId;
-                entidad.ObservacionRevision = null;
-                entidad.FechaRevision = null;
-                entidad.IdRevisor = null;
+                entidad.fecha_resultado = resultado.FechaResultado ?? DateTime.UtcNow;
+                entidad.observaciones = resultado.ObservacionesGenerales;
+                entidad.id_estado_resultado = EstadoResultadoRevisionId;
+                entidad.observacion_revision = null;
+                entidad.fecha_revision = null;
+                entidad.id_revisor = null;
 
                 foreach (var ex in resultado.Examenes)
                 {
-                    var detalle = entidad.DetalleResultado.FirstOrDefault(d => d.IdExamen == ex.IdExamen);
+                    var detalle = entidad.detalle_resultado.FirstOrDefault(d => d.id_examen == ex.IdExamen);
                     if (detalle != null)
-                        detalle.Valor = ex.Valor ?? string.Empty;
+                        detalle.valor = ex.Valor ?? string.Empty;
                 }
 
                 await _context.SaveChangesAsync();
                 await transaccion.CommitAsync();
-                await ActualizarOrdenSegunResultadosAsync(entidad.IdOrden);
+                await ActualizarOrdenSegunResultadosAsync(entidad.id_orden);
                 return true;
             }
             catch (Exception ex)

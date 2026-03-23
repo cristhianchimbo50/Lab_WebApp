@@ -10,6 +10,7 @@
 @using Lab_Contracts.Pacientes
 @using Lab_Contracts.Common
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
 @using System.Security.Claims
 @inject IPacientesApiService PacientesApiService
 @inject IJSRuntime JS
@@ -48,20 +49,23 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" @bind-Value:after="AjustarValorBusquedaSegunCriterio" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="cedula">Cédula</option>
-                            <option value="nombre">Nombre</option>
+                            <option value="nombre">Nombre y Apellido</option>
                             <option value="correo">Correo</option>
                         </InputSelect>
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda" placeholder="Ingrese valor a buscar"
-                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarPacientesAsync(); })" />
+                        <input class="form-control @(_filtro.CriterioBusqueda == "nombre" ? "text-uppercase" : string.Empty)"
+                               value="@ValorBusquedaFiltro"
+                               placeholder="Ingrese valor a buscar"
+                               @oninput="OnValorBusquedaInput"
+                               @onkeypress="OnValorBusquedaKeyPressAsync" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarPacientesAsync" disabled="@_buscando">
+                        <button class="btn btn-primary" @onclick="OnBuscarClickAsync" disabled="@_buscando">
                             @if (_buscando){<span class="spinner-border spinner-border-sm me-1"></span>}
                             <i class="bi bi-search me-1"></i>Buscar
                         </button>
@@ -74,11 +78,11 @@
                 <div class="card-body row g-3">
                     <div class="col-md-3 d-flex align-items-center mt-2">
                         <InputCheckbox @bind-Value="_filtro.IncluirAnulados" class="form-check-input me-2" />
-                        <label class="form-check-label">Anulado</label>
+                        <label class="form-check-label">Deshabilitado</label>
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-2">
                         <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
-                        <label class="form-check-label">No Anulado</label>
+                        <label class="form-check-label">Habilitado</label>
                     </div>
                 </div>
             </div>
@@ -143,7 +147,7 @@
                                         <td data-label="Dirección">@paciente.Direccion</td>
                                         <td data-label="Correo">@paciente.Correo</td>
                                         <td data-label="Teléfono">@paciente.Telefono</td>
-                                        <td data-label="Estado"><span class="badge bg-@(paciente.Activo ? "success" : "danger")">@(paciente.Activo ? "Activo" : "Deshabilitado")</span></td>
+                                        <td data-label="Estado"><span class="badge bg-@(paciente.Activo ? "success" : "danger")">@(paciente.Activo ? "Habilitado" : "Deshabilitado")</span></td>
                                         <td data-label="Acciones">
                                             @if (puedeModificar)
                                             {
@@ -179,15 +183,15 @@
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Cédula</label><InputText class="form-control" @bind-Value="_pacienteActual.Cedula" /></div>
-                                    <div class="col-md-6"><label class="form-label">Nombres</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Nombres" @oninput="(e => _pacienteActual.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Apellidos</label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Apellidos" @oninput="(e => _pacienteActual.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="_pacienteActual.FechaNacimiento" TValue="DateTime" /></div>
-                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.Telefono" /></div>
-                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.Correo" readonly="@(_pacienteActual.IdPaciente != 0)" disabled="@(_pacienteActual.IdPaciente != 0)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Cédula <span class="text-danger">*</span></label><InputText class="form-control" @bind-Value="_pacienteActual.Cedula" required @onblur="OnCedulaBlurAsync" disabled="@_camposPersonaBloqueados" /></div>
+                                    <div class="col-md-6"><label class="form-label">Nombres <span class="text-danger">*</span></label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Nombres" required @oninput="(e => _pacienteActual.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)" disabled="@_camposPersonaBloqueados" /></div>
+                                    <div class="col-md-6"><label class="form-label">Apellidos <span class="text-danger">*</span></label><InputText class="form-control text-uppercase" @bind-Value="_pacienteActual.Apellidos" required @oninput="(e => _pacienteActual.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)" disabled="@_camposPersonaBloqueados" /></div>
+                                    <div class="col-md-6"><label class="form-label">Fecha de Nacimiento</label><InputDate class="form-control" @bind-Value="_pacienteActual.FechaNacimiento" TValue="DateTime?" /></div>
+                                    <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_pacienteActual.Telefono" disabled="@_camposPersonaBloqueados" /></div>
+                                    <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_pacienteActual.Correo" readonly="@(_pacienteActual.IdPaciente != 0 || _camposPersonaBloqueados)" disabled="@(_pacienteActual.IdPaciente != 0 || _camposPersonaBloqueados)" /></div>
                                     <div class="col-md-6"><label class="form-label">Dirección</label><InputText class="form-control" @bind-Value="_pacienteActual.Direccion" /></div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Género</label>
+                                        <label class="form-label">Género <span class="text-danger">*</span></label>
                                         <InputSelect class="form-select" @bind-Value="_pacienteActual.IdGenero">
                                             <option value="">Seleccione</option>
                                             @foreach (var g in _generos)
@@ -197,6 +201,7 @@
                                         </InputSelect>
                                     </div>
                                 </div>
+                                <div class="mt-3 small text-danger">* Los datos en rojo son datos requeridos.</div>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary px-3"><i class="bi bi-save me-1"></i>Guardar</button>
@@ -227,7 +232,10 @@
     private bool _modalVisible;
     private bool _buscando = false;
     private bool _sesionVerificada = false;
+    private bool _mostrarToastPorClickBuscar;
     private List<GeneroDto> _generos = new();
+    private bool _datosAutocompletados;
+    private bool _cedulaYaRegistradaComoPaciente;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -236,7 +244,6 @@
             _sesionVerificada = true;
             if (!await SesionService.VerificarOSalirAsync()) return;
             await CargarGenerosAsync();
-            await BuscarPacientesAsync();
         }
     }
 
@@ -262,13 +269,55 @@
         {
             _buscando = true;
             _resultado = await PacientesApiService.ListarPacientesPaginadosAsync(_filtro);
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
+            if (_mostrarToastPorClickBuscar)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
+            }
         }
         catch
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar pacientes.", "danger");
         }
-        finally { _buscando = false; }
+        finally
+        {
+            _buscando = false;
+            _mostrarToastPorClickBuscar = false;
+        }
+    }
+
+    private async Task OnBuscarClickAsync()
+    {
+        _mostrarToastPorClickBuscar = true;
+        await BuscarPacientesAsync();
+    }
+
+    private string ValorBusquedaFiltro
+    {
+        get => _filtro.ValorBusqueda ?? string.Empty;
+        set => _filtro.ValorBusqueda = _filtro.CriterioBusqueda == "nombre"
+            ? (value ?? string.Empty).ToUpper()
+            : value;
+    }
+
+    private void AjustarValorBusquedaSegunCriterio()
+    {
+        if (_filtro.CriterioBusqueda == "nombre")
+        {
+            _filtro.ValorBusqueda = (_filtro.ValorBusqueda ?? string.Empty).ToUpper();
+        }
+    }
+
+    private void OnValorBusquedaInput(ChangeEventArgs e)
+    {
+        ValorBusquedaFiltro = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task OnValorBusquedaKeyPressAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await BuscarPacientesAsync();
+        }
     }
 
     private async Task LimpiarBusquedaAsync()
@@ -310,6 +359,8 @@
     private async Task MostrarModalNuevoAsync()
     {
         _pacienteActual = new PacienteDto { FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
+        _datosAutocompletados = false;
+        _cedulaYaRegistradaComoPaciente = false;
         _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -317,11 +368,18 @@
     private async Task CerrarModalAsync()
     {
         _modalVisible = false;
+        _cedulaYaRegistradaComoPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
 
     private async Task EditarPacienteAsync(PacienteDto paciente)
     {
+        if (!paciente.Activo)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Primero debe habilitar al paciente para poder modificarlo.", "warning");
+            return;
+        }
+
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? "";
         if (rol != "1")
@@ -330,6 +388,7 @@
             return;
         }
         _pacienteActual = paciente;
+        _datosAutocompletados = false;
         _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -337,8 +396,19 @@
     private async Task ValidarYGuardarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+
+        _pacienteActual.Telefono = string.IsNullOrWhiteSpace(_pacienteActual.Telefono) ? null : _pacienteActual.Telefono.Trim();
+        _pacienteActual.Direccion = string.IsNullOrWhiteSpace(_pacienteActual.Direccion) ? null : _pacienteActual.Direccion.Trim();
+        _pacienteActual.Correo = string.IsNullOrWhiteSpace(_pacienteActual.Correo) ? null : _pacienteActual.Correo.Trim();
+
         if (_pacienteActual.IdPaciente == 0)
         {
+            if (_cedulaYaRegistradaComoPaciente)
+            {
+                await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente. No se puede guardar.");
+                return;
+            }
+
             var (exito, msg, _) = await PacientesApiService.GuardarPacienteAsync(_pacienteActual);
             await JS.InvokeVoidAsync("mostrarToastAsync", msg, exito ? "success" : "danger");
             if (exito)
@@ -355,15 +425,68 @@
         }
     }
 
+    private bool _camposPersonaBloqueados => _datosAutocompletados;
+
+    private async Task OnCedulaBlurAsync(FocusEventArgs _)
+    {
+        if (_pacienteActual.IdPaciente != 0) return;
+        var cedula = _pacienteActual.Cedula?.Trim();
+        if (string.IsNullOrWhiteSpace(cedula)) { _datosAutocompletados = false; return; }
+
+        try
+        {
+            var existente = await PacientesApiService.ObtenerPacientePorCedulaAsync(cedula);
+            if (existente != null)
+            {
+                _pacienteActual = existente;
+                _datosAutocompletados = true;
+                _cedulaYaRegistradaComoPaciente = true;
+                await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente.");
+            }
+            else
+            {
+                var persona = await PacientesApiService.ObtenerPersonaPorCedulaAsync(cedula);
+                if (persona != null)
+                {
+                    _pacienteActual.Cedula = persona.Cedula;
+                    _pacienteActual.IdPersona = persona.IdPersona;
+                    _pacienteActual.Nombres = persona.Nombres;
+                    _pacienteActual.Apellidos = persona.Apellidos;
+                    _pacienteActual.Correo = persona.Correo;
+                    _pacienteActual.Telefono = persona.Telefono;
+                    _pacienteActual.FechaNacimiento = persona.FechaNacimiento;
+                    _pacienteActual.IdGenero = persona.IdGenero;
+                    _datosAutocompletados = true;
+                    _cedulaYaRegistradaComoPaciente = false;
+                    var mensaje = string.IsNullOrWhiteSpace(persona.Correo)
+                        ? "Persona encontrada. Se bloquearon los datos personales existentes."
+                        : "Persona encontrada y ya tiene usuario registrado. Se bloquearon los datos personales existentes.";
+                    await JS.InvokeVoidAsync("alert", mensaje);
+                }
+                else
+                {
+                    _datosAutocompletados = false;
+                    _cedulaYaRegistradaComoPaciente = false;
+                }
+            }
+        }
+        catch
+        {
+            _datosAutocompletados = false;
+            _cedulaYaRegistradaComoPaciente = false;
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo verificar la cédula.", "warning");
+        }
+    }
+
     private async Task ConfirmarAnulacionAsync(int id)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este paciente?"))
+        if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este paciente?"))
         {
             var resultadoOp = await PacientesApiService.AnularPacienteAsync(id);
             if (resultadoOp.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente anulado correctamente.", "success");
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente deshabilitado correctamente.", "success");
                 await BuscarPacientesAsync();
             }
         }
@@ -397,11 +520,12 @@
         }
     }
 
-    private int CalcularEdad(DateTime fechaNacimiento)
+    private string CalcularEdad(DateTime? fechaNacimiento)
     {
+        if (!fechaNacimiento.HasValue) return "-";
         var hoy = DateTime.Today;
-        int edad = hoy.Year - fechaNacimiento.Year;
-        if (fechaNacimiento > hoy.AddYears(-edad)) edad--;
-        return edad;
+        int edad = hoy.Year - fechaNacimiento.Value.Year;
+        if (fechaNacimiento.Value > hoy.AddYears(-edad)) edad--;
+        return edad.ToString();
     }
 }

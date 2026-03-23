@@ -17,5 +17,8 @@ namespace Lab_APIRest.Services.Examenes
         Task<bool> AsignarExamenHijoAsync(int idExamenPadre, int idExamenHijo);
         Task<bool> EliminarExamenHijoAsync(int idExamenPadre, int idExamenHijo);
         Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro);
+        Task<List<CatalogoExamenDto>> ListarCatalogoAsync(string tipo, bool incluirInactivos = true);
+        Task<CatalogoExamenDto?> GuardarCatalogoAsync(string tipo, CatalogoExamenDto dto);
+        Task<bool> CambiarEstadoCatalogoAsync(string tipo, int id, bool activo);
     }
 }

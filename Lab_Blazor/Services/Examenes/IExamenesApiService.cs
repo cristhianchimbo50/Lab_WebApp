@@ -19,5 +19,8 @@ namespace Lab_Blazor.Services.Examenes
         Task<HttpResponseMessage> AsignarExamenHijoAsync(int idPadre, int idHijo);
         Task<HttpResponseMessage> EliminarExamenHijoAsync(int idPadre, int idHijo);
         Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro);
+        Task<List<CatalogoExamenDto>> ListarCatalogoAsync(string tipo, bool incluirInactivos = true);
+        Task<CatalogoExamenDto?> GuardarCatalogoAsync(string tipo, CatalogoExamenDto dto);
+        Task<HttpResponseMessage> CambiarEstadoCatalogoAsync(string tipo, int id, bool activo);
     }
 }

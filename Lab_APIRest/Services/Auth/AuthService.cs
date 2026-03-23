@@ -1,5 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using usuario = Lab_APIRest.Infrastructure.EF.Models.usuario;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
@@ -39,19 +40,19 @@ namespace Lab_APIRest.Services.Auth
             EF.CompileAsyncQuery((LabDbContext ctx, string correo) =>
                 ctx.Usuario
                     .AsNoTracking()
-                    .Include(u => u.IdRolNavigation)
-                    .Include(u => u.IdPersonaNavigation)
-                    .Where(u => u.IdPersonaNavigation.Correo == correo)
+                    .Include(u => u.rol_navigation)
+                    .Include(u => u.persona_navigation)
+                    .Where(u => u.correo == correo)
                     .Select(u => new UsuarioLoginProjection(
-                        u.IdUsuario,
-                        u.IdPersona,
-                        u.IdPersonaNavigation.Correo,
-                        u.IdPersonaNavigation.Nombres,
-                        u.IdPersonaNavigation.Apellidos,
-                        u.IdRol,
-                        u.IdRolNavigation.Nombre,
-                        u.PasswordHash,
-                        u.Activo
+                        u.id_usuario,
+                        u.id_persona,
+                        u.correo,
+                        u.persona_navigation.nombres,
+                        u.persona_navigation.apellidos,
+                        u.id_rol,
+                        u.rol_navigation.nombre,
+                        u.password_hash,
+                        u.activo
                     ))
             );
 
@@ -114,13 +115,13 @@ namespace Lab_APIRest.Services.Auth
 
             try
             {
-                var usuarioActualizar = new Usuario
+                var usuarioActualizar = new usuario
                 {
-                    IdUsuario = usuarioEntidad.IdUsuario,
-                    UltimoAcceso = DateTime.UtcNow
+                    id_usuario = usuarioEntidad.IdUsuario,
+                    ultimo_acceso = DateTime.UtcNow
                 };
                 _context.Usuario.Attach(usuarioActualizar);
-                _context.Entry(usuarioActualizar).Property(x => x.UltimoAcceso).IsModified = true;
+                _context.Entry(usuarioActualizar).Property(x => x.ultimo_acceso).IsModified = true;
                 await _context.SaveChangesAsync(ct);
             }
             catch (Exception ex)
@@ -135,11 +136,11 @@ namespace Lab_APIRest.Services.Auth
             if (esPaciente)
             {
                 var pacienteEntidad = await _context.Paciente.AsNoTracking()
-                    .Where(p => p.IdPersona == usuarioEntidad.IdPersona)
-                    .Select(p => new { p.IdPaciente })
+                    .Where(p => p.id_persona == usuarioEntidad.IdPersona)
+                    .Select(p => new { p.id_paciente })
                     .FirstOrDefaultAsync(ct);
                 if (pacienteEntidad != null)
-                    idPaciente = pacienteEntidad.IdPaciente;
+                    idPaciente = pacienteEntidad.id_paciente;
             }
 
             (string token, DateTime expiraUtc) = _tokenService.CreateToken(
@@ -177,21 +178,20 @@ namespace Lab_APIRest.Services.Auth
         {
             var correo = cambio.CorreoUsuario.Trim().ToLowerInvariant();
             var usuarioEntidad = await _context.Usuario
-                .Include(u => u.IdPersonaNavigation)
-                .FirstOrDefaultAsync(u => u.IdPersonaNavigation.Correo.ToLower() == correo, ct);
+                .FirstOrDefaultAsync(u => u.correo.ToLower() == correo, ct);
 
             if (usuarioEntidad == null)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Usuario no encontrado." };
 
-            if (string.IsNullOrEmpty(usuarioEntidad.PasswordHash))
+            if (string.IsNullOrEmpty(usuarioEntidad.password_hash))
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "Credenciales inválidas." };
 
-            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.PasswordHash!, cambio.ContraseniaActual);
+            var verificacion = _hasher.VerifyHashedPassword(null!, usuarioEntidad.password_hash!, cambio.ContraseniaActual);
             if (verificacion == PasswordVerificationResult.Failed)
                 return new CambiarContraseniaResponseDto { Exito = false, Mensaje = "La contraseña actual es incorrecta." };
 
             var nuevaHash = _hasher.HashPassword(null!, cambio.NuevaContrasenia);
-            usuarioEntidad.PasswordHash = nuevaHash;
+            usuarioEntidad.password_hash = nuevaHash;
 
             await _context.SaveChangesAsync(ct);
 
@@ -212,37 +212,40 @@ namespace Lab_APIRest.Services.Auth
             var tokenHash = CalcularHash(token);
 
             var registro = await _context.TokensUsuarios
-                .Include(r => r.IdUsuarioNavigation)
-                .FirstOrDefaultAsync(r => r.TipoToken == "activacion" && !r.Usado && r.TokenHash == tokenHash, ct);
+                .Include(r => r.usuario_navigation)
+                .FirstOrDefaultAsync(r => r.tipo_token == "activacion" && !r.usado && r.token_hash == tokenHash, ct);
 
             if (registro == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido o ya fue usado." };
 
-            if (registro.FechaExpiracion < DateTime.UtcNow)
+            if (registro.fecha_expiracion < DateTime.UtcNow)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
-            var usuario = registro.IdUsuarioNavigation;
-            usuario.PasswordHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
-            usuario.Activo = true;
+            var usuario = registro.usuario_navigation;
+            usuario.password_hash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            usuario.activo = true;
 
-            registro.Usado = true;
-            registro.UsadoEn = DateTime.UtcNow;
+            registro.usado = true;
+            registro.usado_en = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(ct);
 
-            var persona = await _context.Persona.FirstOrDefaultAsync(p => p.IdPersona == usuario.IdPersona, ct);
+            var persona = await _context.Persona
+                .Where(p => p.id_persona == usuario.id_persona)
+                .Select(p => new { p.nombres, p.apellidos })
+                .FirstOrDefaultAsync(ct);
 
             var asunto = "Cuenta activada correctamente";
 
             var cuerpo = $@"
-                <p>Hola <strong>{persona?.Nombres} {persona?.Apellidos}</strong>,</p>
+                <p>Hola <strong>{persona?.nombres} {persona?.apellidos}</strong>,</p>
 
                 <p>Tu cuenta ha sido activada exitosamente.</p>
 
                 <p>Ya puedes iniciar sesión con tu correo registrado.</p>";
 
-            var correoDestino = persona?.Correo ?? string.Empty;
-            var nombreDestino = $"{persona?.Nombres} {persona?.Apellidos}".Trim();
+            var correoDestino = usuario.correo;
+            var nombreDestino = $"{persona?.nombres} {persona?.apellidos}".Trim();
             await _emailService.EnviarCorreoAsync(correoDestino, nombreDestino, asunto, cuerpo);
 
             return new RespuestaMensajeDto

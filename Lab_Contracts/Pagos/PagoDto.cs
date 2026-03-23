@@ -8,13 +8,16 @@ namespace Lab_Contracts.Pagos
         public int IdOrden { get; set; }
 
         public DateTime? FechaPago { get; set; }
+        public decimal MontoRecibido { get; set; }
+        public decimal MontoAplicado { get; set; }
+        public decimal MontoVuelto { get; set; }
+
         public decimal MontoPagado { get; set; }
+        public decimal DineroEfectivo { get; set; }
+        public decimal Transferencia { get; set; }
 
         public string Observacion { get; set; }
         public bool Anulado { get; set; }
-
-        public decimal DineroEfectivo { get; set; }
-        public decimal Transferencia { get; set; }
 
         public List<DetallePagoDto> DetallePagos { get; set; } = new();
     }

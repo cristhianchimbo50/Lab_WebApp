@@ -31,6 +31,10 @@ namespace Lab_APIRest.Controllers
 
                 return Ok(pagoRegistrado);
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Mensaje = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar el pago.");

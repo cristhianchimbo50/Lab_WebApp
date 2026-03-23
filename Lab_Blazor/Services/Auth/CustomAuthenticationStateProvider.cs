@@ -61,7 +61,6 @@ namespace Lab_Blazor.Services.Auth
                              claim.Type.Equals("rol", StringComparison.OrdinalIgnoreCase) ||
                              claim.Type.Equals(ClaimTypes.Role, StringComparison.Ordinal))
                     {
-                        // ignore legacy role name claims to avoid mismatches
                     }
                     else
                     {

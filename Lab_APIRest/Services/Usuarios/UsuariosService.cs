@@ -1,8 +1,13 @@
 ﻿using Lab_Contracts.Usuarios;
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using usuario = Lab_APIRest.Infrastructure.EF.Models.usuario;
+using persona = Lab_APIRest.Infrastructure.EF.Models.persona;
+using tokens_usuarios = Lab_APIRest.Infrastructure.EF.Models.tokens_usuarios;
 using Microsoft.EntityFrameworkCore;
 using Lab_APIRest.Infrastructure.Services;
+using System;
+using System.Linq;
 
 namespace Lab_APIRest.Services.Usuarios
 {
@@ -17,21 +22,24 @@ namespace Lab_APIRest.Services.Usuarios
             _emailService = emailService;
         }
 
-        private static UsuarioListadoDto MapUsuario(Usuario entidad) => new()
+        private static UsuarioListadoDto MapUsuario(usuario entidad) => new()
         {
-            IdUsuario = entidad.IdUsuario,
-            IdPersona = entidad.IdPersona,
-            Cedula = entidad.IdPersonaNavigation?.Cedula ?? string.Empty,
-            Nombres = entidad.IdPersonaNavigation?.Nombres ?? string.Empty,
-            Apellidos = entidad.IdPersonaNavigation?.Apellidos ?? string.Empty,
-            Correo = entidad.IdPersonaNavigation?.Correo ?? string.Empty,
-            Telefono = entidad.IdPersonaNavigation?.Telefono ?? string.Empty,
-            Direccion = entidad.IdPersonaNavigation?.Direccion ?? string.Empty,
-            IdRol = entidad.IdRol,
-            NombreRol = entidad.IdRolNavigation?.Nombre ?? string.Empty,
-            Activo = entidad.Activo ?? false,
-            FechaCreacion = entidad.FechaCreacion,
-            UltimoAcceso = entidad.UltimoAcceso
+            IdUsuario = entidad.id_usuario,
+            IdPersona = entidad.id_persona,
+            Cedula = entidad.persona_navigation?.cedula ?? string.Empty,
+            Nombres = entidad.persona_navigation?.nombres ?? string.Empty,
+            Apellidos = entidad.persona_navigation?.apellidos ?? string.Empty,
+            FechaNacimiento = (entidad.persona_navigation?.fecha_nacimiento ?? DateOnly.MinValue).ToDateTime(TimeOnly.MinValue),
+            Correo = entidad.correo ?? string.Empty,
+            Telefono = entidad.persona_navigation?.telefono ?? string.Empty,
+            Direccion = entidad.persona_navigation?.direccion ?? string.Empty,
+            IdGenero = entidad.persona_navigation?.id_genero ?? 0,
+            NombreGenero = entidad.persona_navigation?.genero_navigation?.nombre ?? string.Empty,
+            IdRol = entidad.id_rol,
+            NombreRol = entidad.rol_navigation?.nombre ?? string.Empty,
+            Activo = entidad.activo ?? false,
+            FechaCreacion = entidad.fecha_creacion,
+            UltimoAcceso = entidad.ultimo_acceso
         };
 
         public async Task<List<UsuarioListadoDto>> ListarUsuariosAsync(UsuarioFiltroDto filtro, CancellationToken ct = default)
@@ -39,17 +47,17 @@ namespace Lab_APIRest.Services.Usuarios
             try
             {
                 var consulta = _context.Usuario
-                    .Include(u => u.IdRolNavigation)
-                    .Include(u => u.IdPersonaNavigation)
-                    .Where(u => u.IdRolNavigation.Nombre != "paciente");
+                    .Include(u => u.rol_navigation)
+                    .Include(u => u.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                    .Where(u => u.rol_navigation.nombre != "paciente");
 
-                if (!string.IsNullOrWhiteSpace(filtro.Nombre)) consulta = consulta.Where(u => u.IdPersonaNavigation!.Nombres.Contains(filtro.Nombre) || u.IdPersonaNavigation!.Apellidos.Contains(filtro.Nombre));
-                if (!string.IsNullOrWhiteSpace(filtro.Correo)) consulta = consulta.Where(u => u.IdPersonaNavigation!.Correo.Contains(filtro.Correo));
-                if (filtro.IdRol.HasValue) consulta = consulta.Where(u => u.IdRol == filtro.IdRol.Value);
-                if (filtro.Activo.HasValue) consulta = consulta.Where(u => (u.Activo ?? false) == filtro.Activo.Value);
+                if (!string.IsNullOrWhiteSpace(filtro.Nombre)) consulta = consulta.Where(u => u.persona_navigation!.nombres.Contains(filtro.Nombre) || u.persona_navigation!.apellidos.Contains(filtro.Nombre));
+                if (!string.IsNullOrWhiteSpace(filtro.Correo)) consulta = consulta.Where(u => (u.correo ?? string.Empty).Contains(filtro.Correo));
+                if (filtro.IdRol.HasValue) consulta = consulta.Where(u => u.id_rol == filtro.IdRol.Value);
+                if (filtro.Activo.HasValue) consulta = consulta.Where(u => (u.activo ?? false) == filtro.Activo.Value);
 
                 return await consulta
-                    .OrderBy(u => u.IdPersonaNavigation!.Nombres)
+                    .OrderBy(u => u.persona_navigation!.nombres)
                     .Select(u => MapUsuario(u))
                     .ToListAsync(ct);
             }
@@ -68,9 +76,9 @@ namespace Lab_APIRest.Services.Usuarios
             try
             {
                 var entidad = await _context.Usuario
-                    .Include(u => u.IdRolNavigation)
-                    .Include(u => u.IdPersonaNavigation)
-                    .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
+                    .Include(u => u.rol_navigation)
+                    .Include(u => u.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                    .FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol_navigation.nombre != "paciente", ct);
                 return entidad == null ? null : MapUsuario(entidad);
             }
             catch (DbUpdateException ex)
@@ -87,46 +95,54 @@ namespace Lab_APIRest.Services.Usuarios
         {
             try
             {
+                if (!ValidarCedula(usuario.Cedula))
+                    throw new ArgumentException("La cédula ingresada no es válida.");
+
                 await using var transaccion = await _context.Database.BeginTransactionAsync(ct);
 
-                var persona = new Persona
+                if (usuario.IdGenero <= 0)
+                    throw new ArgumentException("El género es obligatorio.");
+
+                var persona = new persona
                 {
-                    Cedula = usuario.Cedula,
-                    Nombres = usuario.Nombres,
-                    Apellidos = usuario.Apellidos,
-                    Correo = usuario.Correo,
-                    Telefono = usuario.Telefono,
-                    Direccion = usuario.Direccion,
-                    Activo = true,
-                    FechaCreacion = DateTime.UtcNow
+                    cedula = usuario.Cedula,
+                    nombres = (usuario.Nombres ?? string.Empty).ToUpperInvariant(),
+                    apellidos = (usuario.Apellidos ?? string.Empty).ToUpperInvariant(),
+                    fecha_nacimiento = usuario.FechaNacimiento == default ? null : DateOnly.FromDateTime(usuario.FechaNacimiento),
+                    telefono = usuario.Telefono,
+                    direccion = (usuario.Direccion ?? string.Empty).ToUpperInvariant(),
+                    id_genero = usuario.IdGenero,
+                    activo = true,
+                    fecha_creacion = DateTime.UtcNow
                 };
                 _context.Persona.Add(persona);
-                await _context.SaveChangesAsync(ct);
-
-                var entidad = new Usuario
-                {
-                    IdPersona = persona.IdPersona,
-                    IdRol = usuario.IdRol,
-                    Activo = false,
-                    PasswordHash = null,
-                    FechaCreacion = DateTime.UtcNow
-                };
-
-                _context.Usuario.Add(entidad);
                 await _context.SaveChangesAsync(ct);
 
                 var randomBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
                 var token = Convert.ToBase64String(randomBytes);
                 var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
 
-                var tokenRegistro = new TokensUsuarios
+                var entidad = new usuario
                 {
-                    IdUsuario = entidad.IdUsuario,
-                    TokenHash = tokenHash,
-                    TipoToken = "activacion",
-                    FechaSolicitud = DateTime.UtcNow,
-                    FechaExpiracion = DateTime.UtcNow.AddHours(24),
-                    Usado = false
+                    id_persona = persona.id_persona,
+                    id_rol = usuario.IdRol,
+                    correo = usuario.Correo,
+                    activo = false,
+                    password_hash = Convert.ToHexString(tokenHash),
+                    fecha_creacion = DateTime.UtcNow
+                };
+
+                _context.Usuario.Add(entidad);
+                await _context.SaveChangesAsync(ct);
+
+                var tokenRegistro = new tokens_usuarios
+                {
+                    id_usuario = entidad.id_usuario,
+                    token_hash = tokenHash,
+                    tipo_token = "activacion",
+                    fecha_solicitud = DateTime.UtcNow,
+                    fecha_expiracion = DateTime.UtcNow.AddHours(24),
+                    usado = false
                 };
                 _context.TokensUsuarios.Add(tokenRegistro);
                 await _context.SaveChangesAsync(ct);
@@ -137,7 +153,7 @@ namespace Lab_APIRest.Services.Usuarios
 
                 var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
                 var cuerpo = $@"
-                    <p>Hola <strong>{persona.Nombres} {persona.Apellidos}</strong>,</p>
+                    <p>Hola <strong>{persona.nombres} {persona.apellidos}</strong>,</p>
 
                     <p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
 
@@ -153,11 +169,11 @@ namespace Lab_APIRest.Services.Usuarios
 
                     <p>Si no solicitaste este registro, puedes ignorar este mensaje.</p>";
 
-                await _emailService.EnviarCorreoAsync(persona.Correo, $"{persona.Nombres} {persona.Apellidos}", asunto, cuerpo);
+                await _emailService.EnviarCorreoAsync(entidad.correo, $"{persona.nombres} {persona.apellidos}", asunto, cuerpo);
 
                 await transaccion.CommitAsync(ct);
 
-                return entidad.IdUsuario;
+                return entidad.id_usuario;
             }
             catch (DbUpdateException ex)
             {
@@ -173,33 +189,31 @@ namespace Lab_APIRest.Services.Usuarios
         {
             try
             {
+                if (!ValidarCedula(usuario.Cedula))
+                    throw new ArgumentException("La cédula ingresada no es válida.");
+
                 await using var transaccion = await _context.Database.BeginTransactionAsync(ct);
 
                 var entidad = await _context.Usuario
-                    .Include(u => u.IdPersonaNavigation)
-                    .FirstOrDefaultAsync(x => x.IdUsuario == usuario.IdUsuario && x.IdRolNavigation.Nombre != "paciente", ct);
+                    .Include(u => u.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                    .Include(u => u.rol_navigation)
+                    .FirstOrDefaultAsync(x => x.id_usuario == usuario.IdUsuario && x.rol_navigation.nombre != "paciente", ct);
                 if (entidad == null) return false;
 
-                var persona = entidad.IdPersonaNavigation;
-                persona.Cedula = usuario.Cedula;
-                persona.Nombres = usuario.Nombres;
-                persona.Apellidos = usuario.Apellidos;
-                persona.Correo = usuario.Correo;
-                persona.Telefono = usuario.Telefono;
-                persona.Direccion = usuario.Direccion;
-                persona.FechaActualizacion = DateTime.UtcNow;
+                var persona = entidad.persona_navigation;
+                persona.cedula = usuario.Cedula;
+                persona.nombres = (usuario.Nombres ?? string.Empty).ToUpperInvariant();
+                persona.apellidos = (usuario.Apellidos ?? string.Empty).ToUpperInvariant();
+                persona.fecha_nacimiento = usuario.FechaNacimiento == default ? null : DateOnly.FromDateTime(usuario.FechaNacimiento);
+                persona.telefono = usuario.Telefono;
+                persona.direccion = (usuario.Direccion ?? string.Empty).ToUpperInvariant();
+                if (usuario.IdGenero <= 0) throw new ArgumentException("El género es obligatorio.");
+                persona.id_genero = usuario.IdGenero;
+                persona.fecha_actualizacion = DateTime.UtcNow;
 
-                entidad.IdRol = usuario.IdRol;
-                entidad.Activo = usuario.Activo;
-                entidad.FechaActualizacion = DateTime.UtcNow;
-                if (entidad.Activo == false)
-                {
-                    entidad.FechaFin = entidad.FechaFin ?? DateTime.UtcNow;
-                }
-                else
-                {
-                    entidad.FechaFin = null;
-                }
+                entidad.correo = usuario.Correo;
+                entidad.id_rol = usuario.IdRol;
+                entidad.fecha_actualizacion = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync(ct);
                 await transaccion.CommitAsync(ct);
@@ -219,20 +233,20 @@ namespace Lab_APIRest.Services.Usuarios
         {
             try
             {
-                var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario && u.IdRolNavigation.Nombre != "paciente", ct);
+                var entidad = await _context.Usuario.FirstOrDefaultAsync(u => u.id_usuario == idUsuario && u.rol_navigation.nombre != "paciente", ct);
                 if (entidad == null) return false;
                 if (!string.IsNullOrWhiteSpace(correoUsuarioActual) &&
-                    entidad.IdPersonaNavigation?.Correo.Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
+                    (entidad.correo ?? string.Empty).Trim().ToLowerInvariant() == correoUsuarioActual.Trim().ToLowerInvariant())
                     throw new InvalidOperationException("No puedes deshabilitar tu propio usuario.");
-                entidad.Activo = activo;
-                entidad.FechaActualizacion = DateTime.UtcNow;
-                if (entidad.Activo == false)
+                entidad.activo = activo;
+                entidad.fecha_actualizacion = DateTime.UtcNow;
+                if (entidad.activo == false)
                 {
-                    entidad.FechaFin = entidad.FechaFin ?? DateTime.UtcNow;
+                    entidad.fecha_fin = entidad.fecha_fin ?? DateTime.UtcNow;
                 }
                 else
                 {
-                    entidad.FechaFin = null;
+                    entidad.fecha_fin = null;
                 }
                 await _context.SaveChangesAsync(ct);
                 return true;
@@ -249,6 +263,25 @@ namespace Lab_APIRest.Services.Usuarios
             {
                 throw new Exception($"Error inesperado al cambiar el estado del usuario con ID {idUsuario}.", ex);
             }
+        }
+
+        private bool ValidarCedula(string cedula)
+        {
+            if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit))
+                return false;
+
+            int suma = 0;
+            for (int i = 0; i < 9; i++)
+            {
+                int digito = int.Parse(cedula[i].ToString());
+                int coef = (i % 2 == 0) ? 2 : 1;
+                int producto = digito * coef;
+                suma += (producto >= 10) ? (producto - 9) : producto;
+            }
+
+            int ultimoDigito = int.Parse(cedula[9].ToString());
+            int digitoCalculado = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
+            return ultimoDigito == digitoCalculado;
         }
     }
 }

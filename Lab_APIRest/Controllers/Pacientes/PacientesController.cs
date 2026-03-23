@@ -48,8 +48,16 @@ namespace Lab_APIRest.Controllers
         {
             var resultado = await _pacienteService.ListarPacientesAsync(criterio, valor);
             if (resultado == null)
-                return BadRequest("Campo de búsqueda no soportado. Use: cedula, nombre o correo.");
+                return BadRequest("Campo de búsqueda no soportado. Use: cedula o nombre.");
             return Ok(resultado);
+        }
+
+        [HttpGet("persona")]
+        public async Task<IActionResult> ObtenerPersonaPorCedula([FromQuery] string cedula)
+        {
+            var persona = await _pacienteService.ObtenerPersonaPorCedulaAsync(cedula);
+            if (persona == null) return NotFound();
+            return Ok(persona);
         }
 
         [HttpGet("generos")]

@@ -2,18 +2,27 @@ using System;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class ReferenciaExamen
+public partial class referencia_examen
 {
-    public int IdReferenciaExamen { get; set; }
-    public int IdExamen { get; set; }
-    public decimal? ValorMin { get; set; }
-    public decimal? ValorMax { get; set; }
-    public string? ValorTexto { get; set; }
-    public string? Unidad { get; set; }
-    public bool Activo { get; set; }
-    public DateTime FechaCreacion { get; set; }
-    public DateTime? FechaActualizacion { get; set; }
-    public DateTime? FechaFin { get; set; }
+    public int id_referencia_examen { get; set; }
 
-    public virtual Examen IdExamenNavigation { get; set; } = null!;
+    public int id_examen { get; set; }
+
+    public decimal? valor_min { get; set; }
+
+    public decimal? valor_max { get; set; }
+
+    public string? valor_texto { get; set; }
+
+    public string? unidad { get; set; }
+
+    public bool activo { get; set; }
+
+    public DateTime fecha_creacion { get; set; }
+
+    public DateTime? fecha_actualizacion { get; set; }
+
+    public DateTime? fecha_fin { get; set; }
+
+    public virtual examen examen_navigation { get; set; } = null!;
 }

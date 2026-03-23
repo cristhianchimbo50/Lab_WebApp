@@ -3,6 +3,7 @@ using Lab_APIRest.Infrastructure.EF.Models;
 using Lab_Contracts.Ajustes.Perfil;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace Lab_APIRest.Services.Perfil
 {
@@ -17,27 +18,27 @@ namespace Lab_APIRest.Services.Perfil
             _logger = logger;
         }
 
-        private static PerfilDto MapPerfil(Usuario usuario, Paciente? paciente)
+        private static PerfilDto MapPerfil(usuario usuario, paciente? paciente)
         {
             var perfil = new PerfilDto
             {
-                IdUsuario = usuario.IdUsuario,
-                Nombre = usuario.IdPersonaNavigation != null ? $"{usuario.IdPersonaNavigation.Nombres} {usuario.IdPersonaNavigation.Apellidos}" : string.Empty,
-                Correo = usuario.IdPersonaNavigation?.Correo,
-                IdRol = usuario.IdRol,
-                NombreRol = usuario.IdRolNavigation?.Nombre ?? string.Empty,
-                Activo = usuario.Activo == true,
-                UltimoAcceso = usuario.UltimoAcceso,
-                FechaRegistro = usuario.FechaCreacion
+                IdUsuario = usuario.id_usuario,
+                Nombre = usuario.persona_navigation != null ? $"{usuario.persona_navigation.nombres} {usuario.persona_navigation.apellidos}" : string.Empty,
+                Correo = usuario.correo ?? string.Empty,
+                IdRol = usuario.id_rol,
+                NombreRol = usuario.rol_navigation?.nombre ?? string.Empty,
+                Activo = usuario.activo == true,
+                UltimoAcceso = usuario.ultimo_acceso,
+                FechaRegistro = usuario.fecha_creacion
             };
 
             if (paciente != null)
             {
-                perfil.Cedula = paciente.IdPersonaNavigation?.Cedula;
-                perfil.FechaNacimiento = paciente.FechaNacPaciente;
-                perfil.Direccion = paciente.IdPersonaNavigation?.Direccion;
-                perfil.Telefono = paciente.IdPersonaNavigation?.Telefono;
-                perfil.FechaRegistro = paciente.FechaCreacion; // prioriza registro paciente
+                perfil.Cedula = paciente.persona_navigation?.cedula;
+                perfil.FechaNacimiento = paciente.persona_navigation?.fecha_nacimiento ?? DateOnly.MinValue;
+                perfil.Direccion = paciente.persona_navigation?.direccion;
+                perfil.Telefono = paciente.persona_navigation?.telefono;
+                perfil.FechaRegistro = paciente.fecha_creacion; // prioriza registro paciente
             }
             return perfil;
         }
@@ -48,20 +49,20 @@ namespace Lab_APIRest.Services.Perfil
             {
                 var usuario = await _context.Usuario
                     .AsNoTracking()
-                    .Include(u => u.IdRolNavigation)
-                    .Include(u => u.IdPersonaNavigation)
-                    .FirstOrDefaultAsync(u => u.IdUsuario == idUsuario, ct);
+                    .Include(u => u.rol_navigation)
+                    .Include(u => u.persona_navigation)
+                    .FirstOrDefaultAsync(u => u.id_usuario == idUsuario, ct);
 
                 if (usuario == null)
                     return null;
 
-                Paciente? paciente = null;
-                if (usuario.IdRolNavigation.Nombre.Equals("paciente", StringComparison.OrdinalIgnoreCase))
+                paciente? paciente = null;
+                if (usuario.rol_navigation.nombre.Equals("paciente", StringComparison.OrdinalIgnoreCase))
                 {
                     paciente = await _context.Paciente
                         .AsNoTracking()
-                        .Include(p => p.IdPersonaNavigation)
-                        .FirstOrDefaultAsync(p => p.IdPersona == usuario.IdPersona && p.Activo, ct);
+                        .Include(p => p.persona_navigation)
+                        .FirstOrDefaultAsync(p => p.id_persona == usuario.id_persona && p.activo, ct);
                 }
 
                 var perfil = MapPerfil(usuario, paciente);

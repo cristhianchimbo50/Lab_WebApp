@@ -1,8 +1,12 @@
 ﻿using Lab_Contracts.Reactivos;
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using reactivo = Lab_APIRest.Infrastructure.EF.Models.reactivo;
+using movimiento_reactivo = Lab_APIRest.Infrastructure.EF.Models.movimiento_reactivo;
 using Microsoft.EntityFrameworkCore;
 using Lab_Contracts.Common;
+using System;
+using System.Linq;
 
 namespace Lab_APIRest.Services.Reactivos
 {
@@ -15,20 +19,20 @@ namespace Lab_APIRest.Services.Reactivos
             _context = context;
         }
 
-        private static ReactivoDto MapReactivo(Reactivo entidad) => new()
+        private static ReactivoDto MapReactivo(reactivo entidad) => new()
         {
-            IdReactivo = entidad.IdReactivo,
-            NombreReactivo = entidad.NombreReactivo,
-            Fabricante = entidad.Fabricante ?? string.Empty,
-            Unidad = entidad.Unidad ?? string.Empty,
-            CantidadDisponible = entidad.CantidadDisponible ?? 0m,
-            Anulado = !entidad.Activo
+            IdReactivo = entidad.id_reactivo,
+            NombreReactivo = entidad.nombre_reactivo,
+            Fabricante = entidad.fabricante ?? string.Empty,
+            Unidad = entidad.unidad ?? string.Empty,
+            CantidadDisponible = entidad.cantidad_disponible ?? 0m,
+            Anulado = !entidad.activo
         };
 
         public async Task<List<ReactivoDto>> ListarReactivosAsync()
         {
             return await _context.Reactivo
-                .Where(r => r.Activo)
+                .Where(r => r.activo)
                 .Select(r => MapReactivo(r))
                 .ToListAsync();
         }
@@ -41,14 +45,14 @@ namespace Lab_APIRest.Services.Reactivos
 
         public async Task<ReactivoDto> GuardarReactivoAsync(ReactivoDto reactivo)
         {
-            var entidad = new Reactivo
+            var entidad = new reactivo
             {
-                NombreReactivo = reactivo.NombreReactivo,
-                Fabricante = reactivo.Fabricante,
-                Unidad = reactivo.Unidad,
-                CantidadDisponible = reactivo.CantidadDisponible,
-                Activo = true,
-                FechaCreacion = DateTime.UtcNow
+                nombre_reactivo = reactivo.NombreReactivo,
+                fabricante = reactivo.Fabricante,
+                unidad = reactivo.Unidad,
+                cantidad_disponible = reactivo.CantidadDisponible,
+                activo = true,
+                fecha_creacion = DateTime.UtcNow
             };
             _context.Reactivo.Add(entidad);
             await _context.SaveChangesAsync();
@@ -59,19 +63,19 @@ namespace Lab_APIRest.Services.Reactivos
         {
             var entidad = await _context.Reactivo.FindAsync(idReactivo);
             if (entidad == null) return false;
-            entidad.NombreReactivo = reactivo.NombreReactivo;
-            entidad.Fabricante = reactivo.Fabricante;
-            entidad.Unidad = reactivo.Unidad;
-            entidad.CantidadDisponible = reactivo.CantidadDisponible;
-            entidad.Activo = !reactivo.Anulado;
-            entidad.FechaActualizacion = DateTime.UtcNow;
-            if (!entidad.Activo)
+            entidad.nombre_reactivo = reactivo.NombreReactivo;
+            entidad.fabricante = reactivo.Fabricante;
+            entidad.unidad = reactivo.Unidad;
+            entidad.cantidad_disponible = reactivo.CantidadDisponible;
+            entidad.activo = !reactivo.Anulado;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
+            if (!entidad.activo)
             {
-                entidad.FechaFin = entidad.FechaFin ?? DateTime.UtcNow;
+                entidad.fecha_fin = entidad.fecha_fin ?? DateTime.UtcNow;
             }
             else
             {
-                entidad.FechaFin = null;
+                entidad.fecha_fin = null;
             }
             await _context.SaveChangesAsync();
             return true;
@@ -81,10 +85,10 @@ namespace Lab_APIRest.Services.Reactivos
         {
             var entidad = await _context.Reactivo.FindAsync(idReactivo);
             if (entidad == null) return false;
-            if (!entidad.Activo) return true;
-            entidad.Activo = false;
-            entidad.FechaFin = DateTime.UtcNow;
-            entidad.FechaActualizacion = DateTime.UtcNow;
+            if (!entidad.activo) return true;
+            entidad.activo = false;
+            entidad.fecha_fin = DateTime.UtcNow;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -96,21 +100,21 @@ namespace Lab_APIRest.Services.Reactivos
             {
                 foreach (var ingreso in ingresos)
                 {
-                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.IdReactivo == ingreso.IdReactivo);
-                    if (entidad == null || !entidad.Activo) continue;
+                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.id_reactivo == ingreso.IdReactivo);
+                    if (entidad == null || !entidad.activo) continue;
 
-                    var movimiento = new MovimientoReactivo
+                    var movimiento = new movimiento_reactivo
                     {
-                        IdReactivo = ingreso.IdReactivo,
-                        TipoMovimiento = "INGRESO",
-                        Cantidad = ingreso.Cantidad,
-                        FechaMovimiento = ingreso.FechaMovimiento,
-                        Observacion = ingreso.Observacion
+                        id_reactivo = ingreso.IdReactivo,
+                        tipo_movimiento = "INGRESO",
+                        cantidad = ingreso.Cantidad,
+                        fecha_movimiento = ingreso.FechaMovimiento,
+                        observacion = ingreso.Observacion
                     };
                     await _context.MovimientoReactivo.AddAsync(movimiento);
 
-                    entidad.CantidadDisponible = (entidad.CantidadDisponible ?? 0m) + ingreso.Cantidad;
-                    entidad.FechaActualizacion = DateTime.UtcNow;
+                    entidad.cantidad_disponible = (entidad.cantidad_disponible ?? 0m) + ingreso.Cantidad;
+                    entidad.fecha_actualizacion = DateTime.UtcNow;
                 }
 
                 await _context.SaveChangesAsync();
@@ -131,26 +135,26 @@ namespace Lab_APIRest.Services.Reactivos
             {
                 foreach (var egreso in egresos)
                 {
-                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.IdReactivo == egreso.IdReactivo);
-                    if (entidad == null || !entidad.Activo) continue;
+                    var entidad = await _context.Reactivo.FirstOrDefaultAsync(r => r.id_reactivo == egreso.IdReactivo);
+                    if (entidad == null || !entidad.activo) continue;
 
-                    var disponible = entidad.CantidadDisponible ?? 0m;
+                    var disponible = entidad.cantidad_disponible ?? 0m;
                     if (disponible < egreso.Cantidad)
-                        throw new InvalidOperationException($"Stock insuficiente para {entidad.NombreReactivo}");
+                        throw new InvalidOperationException($"Stock insuficiente para {entidad.nombre_reactivo}");
 
-                    var movimiento = new MovimientoReactivo
+                    var movimiento = new movimiento_reactivo
                     {
-                        IdReactivo = egreso.IdReactivo,
-                        TipoMovimiento = "EGRESO",
-                        Cantidad = egreso.Cantidad,
-                        FechaMovimiento = egreso.FechaMovimiento,
-                        Observacion = egreso.Observacion,
-                        IdDetalleResultado = egreso.IdDetalleResultado
+                        id_reactivo = egreso.IdReactivo,
+                        tipo_movimiento = "EGRESO",
+                        cantidad = egreso.Cantidad,
+                        fecha_movimiento = egreso.FechaMovimiento,
+                        observacion = egreso.Observacion,
+                        id_detalle_resultado = egreso.IdDetalleResultado
                     };
                     await _context.MovimientoReactivo.AddAsync(movimiento);
 
-                    entidad.CantidadDisponible = disponible - egreso.Cantidad;
-                    entidad.FechaActualizacion = DateTime.UtcNow;
+                    entidad.cantidad_disponible = disponible - egreso.Cantidad;
+                    entidad.fecha_actualizacion = DateTime.UtcNow;
                 }
 
                 await _context.SaveChangesAsync();
@@ -171,9 +175,9 @@ namespace Lab_APIRest.Services.Reactivos
             if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
             {
                 if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
-                    query = query.Where(r => r.Activo == false);
+                    query = query.Where(r => r.activo == false);
                 else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
-                    query = query.Where(r => r.Activo == true);
+                    query = query.Where(r => r.activo == true);
             }
 
             if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
@@ -182,10 +186,10 @@ namespace Lab_APIRest.Services.Reactivos
                 switch (filtro.CriterioBusqueda)
                 {
                     case "nombre":
-                        query = query.Where(r => (r.NombreReactivo ?? "").ToLower().Contains(val));
+                        query = query.Where(r => (r.nombre_reactivo ?? "").ToLower().Contains(val));
                         break;
                     case "fabricante":
-                        query = query.Where(r => (r.Fabricante ?? "").ToLower().Contains(val));
+                        query = query.Where(r => (r.fabricante ?? "").ToLower().Contains(val));
                         break;
                 }
             }
@@ -195,11 +199,11 @@ namespace Lab_APIRest.Services.Reactivos
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(ReactivoDto.NombreReactivo) => asc ? query.OrderBy(r => r.NombreReactivo) : query.OrderByDescending(r => r.NombreReactivo),
-                nameof(ReactivoDto.Fabricante) => asc ? query.OrderBy(r => r.Fabricante) : query.OrderByDescending(r => r.Fabricante),
-                nameof(ReactivoDto.Unidad) => asc ? query.OrderBy(r => r.Unidad) : query.OrderByDescending(r => r.Unidad),
-                nameof(ReactivoDto.CantidadDisponible) => asc ? query.OrderBy(r => r.CantidadDisponible) : query.OrderByDescending(r => r.CantidadDisponible),
-                _ => asc ? query.OrderBy(r => r.IdReactivo) : query.OrderByDescending(r => r.IdReactivo)
+                nameof(ReactivoDto.NombreReactivo) => asc ? query.OrderBy(r => r.nombre_reactivo) : query.OrderByDescending(r => r.nombre_reactivo),
+                nameof(ReactivoDto.Fabricante) => asc ? query.OrderBy(r => r.fabricante) : query.OrderByDescending(r => r.fabricante),
+                nameof(ReactivoDto.Unidad) => asc ? query.OrderBy(r => r.unidad) : query.OrderByDescending(r => r.unidad),
+                nameof(ReactivoDto.CantidadDisponible) => asc ? query.OrderBy(r => r.cantidad_disponible) : query.OrderByDescending(r => r.cantidad_disponible),
+                _ => asc ? query.OrderBy(r => r.id_reactivo) : query.OrderByDescending(r => r.id_reactivo)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;

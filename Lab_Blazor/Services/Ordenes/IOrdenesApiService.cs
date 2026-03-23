@@ -21,6 +21,7 @@ namespace Lab_Blazor.Services.Ordenes
         Task<AdminHomeDto> ObtenerDashboardAdministradorAsync();
         Task<OrdenRespuestaDto?> GuardarOrdenAsync(OrdenCompletaDto orden);
         Task<HttpResponseMessage> GuardarOrdenHttpAsync(OrdenCompletaDto orden);
+        Task<HttpResponseMessage> GuardarOrdenConPagoHttpAsync(OrdenPagoGuardarDto datos);
         Task<HttpResponseMessage> GuardarResultadosAsync(ResultadoGuardarDto dto);
         Task<HttpResponseMessage> VerificarNotificacionResultadosOrdenAsync(int idOrden);
         Task<byte[]> GenerarOrdenTicketPdfAsync(int idOrden);

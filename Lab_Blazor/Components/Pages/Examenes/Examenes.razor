@@ -143,10 +143,10 @@
                                 {
                                     <tr>
                                          <td data-label="Nombre" class="text-truncate">@examen.NombreExamen</td>
-                                         <td data-label="Estudio" class="text-truncate">@examen.NombreEstudio ?? examen.Estudio</td>
-                                         <td data-label="Tipo de Muestra" class="text-truncate">@examen.NombreTipoMuestra ?? examen.TipoMuestra</td>
-                                         <td data-label="Tipo de Examen" class="text-truncate">@examen.NombreTipoExamen ?? examen.TipoExamen</td>
-                                         <td data-label="Técnica" class="text-truncate">@examen.NombreTecnica ?? examen.Tecnica</td>
+                                        <td data-label="Estudio" class="text-truncate">@((examen.NombreEstudio ?? examen.Estudio) ?? string.Empty)</td>
+                                        <td data-label="Tipo de Muestra" class="text-truncate">@((examen.NombreTipoMuestra ?? examen.TipoMuestra) ?? string.Empty)</td>
+                                        <td data-label="Tipo de Examen" class="text-truncate">@((examen.NombreTipoExamen ?? examen.TipoExamen) ?? string.Empty)</td>
+                                        <td data-label="Técnica" class="text-truncate">@((examen.NombreTecnica ?? examen.Tecnica) ?? string.Empty)</td>
                                         <td data-label="Precio" class="text-truncate">$@examen.Precio</td>
                                         <td data-label="Estado">
                                             <span class="badge bg-@(examen.Anulado ? "danger" : "success")">
@@ -202,44 +202,94 @@
                                 <ValidationSummary />
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Nombre</label>
+                                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreExamen"
+                                                   required
                                                    @oninput="(e => _examenActual.NombreExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
                                     </div>
                                      <div class="col-md-6">
                                          <label class="form-label">Estudio</label>
-                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreEstudio"
-                                                    @oninput="(e => _examenActual.NombreEstudio = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdEstudio">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _estudiosCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
+                                     </div>
+
+                                     <div class="col-md-6">
+                                         <label class="form-label">Grupo Examen</label>
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdGrupoExamen">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _gruposCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
                                      </div>
 
                                      <div class="col-md-6">
                                          <label class="form-label">Tipo de Muestra</label>
-                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTipoMuestra"
-                                                    @oninput="(e => _examenActual.NombreTipoMuestra = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdTipoMuestra">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _tiposMuestraCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
                                      </div>
 
                                      <div class="col-md-6">
                                          <label class="form-label">Tipo de Examen</label>
-                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTipoExamen"
-                                                    @oninput="(e => _examenActual.NombreTipoExamen = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdTipoExamen">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _tiposExamenCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
                                      </div>
 
                                      <div class="col-md-6">
                                          <label class="form-label">Técnica</label>
-                                         <InputText class="form-control text-uppercase" @bind-Value="_examenActual.NombreTecnica"
-                                                    @oninput="(e => _examenActual.NombreTecnica = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdTecnica">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _tecnicasCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
                                      </div>
                                      <div class="col-md-6">
-                                         <label class="form-label">Valor Referencia</label>
+                                         <label class="form-label">Tipo de Registro</label>
+                                         <InputSelect class="form-select" @bind-Value="_examenActual.IdTipoRegistro">
+                                             <option value="">Seleccione</option>
+                                             @foreach (var item in _tiposRegistroCatalogo)
+                                             {
+                                                 <option value="@item.Id">@item.Nombre</option>
+                                             }
+                                         </InputSelect>
+                                     </div>
+                                     <div class="col-md-6">
+                                         <label class="form-label">Valor Referencia (Texto)</label>
                                          <InputText class="form-control" @bind-Value="_examenActual.ValorReferencia" />
+                                     </div>
+                                     <div class="col-md-3">
+                                         <label class="form-label">Valor Mínimo</label>
+                                         <InputNumber class="form-control" @bind-Value="_valorMinReferencia" TValue="decimal?" />
+                                     </div>
+                                     <div class="col-md-3">
+                                         <label class="form-label">Valor Máximo</label>
+                                         <InputNumber class="form-control" @bind-Value="_valorMaxReferencia" TValue="decimal?" />
                                      </div>
                                      <div class="col-md-4">
                                          <label class="form-label">Unidad</label>
                                          <InputText class="form-control text-uppercase" @bind-Value="_examenActual.Unidad" />
                                      </div>
                                      <div class="col-md-4">
-                                         <label class="form-label">Precio</label>
-                                         <InputNumber class="form-control" @bind-Value="_examenActual.Precio" />
+                                         <label class="form-label">Precio <span class="text-danger">*</span></label>
+                                         <InputNumber class="form-control" @bind-Value="_examenActual.Precio" required />
                                      </div>
                                      <div class="col-md-4">
                                          <label class="form-label">Tiempo de Entrega (minutos)</label>
@@ -247,11 +297,13 @@
                                      </div>
                                 </div>
 
+                                <div class="mt-2 small text-danger">* Los datos en rojo son datos requeridos.</div>
+
                                 <hr class="my-3" />
                                 <h5 class="fw-semibold"><i class="bi bi-diagram-3 me-1"></i> Exámenes Incluidos</h5>
                                 <div class="mb-2 text-end">
                                     <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AbrirModalBusquedaHijo">
-                                        <i class="bi bi-plus-circle me-1"></i> Agregar Examen Hijo
+                                        <i class="bi bi-plus-circle me-1"></i> Agregar Examen Incluido
                                     </button>
                                 </div>
 
@@ -274,8 +326,8 @@
                                                 @foreach (var hijo in _hijosSeleccionados)
                                                 {
                                                     <tr>
-                                                         <td>@hijo.NombreExamen</td>
-                                                         <td>@(hijo.NombreEstudio ?? hijo.Estudio)</td>
+                                                        <td>@hijo.NombreExamen</td>
+                                                        <td>@((hijo.NombreEstudio ?? hijo.Estudio) ?? string.Empty)</td>
                                                         <td>
                                                             <button type="button" class="btn btn-danger btn-sm"
                                                                     @onclick="() => QuitarHijo(hijo.IdExamen)">
@@ -309,7 +361,7 @@
                     <div class="modal-dialog modal-lg modal-dialog-centered">
                         <div class="modal-content shadow-lg">
                             <div class="modal-header">
-                                <h5 class="modal-title"><i class="bi bi-search me-1"></i> Buscar Examen Hijo</h5>
+                                <h5 class="modal-title"><i class="bi bi-search me-1"></i> Buscar Examen Inlcuido</h5>
                                 <button type="button" class="btn-close" @onclick="CerrarModalBusquedaHijo"></button>
                             </div>
                             <div class="modal-body">
@@ -341,10 +393,10 @@
                                         <tbody>
                                             @foreach (var hijo in _resultadosBusquedaHijos)
                                             {
-                                                 <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijoAsync(hijo)">
-                                                     <td>@hijo.NombreExamen</td>
-                                                     <td>@(hijo.NombreEstudio ?? hijo.Estudio)</td>
-                                                 </tr>
+                                                <tr style="cursor:pointer" @ondblclick="() => SeleccionarHijoAsync(hijo)">
+                                                    <td>@hijo.NombreExamen</td>
+                                                    <td>@((hijo.NombreEstudio ?? hijo.Estudio) ?? string.Empty)</td>
+                                                </tr>
                                             }
                                         </tbody>
                                     </table>
@@ -358,7 +410,6 @@
                 </div>
             }
         }
-    }
     </Authorized>
 </AuthorizeView>
 
@@ -385,34 +436,23 @@
     private string _valorBusquedaHijo = string.Empty;
     private List<ExamenDto> _resultadosBusquedaHijos = new();
     private int _paginaActual = 1;
-    private List<string> _estudiosDisponibles = new();
-    private List<string> _tiposMuestraDisponibles = new();
-    private List<string> _tiposExamenDisponibles = new();
+    private List<CatalogoExamenDto> _estudiosCatalogo = new();
+    private List<CatalogoExamenDto> _gruposCatalogo = new();
+    private List<CatalogoExamenDto> _tiposMuestraCatalogo = new();
+    private List<CatalogoExamenDto> _tiposExamenCatalogo = new();
+    private List<CatalogoExamenDto> _tecnicasCatalogo = new();
+    private List<CatalogoExamenDto> _tiposRegistroCatalogo = new();
+    private decimal? _valorMinReferencia;
+    private decimal? _valorMaxReferencia;
 
-    private async Task CargarListasAsync()
+    private async Task CargarCatalogosAsync()
     {
-        var examenes = await ExamenesApiService.ListarExamenesAsync();
-
-        _estudiosDisponibles = examenes
-            .Select(e => (e.NombreEstudio ?? e.Estudio)?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-
-        _tiposMuestraDisponibles = examenes
-            .Select(e => (e.NombreTipoMuestra ?? e.TipoMuestra)?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-
-        _tiposExamenDisponibles = examenes
-            .Select(e => (e.NombreTipoExamen ?? e.TipoExamen)?.ToUpper())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
+        _estudiosCatalogo = await ExamenesApiService.ListarCatalogoAsync("estudio", incluirInactivos: false);
+        _gruposCatalogo = await ExamenesApiService.ListarCatalogoAsync("grupo_examen", incluirInactivos: false);
+        _tiposMuestraCatalogo = await ExamenesApiService.ListarCatalogoAsync("tipo_muestra", incluirInactivos: false);
+        _tiposExamenCatalogo = await ExamenesApiService.ListarCatalogoAsync("tipo_examen", incluirInactivos: false);
+        _tecnicasCatalogo = await ExamenesApiService.ListarCatalogoAsync("tecnica", incluirInactivos: false);
+        _tiposRegistroCatalogo = await ExamenesApiService.ListarCatalogoAsync("tipo_registro", incluirInactivos: false);
     }
 
     private async Task BuscarExamenesAsync(bool mostrarToast = true)
@@ -439,6 +479,9 @@
 
         _examenActual = new ExamenDto();
         _hijosSeleccionados = new();
+        _valorMinReferencia = null;
+        _valorMaxReferencia = null;
+        await CargarCatalogosAsync();
         _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -466,6 +509,10 @@
 
         _examenActual = examen;
         _hijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
+        var refActual = _examenActual.Referencias.FirstOrDefault();
+        _valorMinReferencia = refActual?.ValorMin;
+        _valorMaxReferencia = refActual?.ValorMax;
+        await CargarCatalogosAsync();
         _modalVisible = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
@@ -474,13 +521,17 @@
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
 
-        // Construir referencia básica desde los campos de compatibilidad
-        if (!string.IsNullOrWhiteSpace(_examenActual.ValorReferencia) || !string.IsNullOrWhiteSpace(_examenActual.Unidad))
+        if (!string.IsNullOrWhiteSpace(_examenActual.ValorReferencia)
+            || !string.IsNullOrWhiteSpace(_examenActual.Unidad)
+            || _valorMinReferencia.HasValue
+            || _valorMaxReferencia.HasValue)
         {
             _examenActual.Referencias = new List<ReferenciaExamenDto>
             {
                 new()
                 {
+                    ValorMin = _valorMinReferencia,
+                    ValorMax = _valorMaxReferencia,
                     ValorTexto = _examenActual.ValorReferencia,
                     Unidad = _examenActual.Unidad,
                     Activo = true
@@ -651,36 +702,9 @@
     private void CambiarTamPagina() => _paginaActual = 1;
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
-    private async Task ValidarEstudioAsync(ChangeEventArgs e)
-    {
-        var val = e.Value?.ToString()?.Trim()?.ToUpper();
-        if (string.IsNullOrEmpty(val)) return;
-
-        if (_estudiosDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
-            await JS.InvokeVoidAsync("alert", "Ya existe un estudio similar registrado.");
-    }
-
-    private async Task ValidarTipoMuestraAsync(ChangeEventArgs e)
-    {
-        var val = e.Value?.ToString()?.Trim()?.ToUpper();
-        if (string.IsNullOrEmpty(val)) return;
-
-        if (_tiposMuestraDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
-            await JS.InvokeVoidAsync("alert", "Ya existe un tipo de muestra similar registrado.");
-    }
-
-    private async Task ValidarTipoExamenAsync(ChangeEventArgs e)
-    {
-        var val = e.Value?.ToString()?.Trim()?.ToUpper();
-        if (string.IsNullOrEmpty(val)) return;
-
-        if (_tiposExamenDisponibles.Any(x => x.Contains(val, StringComparison.OrdinalIgnoreCase)))
-            await JS.InvokeVoidAsync("alert", "Ya existe un tipo de examen similar registrado.");
-    }
-
     private async Task OnBuscarKeyPress(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
-            await BuscarExamenesAsync(true);
+            await BuscarExamenesAsync(false);
     }
 }

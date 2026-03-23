@@ -14,7 +14,10 @@ namespace Lab_Contracts.Ordenes
         public decimal Total { get; set; }
         public decimal SaldoPendiente { get; set; }
         public decimal TotalPagado { get; set; }
-        public string EstadoPago { get; set; }
+        public string? EstadoPago { get; set; }
+        public int? IdEstadoPago { get; set; }
+        public string? NombreEstadoPago { get; set; }
+        public DateTime? FechaCompletado { get; set; }
         public string EstadoOrden { get; set; } = "EN_PROCESO";
         public bool ResultadosHabilitados { get; set; }
         public bool Anulado { get; set; }

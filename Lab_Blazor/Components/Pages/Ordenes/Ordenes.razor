@@ -254,7 +254,7 @@
                                             <td data-label="Pagado">@orden.TotalPagado.ToString("C")</td>
                                             <td data-label="Saldo">@orden.SaldoPendiente.ToString("C")</td>
                                             <td data-label="Estado Pago">
-                                                <span class="badge bg-@(orden.EstadoPago == "PAGADO" ? "success" : "warning text-dark")">
+                                                <span class="badge @ObtenerClaseEstadoPago(orden.EstadoPago)">
                                                     @orden.EstadoPago
                                                 </span>
                                             </td>
@@ -950,6 +950,14 @@
             _ => upper[0] + upper[1..].ToLowerInvariant()
         };
     }
+
+    private static string ObtenerClaseEstadoPago(string? estado) => (estado ?? string.Empty).ToUpperInvariant() switch
+    {
+        "PAGADO" => "bg-success",
+        "ABONADO" => "bg-info text-dark",
+        "PENDIENTE" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 
     private async Task VerResultadoAsync(int idResultado)
     {

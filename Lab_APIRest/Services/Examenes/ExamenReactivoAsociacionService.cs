@@ -1,6 +1,7 @@
 ﻿using Lab_Contracts.Examenes;
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using examen_reactivo = Lab_APIRest.Infrastructure.EF.Models.examen_reactivo;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lab_APIRest.Services.Examenes
@@ -19,18 +20,18 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<List<AsociacionReactivoDto>> ListarAsociacionesAsync()
         {
             return await _context.ExamenReactivo
-                .Include(er => er.IdExamenNavigation)
-                .Include(er => er.IdReactivoNavigation)
-                .Where(er => er.Activo && er.IdExamenNavigation.Activo && er.IdReactivoNavigation.Activo)
+                .Include(er => er.examen_navigation)
+                .Include(er => er.reactivo_navigation)
+                .Where(er => er.activo && er.examen_navigation.activo && er.reactivo_navigation.activo)
                 .Select(er => new AsociacionReactivoDto
                 {
-                    IdExamenReactivo = BuildIdExamenReactivo(er.IdExamen, er.IdReactivo),
-                    IdExamen = er.IdExamen,
-                    NombreExamen = er.IdExamenNavigation.NombreExamen,
-                    IdReactivo = er.IdReactivo,
-                    NombreReactivo = er.IdReactivoNavigation.NombreReactivo,
-                    CantidadUsada = er.CantidadUsada,
-                    Unidad = er.IdReactivoNavigation.Unidad
+                    IdExamenReactivo = BuildIdExamenReactivo(er.id_examen, er.id_reactivo),
+                    IdExamen = er.id_examen,
+                    NombreExamen = er.examen_navigation.nombre_examen,
+                    IdReactivo = er.id_reactivo,
+                    NombreReactivo = er.reactivo_navigation.nombre_reactivo,
+                    CantidadUsada = er.cantidad_usada,
+                    Unidad = er.reactivo_navigation.unidad
                 })
                 .ToListAsync();
         }
@@ -38,18 +39,18 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorExamenAsync(string nombreExamen)
         {
             return await _context.ExamenReactivo
-                .Include(er => er.IdExamenNavigation)
-                .Include(er => er.IdReactivoNavigation)
-                .Where(er => er.Activo && er.IdExamenNavigation.Activo && er.IdExamenNavigation.NombreExamen != null && er.IdExamenNavigation.NombreExamen.Contains(nombreExamen))
+                .Include(er => er.examen_navigation)
+                .Include(er => er.reactivo_navigation)
+                .Where(er => er.activo && er.examen_navigation.activo && er.examen_navigation.nombre_examen != null && er.examen_navigation.nombre_examen.Contains(nombreExamen))
                 .Select(er => new AsociacionReactivoDto
                 {
-                    IdExamenReactivo = BuildIdExamenReactivo(er.IdExamen, er.IdReactivo),
-                    IdExamen = er.IdExamen,
-                    NombreExamen = er.IdExamenNavigation.NombreExamen,
-                    IdReactivo = er.IdReactivo,
-                    NombreReactivo = er.IdReactivoNavigation.NombreReactivo,
-                    CantidadUsada = er.CantidadUsada,
-                    Unidad = er.IdReactivoNavigation.Unidad
+                    IdExamenReactivo = BuildIdExamenReactivo(er.id_examen, er.id_reactivo),
+                    IdExamen = er.id_examen,
+                    NombreExamen = er.examen_navigation.nombre_examen,
+                    IdReactivo = er.id_reactivo,
+                    NombreReactivo = er.reactivo_navigation.nombre_reactivo,
+                    CantidadUsada = er.cantidad_usada,
+                    Unidad = er.reactivo_navigation.unidad
                 })
                 .ToListAsync();
         }
@@ -57,18 +58,18 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorReactivoAsync(string nombreReactivo)
         {
             return await _context.ExamenReactivo
-                .Include(er => er.IdExamenNavigation)
-                .Include(er => er.IdReactivoNavigation)
-                .Where(er => er.Activo && er.IdReactivoNavigation.Activo && er.IdReactivoNavigation.NombreReactivo.Contains(nombreReactivo))
+                .Include(er => er.examen_navigation)
+                .Include(er => er.reactivo_navigation)
+                .Where(er => er.activo && er.reactivo_navigation.activo && er.reactivo_navigation.nombre_reactivo.Contains(nombreReactivo))
                 .Select(er => new AsociacionReactivoDto
                 {
-                    IdExamenReactivo = BuildIdExamenReactivo(er.IdExamen, er.IdReactivo),
-                    IdExamen = er.IdExamen,
-                    NombreExamen = er.IdExamenNavigation.NombreExamen,
-                    IdReactivo = er.IdReactivo,
-                    NombreReactivo = er.IdReactivoNavigation.NombreReactivo,
-                    CantidadUsada = er.CantidadUsada,
-                    Unidad = er.IdReactivoNavigation.Unidad
+                    IdExamenReactivo = BuildIdExamenReactivo(er.id_examen, er.id_reactivo),
+                    IdExamen = er.id_examen,
+                    NombreExamen = er.examen_navigation.nombre_examen,
+                    IdReactivo = er.id_reactivo,
+                    NombreReactivo = er.reactivo_navigation.nombre_reactivo,
+                    CantidadUsada = er.cantidad_usada,
+                    Unidad = er.reactivo_navigation.unidad
                 })
                 .ToListAsync();
         }
@@ -76,63 +77,63 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<AsociacionReactivoDto?> ObtenerDetalleAsociacionAsync(int idExamenReactivo)
         {
             var match = await _context.ExamenReactivo
-                .Include(e => e.IdExamenNavigation)
-                .Include(e => e.IdReactivoNavigation)
-                .Where(e => e.Activo)
-                .FirstOrDefaultAsync(e => BuildIdExamenReactivo(e.IdExamen, e.IdReactivo) == idExamenReactivo);
+                .Include(e => e.examen_navigation)
+                .Include(e => e.reactivo_navigation)
+                .Where(e => e.activo)
+                .FirstOrDefaultAsync(e => BuildIdExamenReactivo(e.id_examen, e.id_reactivo) == idExamenReactivo);
             if (match == null) return null;
             return new AsociacionReactivoDto
             {
                 IdExamenReactivo = idExamenReactivo,
-                IdExamen = match.IdExamen,
-                NombreExamen = match.IdExamenNavigation.NombreExamen,
-                IdReactivo = match.IdReactivo,
-                NombreReactivo = match.IdReactivoNavigation.NombreReactivo,
-                CantidadUsada = match.CantidadUsada,
-                Unidad = match.IdReactivoNavigation.Unidad
+                IdExamen = match.id_examen,
+                NombreExamen = match.examen_navigation.nombre_examen,
+                IdReactivo = match.id_reactivo,
+                NombreReactivo = match.reactivo_navigation.nombre_reactivo,
+                CantidadUsada = match.cantidad_usada,
+                Unidad = match.reactivo_navigation.unidad
             };
         }
 
         public async Task<AsociacionReactivoDto> GuardarAsociacionAsync(AsociacionReactivoDto asociacionDto)
         {
-            var existente = await _context.ExamenReactivo.FirstOrDefaultAsync(er => er.IdExamen == asociacionDto.IdExamen && er.IdReactivo == asociacionDto.IdReactivo);
+            var existente = await _context.ExamenReactivo.FirstOrDefaultAsync(er => er.id_examen == asociacionDto.IdExamen && er.id_reactivo == asociacionDto.IdReactivo);
             if (existente != null)
             {
-                existente.CantidadUsada = asociacionDto.CantidadUsada;
-                existente.FechaActualizacion = DateTime.UtcNow;
-                if (!existente.Activo)
+                existente.cantidad_usada = asociacionDto.CantidadUsada;
+                existente.fecha_actualizacion = DateTime.UtcNow;
+                if (!existente.activo)
                 {
-                    existente.Activo = true;
-                    existente.FechaFin = null;
+                    existente.activo = true;
+                    existente.fecha_fin = null;
                 }
                 await _context.SaveChangesAsync();
-                asociacionDto.IdExamenReactivo = BuildIdExamenReactivo(existente.IdExamen, existente.IdReactivo);
+                asociacionDto.IdExamenReactivo = BuildIdExamenReactivo(existente.id_examen, existente.id_reactivo);
                 return asociacionDto;
             }
-            var entidad = new ExamenReactivo
+            var entidad = new examen_reactivo
             {
-                IdExamen = asociacionDto.IdExamen,
-                IdReactivo = asociacionDto.IdReactivo,
-                CantidadUsada = asociacionDto.CantidadUsada,
-                FechaCreacion = DateTime.UtcNow,
-                Activo = true
+                id_examen = asociacionDto.IdExamen,
+                id_reactivo = asociacionDto.IdReactivo,
+                cantidad_usada = asociacionDto.CantidadUsada,
+                fecha_creacion = DateTime.UtcNow,
+                activo = true
             };
             _context.ExamenReactivo.Add(entidad);
             await _context.SaveChangesAsync();
-            asociacionDto.IdExamenReactivo = BuildIdExamenReactivo(entidad.IdExamen, entidad.IdReactivo);
+            asociacionDto.IdExamenReactivo = BuildIdExamenReactivo(entidad.id_examen, entidad.id_reactivo);
             return asociacionDto;
         }
 
         public async Task<bool> GuardarAsociacionAsync(int idExamenReactivo, AsociacionReactivoDto asociacionDto)
         {
-            var entidad = await _context.ExamenReactivo.FirstOrDefaultAsync(er => BuildIdExamenReactivo(er.IdExamen, er.IdReactivo) == idExamenReactivo);
+            var entidad = await _context.ExamenReactivo.FirstOrDefaultAsync(er => BuildIdExamenReactivo(er.id_examen, er.id_reactivo) == idExamenReactivo);
             if (entidad == null) return false;
-            entidad.CantidadUsada = asociacionDto.CantidadUsada;
-            entidad.FechaActualizacion = DateTime.UtcNow;
-            if (!entidad.Activo)
+            entidad.cantidad_usada = asociacionDto.CantidadUsada;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
+            if (!entidad.activo)
             {
-                entidad.Activo = true;
-                entidad.FechaFin = null;
+                entidad.activo = true;
+                entidad.fecha_fin = null;
             }
             await _context.SaveChangesAsync();
             return true;
@@ -140,11 +141,11 @@ namespace Lab_APIRest.Services.Examenes
 
         public async Task<bool> AnularAsociacionAsync(int idExamenReactivo)
         {
-            var entidad = await _context.ExamenReactivo.FirstOrDefaultAsync(er => BuildIdExamenReactivo(er.IdExamen, er.IdReactivo) == idExamenReactivo && er.Activo);
+            var entidad = await _context.ExamenReactivo.FirstOrDefaultAsync(er => BuildIdExamenReactivo(er.id_examen, er.id_reactivo) == idExamenReactivo && er.activo);
             if (entidad == null) return false;
-            entidad.Activo = false;
-            entidad.FechaFin = DateTime.UtcNow;
-            entidad.FechaActualizacion = DateTime.UtcNow;
+            entidad.activo = false;
+            entidad.fecha_fin = DateTime.UtcNow;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -152,50 +153,50 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<List<AsociacionReactivoDto>> ListarAsociacionesPorExamenIdAsync(int idExamen)
         {
             return await _context.ExamenReactivo
-                .Include(er => er.IdExamenNavigation)
-                .Include(er => er.IdReactivoNavigation)
-                .Where(er => er.IdExamen == idExamen && er.Activo)
+                .Include(er => er.examen_navigation)
+                .Include(er => er.reactivo_navigation)
+                .Where(er => er.id_examen == idExamen && er.activo)
                 .Select(er => new AsociacionReactivoDto
                 {
-                    IdExamenReactivo = BuildIdExamenReactivo(er.IdExamen, er.IdReactivo),
-                    IdExamen = er.IdExamen,
-                    NombreExamen = er.IdExamenNavigation.NombreExamen,
-                    IdReactivo = er.IdReactivo,
-                    NombreReactivo = er.IdReactivoNavigation.NombreReactivo,
-                    CantidadUsada = er.CantidadUsada,
-                    Unidad = er.IdReactivoNavigation.Unidad
+                    IdExamenReactivo = BuildIdExamenReactivo(er.id_examen, er.id_reactivo),
+                    IdExamen = er.id_examen,
+                    NombreExamen = er.examen_navigation.nombre_examen,
+                    IdReactivo = er.id_reactivo,
+                    NombreReactivo = er.reactivo_navigation.nombre_reactivo,
+                    CantidadUsada = er.cantidad_usada,
+                    Unidad = er.reactivo_navigation.unidad
                 })
                 .ToListAsync();
         }
 
         public async Task<bool> GuardarAsociacionesPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones)
         {
-            var actuales = await _context.ExamenReactivo.Where(er => er.IdExamen == idExamen).ToListAsync();
+            var actuales = await _context.ExamenReactivo.Where(er => er.id_examen == idExamen).ToListAsync();
             foreach (var act in actuales)
             {
-                act.Activo = false;
-                act.FechaFin = DateTime.UtcNow;
-                act.FechaActualizacion = DateTime.UtcNow;
+                act.activo = false;
+                act.fecha_fin = DateTime.UtcNow;
+                act.fecha_actualizacion = DateTime.UtcNow;
             }
             foreach (var asociacionDto in asociaciones)
             {
-                var existe = actuales.FirstOrDefault(a => a.IdReactivo == asociacionDto.IdReactivo);
+                var existe = actuales.FirstOrDefault(a => a.id_reactivo == asociacionDto.IdReactivo);
                 if (existe != null)
                 {
-                    existe.Activo = true;
-                    existe.FechaFin = null;
-                    existe.FechaActualizacion = DateTime.UtcNow;
-                    existe.CantidadUsada = asociacionDto.CantidadUsada;
+                    existe.activo = true;
+                    existe.fecha_fin = null;
+                    existe.fecha_actualizacion = DateTime.UtcNow;
+                    existe.cantidad_usada = asociacionDto.CantidadUsada;
                 }
                 else
                 {
-                    var entidad = new ExamenReactivo
+                    var entidad = new examen_reactivo
                     {
-                        IdExamen = idExamen,
-                        IdReactivo = asociacionDto.IdReactivo,
-                        CantidadUsada = asociacionDto.CantidadUsada,
-                        FechaCreacion = DateTime.UtcNow,
-                        Activo = true
+                        id_examen = idExamen,
+                        id_reactivo = asociacionDto.IdReactivo,
+                        cantidad_usada = asociacionDto.CantidadUsada,
+                        fecha_creacion = DateTime.UtcNow,
+                        activo = true
                     };
                     _context.ExamenReactivo.Add(entidad);
                 }

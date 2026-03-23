@@ -93,6 +93,20 @@ namespace Lab_Blazor.Services.Ordenes
             return await _http.SendAsync(solicitud);
         }
 
+        public async Task<HttpResponseMessage> GuardarOrdenConPagoHttpAsync(OrdenPagoGuardarDto datos)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var solicitud = new HttpRequestMessage(HttpMethod.Post, "api/ordenes/con-pago")
+            {
+                Content = JsonContent.Create(datos)
+            };
+            AddTokenHeader(solicitud);
+
+            return await _http.SendAsync(solicitud);
+        }
+
         public async Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden)
         {
             if (!await SetAuthHeaderAsync())

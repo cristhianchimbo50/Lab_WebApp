@@ -3,51 +3,51 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Orden
+public partial class orden
 {
-    public int IdOrden { get; set; }
+    public int id_orden { get; set; }
 
-    public string NumeroOrden { get; set; } = null!;
+    public string numero_orden { get; set; } = null!;
 
-    public int? IdPaciente { get; set; }
+    public int? id_paciente { get; set; }
 
-    public DateOnly FechaOrden { get; set; }
+    public DateOnly fecha_orden { get; set; }
 
-    public decimal Total { get; set; }
+    public decimal total { get; set; }
 
-    public decimal? SaldoPendiente { get; set; }
+    public decimal? saldo_pendiente { get; set; }
 
-    public decimal? TotalPagado { get; set; }
+    public int id_estado_pago { get; set; }
 
-    public string EstadoPago { get; set; } = null!;
+    public int id_estado_orden { get; set; }
 
-    public int IdEstadoOrden { get; set; }
+    public DateTime? fecha_completado { get; set; }
 
-    public DateTime? FechaFinalizacion { get; set; }
+    public bool resultados_habilitados { get; set; }
 
-    public bool ResultadosHabilitados { get; set; }
+    public int? id_medico { get; set; }
 
-    public int? IdMedico { get; set; }
+    public string? observacion { get; set; }
 
-    public string? Observacion { get; set; }
+    public int? id_convenio { get; set; }
 
-    public int? IdConvenio { get; set; }
+    public DateTime? fecha_fin { get; set; }
 
-    public DateTime? FechaFin { get; set; }
+    public bool activo { get; set; }
 
-    public bool Activo { get; set; }
+    public virtual ICollection<detalle_orden> detalle_orden { get; set; } = new List<detalle_orden>();
 
-    public virtual ICollection<DetalleOrden> DetalleOrden { get; set; } = new List<DetalleOrden>();
+    public virtual convenio? convenio_navigation { get; set; }
 
-    public virtual Convenio? IdConvenioNavigation { get; set; }
+    public virtual medico? medico_navigation { get; set; }
 
-    public virtual Medico? IdMedicoNavigation { get; set; }
+    public virtual paciente? paciente_navigation { get; set; }
 
-    public virtual Paciente? IdPacienteNavigation { get; set; }
+    public virtual ICollection<pago> pago { get; set; } = new List<pago>();
 
-    public virtual ICollection<Pago> Pago { get; set; } = new List<Pago>();
+    public virtual ICollection<resultado> resultado { get; set; } = new List<resultado>();
 
-    public virtual ICollection<Resultado> Resultado { get; set; } = new List<Resultado>();
+    public virtual estado_orden estado_orden_navigation { get; set; } = null!;
 
-    public virtual EstadoOrden IdEstadoOrdenNavigation { get; set; } = null!;
+    public virtual estado_pago? estado_pago_navigation { get; set; }
 }

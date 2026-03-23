@@ -15,11 +15,11 @@ namespace Lab_Contracts.Medicos
         public string Especialidad { get; set; } = string.Empty;
 
         [StringLength(20)]
-        public string Telefono { get; set; } = string.Empty;
+        public string? Telefono { get; set; }
 
-        [EmailAddress(ErrorMessage = "Ingrese un correo válido")]
+        [RegularExpression(@"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Ingrese un correo válido")]
         [StringLength(150)]
-        public string Correo { get; set; } = string.Empty;
+        public string? Correo { get; set; }
 
         public bool Anulado { get; set; }
     }

@@ -160,5 +160,44 @@ namespace Lab_Blazor.Services.Examenes
             return await response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<ExamenDto>>()
                 ?? new ResultadoPaginadoDto<ExamenDto> { Items = new List<ExamenDto>(), PageNumber = filtro.PageNumber, PageSize = filtro.PageSize };
         }
+
+        public async Task<List<CatalogoExamenDto>> ListarCatalogoAsync(string tipo, bool incluirInactivos = true)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesi?n expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/examenes/catalogos/{tipo}?incluirInactivos={incluirInactivos.ToString().ToLowerInvariant()}");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<CatalogoExamenDto>>() ?? new();
+        }
+
+        public async Task<CatalogoExamenDto?> GuardarCatalogoAsync(string tipo, CatalogoExamenDto dto)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesi?n expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/examenes/catalogos/{tipo}")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<CatalogoExamenDto>();
+        }
+
+        public async Task<HttpResponseMessage> CambiarEstadoCatalogoAsync(string tipo, int id, bool activo)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesi?n expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/examenes/catalogos/{tipo}/{id}/estado?activo={activo.ToString().ToLowerInvariant()}");
+            AddTokenHeader(request);
+            return await _http.SendAsync(request);
+        }
     }
 }

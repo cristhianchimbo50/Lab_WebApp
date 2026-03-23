@@ -15,6 +15,7 @@
 @using Lab_Contracts.Pagos
 @using Lab_Contracts.Common
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
 
 @inject SesionVerificacionService SesionService
 @inject IOrdenesApiService OrdenesApi
@@ -22,7 +23,6 @@
 @inject IPacientesApiService PacientesApi
 @inject IMedicosApiService MedicosApi
 @inject IExamenesApiService ExamenesApi
-@inject IPagosApiService PagosApi
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
 
@@ -78,7 +78,7 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Cédula del Paciente</label>
                                 <div class="input-group">
-                                    <InputText class="form-control" @bind-Value="_cedulaPaciente" placeholder="Ingrese cédula" />
+                                    <InputText class="form-control" @bind-Value="_cedulaPaciente" placeholder="Ingrese cédula" @onblur="OnCedulaBlurAsync" />
                                     <button type="button" class="btn btn-outline-primary" @onclick="BuscarPorCedulaAsync">
                                         <i class="bi bi-search"></i>
                                     </button>
@@ -172,25 +172,27 @@
                                                 <label class="form-label">Nombres</label>
                                                 <InputText class="form-control text-uppercase"
                                                            @bind-Value="_pacienteNuevo.Nombres"
-                                                           @oninput="(e => _pacienteNuevo.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @oninput="(e => _pacienteNuevo.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)"
+                                                           disabled="@_bloquearDatosPersonaExistente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Apellidos</label>
                                                 <InputText class="form-control text-uppercase"
                                                            @bind-Value="_pacienteNuevo.Apellidos"
-                                                           @oninput="(e => _pacienteNuevo.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                                           @oninput="(e => _pacienteNuevo.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)"
+                                                           disabled="@_bloquearDatosPersonaExistente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Fecha Nacimiento</label>
-                                                <InputDate class="form-control" @bind-Value="_pacienteNuevo.FechaNacimiento" TValue="DateTime" />
+                                                <InputDate class="form-control" @bind-Value="_pacienteNuevo.FechaNacimiento" TValue="DateTime?" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Correo</label>
-                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Correo" />
+                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Correo" disabled="@_bloquearDatosPersonaExistente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Teléfono</label>
-                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Telefono" />
+                                                <InputText class="form-control" @bind-Value="_pacienteNuevo.Telefono" disabled="@_bloquearDatosPersonaExistente" />
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Dirección</label>
@@ -595,6 +597,7 @@
     private bool _mostrarModalMedico;
     private bool _mostrarModalExamen;
     private bool _mostrarModalPago;
+    private bool _bloquearDatosPersonaExistente;
     private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.Nombres), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
     private ResultadoPaginadoDto<PacienteDto>? _resultadoPacientes;
     private ExamenFiltroDto _filtroExamen = new() { CriterioBusqueda = "nombre", PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = false, IncluirVigentes = true };
@@ -628,9 +631,37 @@
         if (paciente != null)
         {
             _pacienteSeleccionado = paciente;
+            _bloquearDatosPersonaExistente = false;
+            await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente.");
         }
         else
         {
+            var persona = await PacientesApi.ObtenerPersonaPorCedulaAsync(_cedulaPaciente);
+            if (persona != null)
+            {
+                _pacienteNuevo = new PacienteDto
+                {
+                    IdPersona = persona.IdPersona,
+                    Cedula = persona.Cedula,
+                    Nombres = persona.Nombres,
+                    Apellidos = persona.Apellidos,
+                    Correo = persona.Correo,
+                    Telefono = persona.Telefono,
+                    Direccion = persona.Direccion,
+                    FechaNacimiento = persona.FechaNacimiento,
+                    IdGenero = persona.IdGenero,
+                    Activo = true
+                };
+                _bloquearDatosPersonaExistente = true;
+                var mensaje = string.IsNullOrWhiteSpace(persona.Correo)
+                    ? "Se encontraron datos de la persona con esa cédula."
+                    : "La cédula ya tiene un usuario registrado. Se cargaron sus datos.";
+                await JS.InvokeVoidAsync("alert", mensaje);
+                _mostrarModalRegistrarPaciente = true;
+                await JS.InvokeVoidAsync("marcarModalAbierto");
+                return;
+            }
+
             var deseaRegistrar = await JS.InvokeAsync<bool>("confirm", "No se encontró paciente con esa cédula. ¿Desea registrarlo?");
             if (!deseaRegistrar) return;
             if (!ValidarCedula(_cedulaPaciente))
@@ -639,9 +670,16 @@
                 return;
             }
             _pacienteNuevo = new PacienteDto { Cedula = _cedulaPaciente, FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
+            _bloquearDatosPersonaExistente = false;
             _mostrarModalRegistrarPaciente = true;
             await JS.InvokeVoidAsync("marcarModalAbierto");
         }
+    }
+
+    private async Task OnCedulaBlurAsync(FocusEventArgs _)
+    {
+        if (string.IsNullOrWhiteSpace(_cedulaPaciente)) return;
+        await BuscarPorCedulaAsync();
     }
     private async Task BuscarPacientesModalAsync()
     {
@@ -763,7 +801,20 @@
     private async Task GuardarPagoAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+
+        if (_montoEfectivo < 0 || _montoTransferencia < 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Los montos de pago no pueden ser negativos.");
+            return;
+        }
+
         var totalPagado = _montoEfectivo + _montoTransferencia;
+        if (totalPagado <= 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Debe ingresar al menos un monto de pago mayor a cero.");
+            return;
+        }
+
         var saldoPendiente = ObtenerSaldoPendiente();
         _ordenActual.IdPaciente = _pacienteSeleccionado!.IdPaciente;
         _ordenActual.IdMedico = _medicoSeleccionado!.IdMedico;
@@ -777,26 +828,29 @@
         _ordenActual.Observacion = "";
         _ordenActual.Detalles = _examenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
         var dtoOrdenCompleta = new OrdenCompletaDto { Orden = _ordenActual, IdsExamenes = _examenesSeleccionados.Select(e => e.IdExamen).ToList() };
-        var respuestaOrden = await OrdenesApi.GuardarOrdenHttpAsync(dtoOrdenCompleta);
+        var pago = new PagoDto
+        {
+            FechaPago = DateTime.Now,
+            MontoPagado = totalPagado,
+            Observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion) ? "PAGO DESDE ORDEN" : _pagoActual.Observacion,
+            DetallePagos = new List<DetallePagoDto>()
+        };
+
+        if (_montoEfectivo > 0)
+            pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "EFECTIVO", Monto = _montoEfectivo });
+        if (_montoTransferencia > 0)
+            pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "TRANSFERENCIA", Monto = _montoTransferencia });
+
+        var respuestaOrden = await OrdenesApi.GuardarOrdenConPagoHttpAsync(new OrdenPagoGuardarDto
+        {
+            Orden = dtoOrdenCompleta,
+            Pago = pago
+        });
         if (respuestaOrden.IsSuccessStatusCode)
         {
             var respuestaContenido = await respuestaOrden.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
             if (respuestaContenido != null && respuestaContenido.IdOrden > 0)
             {
-                var observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion) ? "PAGO DESDE ORDEN" : _pagoActual.Observacion;
-                var pago = new PagoDto
-                {
-                    IdOrden = respuestaContenido.IdOrden,
-                    FechaPago = DateTime.Now,
-                    MontoPagado = totalPagado,
-                    Observacion = observacion,
-                    DetallePagos = new List<DetallePagoDto>
-                {
-                    new() { TipoPago = "EFECTIVO", Monto = _montoEfectivo },
-                    new() { TipoPago = "TRANSFERENCIA", Monto = _montoTransferencia }
-                }
-                };
-                await PagosApi.GuardarPagoAsync(pago);
                 Navigation.NavigateTo("/ordenes");
             }
             else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
@@ -825,6 +879,7 @@
     private async Task CerrarModalRegistrarPacienteAsync()
     {
         _mostrarModalRegistrarPaciente = false;
+        _bloquearDatosPersonaExistente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
     private async Task CerrarModalBuscarPacienteAsync()

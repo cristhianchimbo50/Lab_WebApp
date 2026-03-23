@@ -36,7 +36,9 @@ namespace Lab_Blazor.Services.Usuarios
         {
             if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
             var req = new HttpRequestMessage(HttpMethod.Post, "api/usuarios") { Content = JsonContent.Create(usuario) }; AddTokenHeader(req);
-            var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
+            var resp = await _http.SendAsync(req);
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception(await ExtraerMensajeErrorAsync(resp, "Error al guardar usuario."));
             return await resp.Content.ReadFromJsonAsync<int>();
         }
 
@@ -45,7 +47,9 @@ namespace Lab_Blazor.Services.Usuarios
             if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
             var req = new HttpRequestMessage(HttpMethod.Put, $"api/usuarios/{usuario.IdUsuario}") { Content = JsonContent.Create(usuario) }; AddTokenHeader(req);
             var resp = await _http.SendAsync(req);
-            return resp.IsSuccessStatusCode;
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception(await ExtraerMensajeErrorAsync(resp, "Error al actualizar usuario."));
+            return true;
         }
 
         public async Task<bool> CambiarEstadoUsuarioAsync(int idUsuario, bool activo)
@@ -62,6 +66,26 @@ namespace Lab_Blazor.Services.Usuarios
             }
             catch { }
             throw new Exception("Error al cambiar estado del usuario.");
+        }
+
+        private static async Task<string> ExtraerMensajeErrorAsync(HttpResponseMessage resp, string predeterminado)
+        {
+            var contenido = await resp.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(contenido)) return predeterminado;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(contenido);
+                if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("Mensaje", out var m)) return m.GetString() ?? predeterminado;
+                    if (doc.RootElement.TryGetProperty("message", out var mm)) return mm.GetString() ?? predeterminado;
+                    if (doc.RootElement.TryGetProperty("title", out var t)) return t.GetString() ?? predeterminado;
+                }
+            }
+            catch { }
+
+            return contenido;
         }
     }
 }

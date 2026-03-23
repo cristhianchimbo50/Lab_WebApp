@@ -2,7 +2,11 @@ using Lab_Contracts.Examenes;
 using Lab_Contracts.Common;
 using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using examen = Lab_APIRest.Infrastructure.EF.Models.examen;
+using referencia_examen = Lab_APIRest.Infrastructure.EF.Models.referencia_examen;
+using examen_composicion = Lab_APIRest.Infrastructure.EF.Models.examen_composicion;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -22,13 +26,13 @@ namespace Lab_APIRest.Services.Examenes
         {
             return await _context.Examen
                 .AsNoTracking()
-                .Include(e => e.IdEstudioNavigation)
-                .Include(e => e.IdGrupoExamenNavigation)
-                .Include(e => e.IdTipoMuestraNavigation)
-                .Include(e => e.IdTipoExamenNavigation)
-                .Include(e => e.IdTecnicaNavigation)
-                .Include(e => e.IdTipoRegistroNavigation)
-                .Include(e => e.ReferenciaExamen)
+                .Include(e => e.estudio_navigation)
+                .Include(e => e.grupo_examen_navigation)
+                .Include(e => e.tipo_muestra_navigation)
+                .Include(e => e.tipo_examen_navigation)
+                .Include(e => e.tecnica_navigation)
+                .Include(e => e.tipo_registro_navigation)
+                .Include(e => e.referencia_examen)
                 .Select(e => Map(e))
                 .ToListAsync();
         }
@@ -37,14 +41,14 @@ namespace Lab_APIRest.Services.Examenes
         {
             var entidad = await _context.Examen
                 .AsNoTracking()
-                .Include(e => e.IdEstudioNavigation)
-                .Include(e => e.IdGrupoExamenNavigation)
-                .Include(e => e.IdTipoMuestraNavigation)
-                .Include(e => e.IdTipoExamenNavigation)
-                .Include(e => e.IdTecnicaNavigation)
-                .Include(e => e.IdTipoRegistroNavigation)
-                .Include(e => e.ReferenciaExamen)
-                .FirstOrDefaultAsync(x => x.IdExamen == idExamen);
+                .Include(e => e.estudio_navigation)
+                .Include(e => e.grupo_examen_navigation)
+                .Include(e => e.tipo_muestra_navigation)
+                .Include(e => e.tipo_examen_navigation)
+                .Include(e => e.tecnica_navigation)
+                .Include(e => e.tipo_registro_navigation)
+                .Include(e => e.referencia_examen)
+                .FirstOrDefaultAsync(x => x.id_examen == idExamen);
             return entidad == null ? null : Map(entidad);
         }
 
@@ -52,34 +56,34 @@ namespace Lab_APIRest.Services.Examenes
         {
             return await _context.Examen
                 .AsNoTracking()
-                .Include(e => e.IdEstudioNavigation)
-                .Include(e => e.IdGrupoExamenNavigation)
-                .Include(e => e.IdTipoMuestraNavigation)
-                .Include(e => e.IdTipoExamenNavigation)
-                .Include(e => e.IdTecnicaNavigation)
-                .Include(e => e.IdTipoRegistroNavigation)
-                .Include(e => e.ReferenciaExamen)
-                .Where(e => (e.NombreExamen ?? "").Contains(nombre))
+                .Include(e => e.estudio_navigation)
+                .Include(e => e.grupo_examen_navigation)
+                .Include(e => e.tipo_muestra_navigation)
+                .Include(e => e.tipo_examen_navigation)
+                .Include(e => e.tecnica_navigation)
+                .Include(e => e.tipo_registro_navigation)
+                .Include(e => e.referencia_examen)
+                .Where(e => (e.nombre_examen ?? "").Contains(nombre))
                 .Select(e => Map(e))
                 .ToListAsync();
         }
 
         public async Task<ExamenDto> GuardarExamenAsync(ExamenDto datosExamen)
         {
-            var entidad = new Examen
+            var entidad = new examen
             {
-                NombreExamen = datosExamen.NombreExamen,
-                Precio = datosExamen.Precio,
-                Activo = true,
-                TiempoEntregaMinutos = datosExamen.TiempoEntregaMinutos,
-                IdEstudio = datosExamen.IdEstudio,
-                IdGrupoExamen = datosExamen.IdGrupoExamen,
-                IdTipoMuestra = datosExamen.IdTipoMuestra,
-                IdTipoExamen = datosExamen.IdTipoExamen,
-                IdTecnica = datosExamen.IdTecnica,
-                IdTipoRegistro = datosExamen.IdTipoRegistro,
-                TituloExamen = datosExamen.TituloExamen,
-                FechaCreacion = DateTime.UtcNow
+                nombre_examen = datosExamen.NombreExamen,
+                precio = datosExamen.Precio,
+                activo = true,
+                tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos,
+                id_estudio = datosExamen.IdEstudio,
+                id_grupo_examen = datosExamen.IdGrupoExamen,
+                id_tipo_muestra = datosExamen.IdTipoMuestra,
+                id_tipo_examen = datosExamen.IdTipoExamen,
+                id_tecnica = datosExamen.IdTecnica,
+                id_tipo_registro = datosExamen.IdTipoRegistro,
+                titulo_examen = datosExamen.TituloExamen,
+                fecha_creacion = DateTime.UtcNow
             };
             _context.Examen.Add(entidad);
             await _context.SaveChangesAsync();
@@ -88,20 +92,20 @@ namespace Lab_APIRest.Services.Examenes
             {
                 foreach (var r in datosExamen.Referencias)
                 {
-                    _context.ReferenciaExamen.Add(new ReferenciaExamen
+                    _context.ReferenciaExamen.Add(new referencia_examen
                     {
-                        IdExamen = entidad.IdExamen,
-                        ValorMin = r.ValorMin,
-                        ValorMax = r.ValorMax,
-                        ValorTexto = r.ValorTexto,
-                        Unidad = r.Unidad,
-                        Activo = r.Activo,
-                        FechaCreacion = DateTime.UtcNow
+                        id_examen = entidad.id_examen,
+                        valor_min = r.ValorMin,
+                        valor_max = r.ValorMax,
+                        valor_texto = r.ValorTexto,
+                        unidad = r.Unidad,
+                        activo = r.Activo,
+                        fecha_creacion = DateTime.UtcNow
                     });
                 }
                 await _context.SaveChangesAsync();
             }
-            datosExamen.IdExamen = entidad.IdExamen;
+            datosExamen.IdExamen = entidad.id_examen;
             datosExamen.Anulado = false;
             return datosExamen;
         }
@@ -109,48 +113,48 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<bool> GuardarExamenAsync(int idExamen, ExamenDto datosExamen)
         {
             var entidad = await _context.Examen
-                .Include(e => e.ReferenciaExamen)
-                .FirstOrDefaultAsync(e => e.IdExamen == idExamen);
+                .Include(e => e.referencia_examen)
+                .FirstOrDefaultAsync(e => e.id_examen == idExamen);
             if (entidad == null) return false;
-            entidad.NombreExamen = datosExamen.NombreExamen;
-            entidad.Precio = datosExamen.Precio;
-            entidad.TiempoEntregaMinutos = datosExamen.TiempoEntregaMinutos;
-            entidad.IdEstudio = datosExamen.IdEstudio;
-            entidad.IdGrupoExamen = datosExamen.IdGrupoExamen;
-            entidad.IdTipoMuestra = datosExamen.IdTipoMuestra;
-            entidad.IdTipoExamen = datosExamen.IdTipoExamen;
-            entidad.IdTecnica = datosExamen.IdTecnica;
-            entidad.IdTipoRegistro = datosExamen.IdTipoRegistro;
-            entidad.TituloExamen = datosExamen.TituloExamen;
-            entidad.Activo = !datosExamen.Anulado;
-            entidad.FechaActualizacion = DateTime.UtcNow;
-            if (!entidad.Activo)
+            entidad.nombre_examen = datosExamen.NombreExamen;
+            entidad.precio = datosExamen.Precio;
+            entidad.tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos;
+            entidad.id_estudio = datosExamen.IdEstudio;
+            entidad.id_grupo_examen = datosExamen.IdGrupoExamen;
+            entidad.id_tipo_muestra = datosExamen.IdTipoMuestra;
+            entidad.id_tipo_examen = datosExamen.IdTipoExamen;
+            entidad.id_tecnica = datosExamen.IdTecnica;
+            entidad.id_tipo_registro = datosExamen.IdTipoRegistro;
+            entidad.titulo_examen = datosExamen.TituloExamen;
+            entidad.activo = !datosExamen.Anulado;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
+            if (!entidad.activo)
             {
-                entidad.FechaFin = entidad.FechaFin ?? DateTime.UtcNow;
+                entidad.fecha_fin = entidad.fecha_fin ?? DateTime.UtcNow;
             }
             else
             {
-                entidad.FechaFin = null;
+                entidad.fecha_fin = null;
             }
 
-            if (entidad.ReferenciaExamen.Any())
+            if (entidad.referencia_examen.Any())
             {
-                _context.ReferenciaExamen.RemoveRange(entidad.ReferenciaExamen);
+                _context.ReferenciaExamen.RemoveRange(entidad.referencia_examen);
                 await _context.SaveChangesAsync();
             }
             if (datosExamen.Referencias?.Any() == true)
             {
                 foreach (var r in datosExamen.Referencias)
                 {
-                    _context.ReferenciaExamen.Add(new ReferenciaExamen
+                    _context.ReferenciaExamen.Add(new referencia_examen
                     {
-                        IdExamen = entidad.IdExamen,
-                        ValorMin = r.ValorMin,
-                        ValorMax = r.ValorMax,
-                        ValorTexto = r.ValorTexto,
-                        Unidad = r.Unidad,
-                        Activo = r.Activo,
-                        FechaCreacion = DateTime.UtcNow
+                        id_examen = entidad.id_examen,
+                        valor_min = r.ValorMin,
+                        valor_max = r.ValorMax,
+                        valor_texto = r.ValorTexto,
+                        unidad = r.Unidad,
+                        activo = r.Activo,
+                        fecha_creacion = DateTime.UtcNow
                     });
                 }
             }
@@ -162,10 +166,10 @@ namespace Lab_APIRest.Services.Examenes
         {
             var entidad = await _context.Examen.FindAsync(idExamen);
             if (entidad == null) return false;
-            if (!entidad.Activo) return true;
-            entidad.Activo = false;
-            entidad.FechaFin = DateTime.UtcNow;
-            entidad.FechaActualizacion = DateTime.UtcNow;
+            if (!entidad.activo) return true;
+            entidad.activo = false;
+            entidad.fecha_fin = DateTime.UtcNow;
+            entidad.fecha_actualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -173,17 +177,17 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<List<ExamenDto>> ListarExamenesHijosAsync(int idExamenPadre)
         {
             var hijos = await _context.ExamenComposicion
-                .Where(ec => ec.IdExamenPadre == idExamenPadre && ec.Activo)
+                .Where(ec => ec.id_examen_padre == idExamenPadre && ec.activo)
                 .Join(_context.Examen
-                        .Include(e => e.IdEstudioNavigation)
-                        .Include(e => e.IdGrupoExamenNavigation)
-                        .Include(e => e.IdTipoMuestraNavigation)
-                        .Include(e => e.IdTipoExamenNavigation)
-                        .Include(e => e.IdTecnicaNavigation)
-                        .Include(e => e.IdTipoRegistroNavigation)
-                        .Include(e => e.ReferenciaExamen),
-                    ec => ec.IdExamenHijo,
-                    e => e.IdExamen,
+                        .Include(e => e.estudio_navigation)
+                        .Include(e => e.grupo_examen_navigation)
+                        .Include(e => e.tipo_muestra_navigation)
+                        .Include(e => e.tipo_examen_navigation)
+                        .Include(e => e.tecnica_navigation)
+                        .Include(e => e.tipo_registro_navigation)
+                        .Include(e => e.referencia_examen),
+                    ec => ec.id_examen_hijo,
+                    e => e.id_examen,
                     (ec, e) => e)
                 .ToListAsync();
             return hijos.Select(Map).ToList();
@@ -191,20 +195,20 @@ namespace Lab_APIRest.Services.Examenes
 
         public async Task<bool> AsignarExamenHijoAsync(int idExamenPadre, int idExamenHijo)
         {
-            var existe = await _context.ExamenComposicion.AnyAsync(x => x.IdExamenPadre == idExamenPadre && x.IdExamenHijo == idExamenHijo);
+            var existe = await _context.ExamenComposicion.AnyAsync(x => x.id_examen_padre == idExamenPadre && x.id_examen_hijo == idExamenHijo);
             if (existe)
             {
-                var registro = await _context.ExamenComposicion.FirstAsync(x => x.IdExamenPadre == idExamenPadre && x.IdExamenHijo == idExamenHijo);
-                if (!registro.Activo)
+                var registro = await _context.ExamenComposicion.FirstAsync(x => x.id_examen_padre == idExamenPadre && x.id_examen_hijo == idExamenHijo);
+                if (!registro.activo)
                 {
-                    registro.Activo = true;
-                    registro.FechaFin = null;
-                    registro.FechaActualizacion = DateTime.UtcNow;
+                    registro.activo = true;
+                    registro.fecha_fin = null;
+                    registro.fecha_actualizacion = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
                 return false;
             }
-            var composicion = new ExamenComposicion { IdExamenPadre = idExamenPadre, IdExamenHijo = idExamenHijo, Activo = true, FechaCreacion = DateTime.UtcNow };
+            var composicion = new examen_composicion { id_examen_padre = idExamenPadre, id_examen_hijo = idExamenHijo, activo = true, fecha_creacion = DateTime.UtcNow };
             _context.ExamenComposicion.Add(composicion);
             await _context.SaveChangesAsync();
             return true;
@@ -212,11 +216,11 @@ namespace Lab_APIRest.Services.Examenes
 
         public async Task<bool> EliminarExamenHijoAsync(int idExamenPadre, int idExamenHijo)
         {
-            var composicion = await _context.ExamenComposicion.FirstOrDefaultAsync(x => x.IdExamenPadre == idExamenPadre && x.IdExamenHijo == idExamenHijo && x.Activo);
+            var composicion = await _context.ExamenComposicion.FirstOrDefaultAsync(x => x.id_examen_padre == idExamenPadre && x.id_examen_hijo == idExamenHijo && x.activo);
             if (composicion == null) return false;
-            composicion.Activo = false;
-            composicion.FechaFin = DateTime.UtcNow;
-            composicion.FechaActualizacion = DateTime.UtcNow;
+            composicion.activo = false;
+            composicion.fecha_fin = DateTime.UtcNow;
+            composicion.fecha_actualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -224,21 +228,21 @@ namespace Lab_APIRest.Services.Examenes
         public async Task<ResultadoPaginadoDto<ExamenDto>> ListarExamenesPaginadosAsync(ExamenFiltroDto filtro)
         {
             var query = _context.Examen.AsNoTracking()
-                .Include(e => e.IdEstudioNavigation)
-                .Include(e => e.IdGrupoExamenNavigation)
-                .Include(e => e.IdTipoMuestraNavigation)
-                .Include(e => e.IdTipoExamenNavigation)
-                .Include(e => e.IdTecnicaNavigation)
-                .Include(e => e.IdTipoRegistroNavigation)
-                .Include(e => e.ReferenciaExamen)
+                .Include(e => e.estudio_navigation)
+                .Include(e => e.grupo_examen_navigation)
+                .Include(e => e.tipo_muestra_navigation)
+                .Include(e => e.tipo_examen_navigation)
+                .Include(e => e.tecnica_navigation)
+                .Include(e => e.tipo_registro_navigation)
+                .Include(e => e.referencia_examen)
                 .AsQueryable();
 
             if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
             {
                 if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
-                    query = query.Where(e => e.Activo == false);
+                    query = query.Where(e => e.activo == false);
                 else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
-                    query = query.Where(e => e.Activo == true);
+                    query = query.Where(e => e.activo == true);
             }
 
             if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
@@ -246,10 +250,10 @@ namespace Lab_APIRest.Services.Examenes
                 var val = filtro.ValorBusqueda.ToLower();
                 switch (filtro.CriterioBusqueda)
                 {
-                    case "nombre": query = query.Where(e => (e.NombreExamen ?? "").ToLower().Contains(val)); break;
-                    case "estudio": query = query.Where(e => (e.IdEstudioNavigation!.Nombre ?? "").ToLower().Contains(val)); break;
-                    case "tipo": query = query.Where(e => (e.IdTipoExamenNavigation!.Nombre ?? "").ToLower().Contains(val)); break;
-                    case "tecnica": query = query.Where(e => (e.IdTecnicaNavigation!.Nombre ?? "").ToLower().Contains(val)); break;
+                    case "nombre": query = query.Where(e => (e.nombre_examen ?? "").ToLower().Contains(val)); break;
+                    case "estudio": query = query.Where(e => (e.estudio_navigation!.nombre ?? "").ToLower().Contains(val)); break;
+                    case "tipo": query = query.Where(e => (e.tipo_examen_navigation!.nombre ?? "").ToLower().Contains(val)); break;
+                    case "tecnica": query = query.Where(e => (e.tecnica_navigation!.nombre ?? "").ToLower().Contains(val)); break;
                 }
             }
 
@@ -258,11 +262,11 @@ namespace Lab_APIRest.Services.Examenes
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(ExamenDto.NombreExamen) => asc ? query.OrderBy(e => e.NombreExamen) : query.OrderByDescending(e => e.NombreExamen),
-                nameof(ExamenDto.Estudio) => asc ? query.OrderBy(e => e.IdEstudioNavigation!.Nombre) : query.OrderByDescending(e => e.IdEstudioNavigation!.Nombre),
-                nameof(ExamenDto.TipoExamen) => asc ? query.OrderBy(e => e.IdTipoExamenNavigation!.Nombre) : query.OrderByDescending(e => e.IdTipoExamenNavigation!.Nombre),
-                nameof(ExamenDto.Tecnica) => asc ? query.OrderBy(e => e.IdTecnicaNavigation!.Nombre) : query.OrderByDescending(e => e.IdTecnicaNavigation!.Nombre),
-                _ => asc ? query.OrderBy(e => e.IdExamen) : query.OrderByDescending(e => e.IdExamen)
+                nameof(ExamenDto.NombreExamen) => asc ? query.OrderBy(e => e.nombre_examen) : query.OrderByDescending(e => e.nombre_examen),
+                nameof(ExamenDto.Estudio) => asc ? query.OrderBy(e => e.estudio_navigation!.nombre) : query.OrderByDescending(e => e.estudio_navigation!.nombre),
+                nameof(ExamenDto.TipoExamen) => asc ? query.OrderBy(e => e.tipo_examen_navigation!.nombre) : query.OrderByDescending(e => e.tipo_examen_navigation!.nombre),
+                nameof(ExamenDto.Tecnica) => asc ? query.OrderBy(e => e.tecnica_navigation!.nombre) : query.OrderByDescending(e => e.tecnica_navigation!.nombre),
+                 _ => asc ? query.OrderBy(e => e.id_examen) : query.OrderByDescending(e => e.id_examen)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
@@ -281,47 +285,292 @@ namespace Lab_APIRest.Services.Examenes
             };
         }
 
-        private static ExamenDto Map(Examen e)
+        public async Task<List<CatalogoExamenDto>> ListarCatalogoAsync(string tipo, bool incluirInactivos = true)
+        {
+            return NormalizarTipoCatalogo(tipo) switch
+            {
+                "estudio" => await _context.Estudio.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_estudio, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                "grupo_examen" => await _context.GrupoExamen.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_grupo_examen, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                "tipo_muestra" => await _context.TipoMuestra.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_tipo_muestra, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                "tipo_examen" => await _context.TipoExamen.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_tipo_examen, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                "tecnica" => await _context.Tecnica.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_tecnica, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                "tipo_registro" => await _context.TipoRegistro.AsNoTracking()
+                    .Where(x => incluirInactivos || x.activo)
+                    .OrderBy(x => x.nombre)
+                    .Select(x => new CatalogoExamenDto { Id = x.id_tipo_registro, Nombre = x.nombre ?? string.Empty, Activo = x.activo })
+                    .ToListAsync(),
+
+                _ => new List<CatalogoExamenDto>()
+            };
+        }
+
+        public async Task<CatalogoExamenDto?> GuardarCatalogoAsync(string tipo, CatalogoExamenDto dto)
+        {
+            var nombre = (dto.Nombre ?? string.Empty).Trim().ToUpper();
+            if (string.IsNullOrWhiteSpace(nombre)) return null;
+
+            var ahora = DateTime.UtcNow;
+
+            switch (NormalizarTipoCatalogo(tipo))
+            {
+                case "estudio":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new estudio { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.Estudio.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_estudio, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.Estudio.FirstOrDefaultAsync(x => x.id_estudio == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_estudio, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+
+                case "grupo_examen":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new grupo_examen { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.GrupoExamen.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_grupo_examen, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.GrupoExamen.FirstOrDefaultAsync(x => x.id_grupo_examen == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_grupo_examen, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+
+                case "tipo_muestra":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new tipo_muestra { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.TipoMuestra.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_tipo_muestra, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.TipoMuestra.FirstOrDefaultAsync(x => x.id_tipo_muestra == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_tipo_muestra, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+
+                case "tipo_examen":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new tipo_examen { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.TipoExamen.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_tipo_examen, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.TipoExamen.FirstOrDefaultAsync(x => x.id_tipo_examen == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_tipo_examen, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+
+                case "tecnica":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new tecnica { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.Tecnica.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_tecnica, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.Tecnica.FirstOrDefaultAsync(x => x.id_tecnica == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_tecnica, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+
+                case "tipo_registro":
+                    if (dto.Id == 0)
+                    {
+                        var nuevo = new tipo_registro { nombre = nombre, activo = true, fecha_creacion = ahora };
+                        _context.TipoRegistro.Add(nuevo);
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = nuevo.id_tipo_registro, Nombre = nuevo.nombre ?? string.Empty, Activo = nuevo.activo };
+                    }
+                    else
+                    {
+                        var existente = await _context.TipoRegistro.FirstOrDefaultAsync(x => x.id_tipo_registro == dto.Id);
+                        if (existente == null) return null;
+                        existente.nombre = nombre;
+                        existente.fecha_actualizacion = ahora;
+                        await _context.SaveChangesAsync();
+                        return new CatalogoExamenDto { Id = existente.id_tipo_registro, Nombre = existente.nombre ?? string.Empty, Activo = existente.activo };
+                    }
+            }
+
+            return null;
+        }
+
+        public async Task<bool> CambiarEstadoCatalogoAsync(string tipo, int id, bool activo)
+        {
+            var ahora = DateTime.UtcNow;
+
+            switch (NormalizarTipoCatalogo(tipo))
+            {
+                case "estudio":
+                    var estudioEntidad = await _context.Estudio.FirstOrDefaultAsync(x => x.id_estudio == id);
+                    if (estudioEntidad == null) return false;
+                    estudioEntidad.activo = activo;
+                    estudioEntidad.fecha_actualizacion = ahora;
+                    estudioEntidad.fecha_fin = activo ? null : estudioEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                case "grupo_examen":
+                    var grupoEntidad = await _context.GrupoExamen.FirstOrDefaultAsync(x => x.id_grupo_examen == id);
+                    if (grupoEntidad == null) return false;
+                    grupoEntidad.activo = activo;
+                    grupoEntidad.fecha_actualizacion = ahora;
+                    grupoEntidad.fecha_fin = activo ? null : grupoEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                case "tipo_muestra":
+                    var muestraEntidad = await _context.TipoMuestra.FirstOrDefaultAsync(x => x.id_tipo_muestra == id);
+                    if (muestraEntidad == null) return false;
+                    muestraEntidad.activo = activo;
+                    muestraEntidad.fecha_actualizacion = ahora;
+                    muestraEntidad.fecha_fin = activo ? null : muestraEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                case "tipo_examen":
+                    var tipoEntidad = await _context.TipoExamen.FirstOrDefaultAsync(x => x.id_tipo_examen == id);
+                    if (tipoEntidad == null) return false;
+                    tipoEntidad.activo = activo;
+                    tipoEntidad.fecha_actualizacion = ahora;
+                    tipoEntidad.fecha_fin = activo ? null : tipoEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                case "tecnica":
+                    var tecnicaEntidad = await _context.Tecnica.FirstOrDefaultAsync(x => x.id_tecnica == id);
+                    if (tecnicaEntidad == null) return false;
+                    tecnicaEntidad.activo = activo;
+                    tecnicaEntidad.fecha_actualizacion = ahora;
+                    tecnicaEntidad.fecha_fin = activo ? null : tecnicaEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                case "tipo_registro":
+                    var tipoRegistroEntidad = await _context.TipoRegistro.FirstOrDefaultAsync(x => x.id_tipo_registro == id);
+                    if (tipoRegistroEntidad == null) return false;
+                    tipoRegistroEntidad.activo = activo;
+                    tipoRegistroEntidad.fecha_actualizacion = ahora;
+                    tipoRegistroEntidad.fecha_fin = activo ? null : tipoRegistroEntidad.fecha_fin ?? ahora;
+                    await _context.SaveChangesAsync();
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static string NormalizarTipoCatalogo(string tipo)
+        {
+            var val = (tipo ?? string.Empty).Trim().ToLowerInvariant();
+            return val switch
+            {
+                "estudio" => "estudio",
+                "grupoexamen" or "grupo_examen" or "grupo-examen" => "grupo_examen",
+                "tipomuestra" or "tipo_muestra" or "tipo-muestra" => "tipo_muestra",
+                "tipoexamen" or "tipo_examen" or "tipo-examen" => "tipo_examen",
+                "tecnica" or "técnica" => "tecnica",
+                "tiporegistro" or "tipo_registro" or "tipo-registro" => "tipo_registro",
+                _ => string.Empty
+            };
+        }
+
+        private static ExamenDto Map(examen e)
         {
             var dto = new ExamenDto
             {
-                IdExamen = e.IdExamen,
-                NombreExamen = e.NombreExamen ?? string.Empty,
-                Precio = e.Precio,
-                Anulado = !e.Activo,
-                TituloExamen = e.TituloExamen,
-                TiempoEntregaMinutos = e.TiempoEntregaMinutos,
-                IdEstudio = e.IdEstudio,
-                NombreEstudio = e.IdEstudioNavigation?.Nombre,
-                IdGrupoExamen = e.IdGrupoExamen,
-                NombreGrupoExamen = e.IdGrupoExamenNavigation?.Nombre,
-                IdTipoMuestra = e.IdTipoMuestra,
-                NombreTipoMuestra = e.IdTipoMuestraNavigation?.Nombre,
-                IdTipoExamen = e.IdTipoExamen,
-                NombreTipoExamen = e.IdTipoExamenNavigation?.Nombre,
-                IdTecnica = e.IdTecnica,
-                NombreTecnica = e.IdTecnicaNavigation?.Nombre,
-                IdTipoRegistro = e.IdTipoRegistro,
-                NombreTipoRegistro = e.IdTipoRegistroNavigation?.Nombre,
+                IdExamen = e.id_examen,
+                NombreExamen = e.nombre_examen ?? string.Empty,
+                Precio = e.precio,
+                Anulado = !e.activo,
+                TituloExamen = e.titulo_examen,
+                TiempoEntregaMinutos = e.tiempo_entrega_minutos,
+                IdEstudio = e.id_estudio,
+                NombreEstudio = e.estudio_navigation?.nombre,
+                IdGrupoExamen = e.id_grupo_examen,
+                NombreGrupoExamen = e.grupo_examen_navigation?.nombre,
+                IdTipoMuestra = e.id_tipo_muestra,
+                NombreTipoMuestra = e.tipo_muestra_navigation?.nombre,
+                IdTipoExamen = e.id_tipo_examen,
+                NombreTipoExamen = e.tipo_examen_navigation?.nombre,
+                IdTecnica = e.id_tecnica,
+                NombreTecnica = e.tecnica_navigation?.nombre,
+                IdTipoRegistro = e.id_tipo_registro,
+                NombreTipoRegistro = e.tipo_registro_navigation?.nombre,
                 // Compatibilidad: nombres legados
-                Estudio = e.IdEstudioNavigation?.Nombre,
-                TipoMuestra = e.IdTipoMuestraNavigation?.Nombre,
-                TiempoEntrega = e.TiempoEntregaMinutos.HasValue ? $"{e.TiempoEntregaMinutos} min" : null,
-                TipoExamen = e.IdTipoExamenNavigation?.Nombre,
-                Tecnica = e.IdTecnicaNavigation?.Nombre
+                Estudio = e.estudio_navigation?.nombre,
+                TipoMuestra = e.tipo_muestra_navigation?.nombre,
+                TiempoEntrega = e.tiempo_entrega_minutos.HasValue ? $"{e.tiempo_entrega_minutos} min" : null,
+                TipoExamen = e.tipo_examen_navigation?.nombre,
+                Tecnica = e.tecnica_navigation?.nombre
             };
 
-            if (e.ReferenciaExamen != null)
+            if (e.referencia_examen != null)
             {
-                dto.Referencias = e.ReferenciaExamen.Select(r => new ReferenciaExamenDto
+                dto.Referencias = e.referencia_examen.Select(r => new ReferenciaExamenDto
                 {
-                    IdReferenciaExamen = r.IdReferenciaExamen,
-                    IdExamen = r.IdExamen,
-                    ValorMin = r.ValorMin,
-                    ValorMax = r.ValorMax,
-                    ValorTexto = r.ValorTexto,
-                    Unidad = r.Unidad,
-                    Activo = r.Activo
+                    IdReferenciaExamen = r.id_referencia_examen,
+                    IdExamen = r.id_examen,
+                    ValorMin = r.valor_min,
+                    ValorMax = r.valor_max,
+                    ValorTexto = r.valor_texto,
+                    Unidad = r.unidad,
+                    Activo = r.activo
                 }).ToList();
 
                 var primeraRef = dto.Referencias.FirstOrDefault();

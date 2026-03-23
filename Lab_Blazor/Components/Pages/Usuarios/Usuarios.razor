@@ -3,10 +3,14 @@
 @using Lab_Blazor.Services.Usuarios
 @using Lab_Contracts.Usuarios
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
 @inject IUsuariosApiService UsuariosApi
 @using Lab_Blazor.Services.Auth
+@using Lab_Blazor.Services.Pacientes
+@using Lab_Contracts.Pacientes
 @inject SesionVerificacionService SesionService
 @inject IJSRuntime JS
+@inject IPacientesApiService PacientesApiService
 @inject AuthenticationStateProvider AuthProvider
 
 <AuthorizeView>
@@ -178,6 +182,7 @@
                             {
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.Nombres @_detalleUsuario.Apellidos</li>
+                                    <li class="list-group-item"><strong>Género:</strong> @_detalleUsuario.NombreGenero</li>
                                     <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.Correo</li>
                                     <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.NombreRol</span></li>
                                     <li class="list-group-item"><strong>Activo:</strong> @_detalleUsuario.Activo ? "Sí" : "No"</li>
@@ -209,43 +214,63 @@
                             <div class="modal-body">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
-                                <div class="mb-2">
-                                    <label class="form-label">Cédula</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Cedula" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Nombres</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Nombres" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Apellidos</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Apellidos" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Correo</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Correo" readonly="@(_usuarioActual.IdUsuario != 0)" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Teléfono</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Telefono" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Dirección</label>
-                                    <InputText class="form-control" @bind-Value="_usuarioActual.Direccion" />
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Rol</label>
-                                    <InputSelect class="form-select" @bind-Value="_usuarioActual.IdRol">
-                                        <option value="0">Seleccione</option>
-                                        <option value="1">Administrador</option>
-                                        <option value="2">Recepcionista</option>
-                                        <option value="3">Laboratorista</option>
-                                        <option value="4">Paciente</option>
-                                    </InputSelect>
-                                </div>
-                                <div class="form-check mt-2">
-                                    <InputCheckbox class="form-check-input" @bind-Value="_usuarioActual.Activo" />
-                                    <label class="form-check-label">Activo</label>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Cédula</label>
+                                        <InputText class="form-control" @bind-Value="_usuarioActual.Cedula" @onblur="OnCedulaBlurUsuarioAsync" disabled="@_camposPersonaBloqueados" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Correo</label>
+                                        <InputText class="form-control" @bind-Value="_usuarioActual.Correo" readonly="@(_usuarioActual.IdUsuario != 0 || _camposPersonaBloqueados)" disabled="@_camposPersonaBloqueados" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombres</label>
+                                        <InputText class="form-control text-uppercase"
+                                                   @bind-Value="_usuarioActual.Nombres"
+                                                   @oninput="(e => _usuarioActual.Nombres = e.Value?.ToString()?.ToUpper() ?? string.Empty)"
+                                                   disabled="@_camposPersonaBloqueados" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Apellidos</label>
+                                        <InputText class="form-control text-uppercase"
+                                                   @bind-Value="_usuarioActual.Apellidos"
+                                                   @oninput="(e => _usuarioActual.Apellidos = e.Value?.ToString()?.ToUpper() ?? string.Empty)"
+                                                   disabled="@_camposPersonaBloqueados" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Fecha de Nacimiento</label>
+                                        <InputDate class="form-control" @bind-Value="_usuarioActual.FechaNacimiento" TValue="DateTime" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Género</label>
+                                        <InputSelect class="form-select" @bind-Value="_usuarioActual.IdGenero">
+                                            <option value="0">Seleccione</option>
+                                            @foreach (var g in _generos)
+                                            {
+                                                <option value="@g.IdGenero">@g.Nombre</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Rol</label>
+                                        <InputSelect class="form-select" @bind-Value="_usuarioActual.IdRol">
+                                            <option value="0">Seleccione</option>
+                                            <option value="1">Administrador</option>
+                                            <option value="2">Recepcionista</option>
+                                            <option value="3">Laboratorista</option>
+                                            <option value="4">Paciente</option>
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Teléfono</label>
+                                        <InputText class="form-control" @bind-Value="_usuarioActual.Telefono" disabled="@_camposPersonaBloqueados" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Dirección</label>
+                                        <InputText class="form-control text-uppercase"
+                                                   @bind-Value="_usuarioActual.Direccion"
+                                                   @oninput="(e => _usuarioActual.Direccion = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -289,6 +314,10 @@
     private string _campoFiltro = "", _valorFiltro = "";
     private string _usuarioActualCorreo = "";
     private bool _sesionVerificada = false;
+    private List<GeneroDto> _generos = new();
+    private bool _camposPersonaBloqueados;
+    private bool _cedulaYaRegistradaComoPaciente;
+    private bool _cedulaYaRegistradaComoUsuario;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -301,7 +330,20 @@
 
             var auth = await AuthProvider.GetAuthenticationStateAsync();
             _usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
+            await CargarGenerosAsync();
             StateHasChanged();
+        }
+    }
+
+    private async Task CargarGenerosAsync()
+    {
+        try
+        {
+            _generos = await PacientesApiService.ListarGenerosAsync();
+        }
+        catch
+        {
+            _generos = new();
         }
     }
 
@@ -352,7 +394,10 @@
 
     private void AbrirModalNuevo()
     {
-        _usuarioActual = new() { Activo = true, IdRol = 0 };
+        _usuarioActual = new() { Activo = true, IdRol = 0, IdGenero = 0, FechaNacimiento = DateTime.Today.AddYears(-20) };
+        _camposPersonaBloqueados = false;
+        _cedulaYaRegistradaComoPaciente = false;
+        _cedulaYaRegistradaComoUsuario = false;
         _esNuevo = true;
         _modalVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
@@ -367,13 +412,18 @@
             Cedula = user.Cedula,
             Nombres = user.Nombres,
             Apellidos = user.Apellidos,
+            FechaNacimiento = user.FechaNacimiento,
             Correo = user.Correo,
             Telefono = user.Telefono,
             Direccion = user.Direccion,
+            IdGenero = user.IdGenero,
             IdRol = user.IdRol,
             NombreRol = user.NombreRol,
             Activo = user.Activo
         };
+        _camposPersonaBloqueados = false;
+        _cedulaYaRegistradaComoPaciente = false;
+        _cedulaYaRegistradaComoUsuario = false;
         _esNuevo = false;
         _modalVisible = true;
         JS.InvokeVoidAsync("marcarModalAbierto");
@@ -382,7 +432,70 @@
     private void CerrarModal()
     {
         _modalVisible = false;
+        _camposPersonaBloqueados = false;
+        _cedulaYaRegistradaComoPaciente = false;
+        _cedulaYaRegistradaComoUsuario = false;
         JS.InvokeVoidAsync("marcarModalCerrado");
+    }
+
+    private async Task OnCedulaBlurUsuarioAsync(FocusEventArgs _)
+    {
+        if (_usuarioActual.IdUsuario != 0) return;
+
+        var cedula = _usuarioActual.Cedula?.Trim();
+        if (string.IsNullOrWhiteSpace(cedula))
+        {
+            _camposPersonaBloqueados = false;
+            _cedulaYaRegistradaComoPaciente = false;
+            _cedulaYaRegistradaComoUsuario = false;
+            return;
+        }
+
+        var paciente = await PacientesApiService.ObtenerPacientePorCedulaAsync(cedula);
+        if (paciente != null)
+        {
+            _usuarioActual.Cedula = paciente.Cedula;
+            _usuarioActual.Nombres = paciente.Nombres;
+            _usuarioActual.Apellidos = paciente.Apellidos;
+            _usuarioActual.Correo = paciente.Correo;
+            _usuarioActual.Telefono = paciente.Telefono;
+            _usuarioActual.Direccion = paciente.Direccion;
+            _usuarioActual.FechaNacimiento = paciente.FechaNacimiento ?? DateTime.Today;
+            _usuarioActual.IdGenero = paciente.IdGenero ?? 0;
+            _camposPersonaBloqueados = true;
+            _cedulaYaRegistradaComoPaciente = true;
+            _cedulaYaRegistradaComoUsuario = !string.IsNullOrWhiteSpace(paciente.Correo);
+            await JS.InvokeVoidAsync("alert", _cedulaYaRegistradaComoUsuario
+                ? "La cédula ingresada ya está registrada como paciente y ya tiene usuario."
+                : "La cédula ingresada ya está registrada como paciente.");
+            StateHasChanged();
+            return;
+        }
+
+        var persona = await PacientesApiService.ObtenerPersonaPorCedulaAsync(cedula);
+        if (persona != null)
+        {
+            _usuarioActual.Cedula = persona.Cedula;
+            _usuarioActual.Nombres = persona.Nombres;
+            _usuarioActual.Apellidos = persona.Apellidos;
+            _usuarioActual.Correo = persona.Correo;
+            _usuarioActual.Telefono = persona.Telefono;
+            _usuarioActual.Direccion = persona.Direccion;
+            _usuarioActual.FechaNacimiento = persona.FechaNacimiento ?? DateTime.Today;
+            _usuarioActual.IdGenero = persona.IdGenero ?? 0;
+            _camposPersonaBloqueados = true;
+            _cedulaYaRegistradaComoPaciente = false;
+            _cedulaYaRegistradaComoUsuario = !string.IsNullOrWhiteSpace(persona.Correo);
+            await JS.InvokeVoidAsync("alert", _cedulaYaRegistradaComoUsuario
+                ? "La cédula ingresada ya tiene un usuario registrado."
+                : "Se cargaron los datos de la persona existente.");
+            StateHasChanged();
+            return;
+        }
+
+        _camposPersonaBloqueados = false;
+        _cedulaYaRegistradaComoPaciente = false;
+        _cedulaYaRegistradaComoUsuario = false;
     }
 
     private async Task GuardarUsuarioAsync()
@@ -394,11 +507,25 @@
         {
             if (_esNuevo)
             {
+                if (_cedulaYaRegistradaComoPaciente)
+                {
+                    await JS.InvokeVoidAsync("alert", "La cédula ingresada ya corresponde a un paciente registrado. No se puede guardar.");
+                    return;
+                }
+
+                if (_cedulaYaRegistradaComoUsuario)
+                {
+                    await JS.InvokeVoidAsync("alert", "La cédula ingresada ya tiene un usuario registrado. No se puede guardar.");
+                    return;
+                }
+
                 var crearDto = new UsuarioCrearDto
                 {
                     Cedula = _usuarioActual.Cedula,
                     Nombres = _usuarioActual.Nombres,
                     Apellidos = _usuarioActual.Apellidos,
+                    FechaNacimiento = _usuarioActual.FechaNacimiento,
+                    IdGenero = _usuarioActual.IdGenero,
                     Correo = _usuarioActual.Correo,
                     Telefono = _usuarioActual.Telefono,
                     Direccion = _usuarioActual.Direccion,
@@ -422,6 +549,7 @@
         {
             _mensaje = $"Error: {ex.Message}";
             _tipoMensaje = "danger";
+            await JS.InvokeVoidAsync("alert", ex.Message);
         }
         finally
         {

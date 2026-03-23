@@ -12,6 +12,7 @@ namespace Lab_APIRest.Services.Ordenes
         Task<OrdenDetalleDto?> ObtenerDetalleOrdenAsync(int idOrden);
         Task<bool> AnularOrdenAsync(int idOrden);
         Task<OrdenRespuestaDto?> GuardarOrdenAsync(OrdenCompletaDto datosOrden);
+        Task<OrdenRespuestaDto?> GuardarOrdenConPagoAsync(OrdenPagoGuardarDto datos);
         Task<byte[]?> GenerarOrdenTicketPdfAsync(int idOrden);
         Task<bool> AnularOrdenCompletaAsync(int idOrden);
         Task<List<object>> ListarOrdenesPorPacienteAsync(int idPaciente);

@@ -3,19 +3,19 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Genero
+public partial class genero
 {
-    public int IdGenero { get; set; }
+    public int id_genero { get; set; }
 
-    public string Nombre { get; set; } = null!;
+    public string nombre { get; set; } = null!;
 
-    public string? Descripcion { get; set; }
+    public string? descripcion { get; set; }
 
-    public bool Activo { get; set; }
+    public bool activo { get; set; }
 
-    public DateTime FechaCreacion { get; set; }
+    public DateTime fecha_creacion { get; set; }
 
-    public DateTime? FechaActualizacion { get; set; }
+    public DateTime? fecha_actualizacion { get; set; }
 
-    public virtual ICollection<Paciente> Paciente { get; set; } = new List<Paciente>();
+    public virtual ICollection<persona> persona { get; set; } = new List<persona>();
 }

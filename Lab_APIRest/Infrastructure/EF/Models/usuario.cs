@@ -3,31 +3,33 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Usuario
+public partial class usuario
 {
-    public int IdUsuario { get; set; }
+    public int id_usuario { get; set; }
 
-    public string? PasswordHash { get; set; }
+    public string correo { get; set; } = null!;
 
-    public int IdRol { get; set; }
+    public string? password_hash { get; set; }
 
-    public int IdPersona { get; set; }
+    public int id_rol { get; set; }
 
-    public bool? Activo { get; set; }
+    public int id_persona { get; set; }
 
-    public DateTime FechaCreacion { get; set; }
+    public bool? activo { get; set; }
 
-    public DateTime? UltimoAcceso { get; set; }
+    public DateTime fecha_creacion { get; set; }
 
-    public DateTime? FechaActualizacion { get; set; }
+    public DateTime? ultimo_acceso { get; set; }
 
-    public DateTime? FechaFin { get; set; }
+    public DateTime? fecha_actualizacion { get; set; }
 
-    public virtual Rol IdRolNavigation { get; set; } = null!;
+    public DateTime? fecha_fin { get; set; }
 
-    public virtual Persona IdPersonaNavigation { get; set; } = null!;
+    public virtual rol rol_navigation { get; set; } = null!;
 
-    public virtual ICollection<TokensUsuarios> TokensUsuarios { get; set; } = new List<TokensUsuarios>();
+    public virtual persona persona_navigation { get; set; } = null!;
 
-    public virtual ICollection<Resultado> Resultado { get; set; } = new List<Resultado>();
+    public virtual ICollection<tokens_usuarios> tokens_usuarios { get; set; } = new List<tokens_usuarios>();
+
+    public virtual ICollection<resultado> resultado { get; set; } = new List<resultado>();
 }

@@ -21,7 +21,6 @@ namespace Lab_Contracts.Examenes
         public string? ValorReferencia { get; set; }
         public string? Unidad { get; set; }
 
-        // Nuevos campos normalizados
         public int? TiempoEntregaMinutos { get; set; }
         public int? IdEstudio { get; set; }
         public string? NombreEstudio { get; set; }

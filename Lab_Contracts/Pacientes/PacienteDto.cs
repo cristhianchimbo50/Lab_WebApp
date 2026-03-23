@@ -20,18 +20,18 @@ namespace Lab_Contracts.Pacientes
         [StringLength(150, ErrorMessage = "Los apellidos son muy largos")]
         public string Apellidos { get; set; } = string.Empty;
 
-        [EmailAddress(ErrorMessage = "Correo no valido")]
-        public string Correo { get; set; } = string.Empty;
+        [RegularExpression(@"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Correo no valido")]
+        public string? Correo { get; set; }
 
         [StringLength(30, ErrorMessage = "El telefono es muy largo")]
-        public string Telefono { get; set; } = string.Empty;
+        public string? Telefono { get; set; }
 
         [StringLength(255, ErrorMessage = "La direccion es muy larga")]
-        public string Direccion { get; set; } = string.Empty;
+        public string? Direccion { get; set; }
 
-        [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
-        public DateTime FechaNacimiento { get; set; }
+        public DateTime? FechaNacimiento { get; set; }
 
+        [Required(ErrorMessage = "El género es obligatorio")]
         public int? IdGenero { get; set; }
 
         public string? NombreGenero { get; set; }

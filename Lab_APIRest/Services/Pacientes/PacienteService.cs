@@ -1,9 +1,16 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using paciente = Lab_APIRest.Infrastructure.EF.Models.paciente;
+using persona = Lab_APIRest.Infrastructure.EF.Models.persona;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Pacientes;
 using Lab_Contracts.Common;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Lab_APIRest.Services.Pacientes
 {
@@ -18,27 +25,47 @@ namespace Lab_APIRest.Services.Pacientes
             _emailService = emailService;
         }
 
-        private static PacienteDto MapPaciente(Paciente entidadPaciente) => new()
+        private static PacienteDto MapPaciente(paciente entidadPaciente) => new()
         {
-            IdPaciente = entidadPaciente.IdPaciente,
-            IdPersona = entidadPaciente.IdPersona,
-            Cedula = entidadPaciente.IdPersonaNavigation?.Cedula ?? string.Empty,
-            Nombres = entidadPaciente.IdPersonaNavigation?.Nombres ?? string.Empty,
-            Apellidos = entidadPaciente.IdPersonaNavigation?.Apellidos ?? string.Empty,
-            Correo = entidadPaciente.IdPersonaNavigation?.Correo ?? string.Empty,
-            Telefono = entidadPaciente.IdPersonaNavigation?.Telefono ?? string.Empty,
-            Direccion = entidadPaciente.IdPersonaNavigation?.Direccion ?? string.Empty,
-            FechaNacimiento = entidadPaciente.FechaNacPaciente.ToDateTime(TimeOnly.MinValue),
-            IdGenero = entidadPaciente.IdGenero,
-            NombreGenero = entidadPaciente.IdGeneroNavigation?.Nombre,
-            Activo = entidadPaciente.Activo
+            IdPaciente = entidadPaciente.id_paciente,
+            IdPersona = entidadPaciente.id_persona,
+            Cedula = entidadPaciente.persona_navigation?.cedula ?? string.Empty,
+            Nombres = entidadPaciente.persona_navigation?.nombres ?? string.Empty,
+            Apellidos = entidadPaciente.persona_navigation?.apellidos ?? string.Empty,
+            Correo = entidadPaciente.persona_navigation?.usuario.FirstOrDefault(u => u.activo == true)?.correo
+                ?? entidadPaciente.persona_navigation?.usuario.FirstOrDefault()?.correo
+                ?? string.Empty,
+            Telefono = entidadPaciente.persona_navigation?.telefono ?? string.Empty,
+            Direccion = entidadPaciente.persona_navigation?.direccion ?? string.Empty,
+            FechaNacimiento = (entidadPaciente.persona_navigation?.fecha_nacimiento ?? DateOnly.MinValue).ToDateTime(TimeOnly.MinValue),
+            IdGenero = entidadPaciente.persona_navigation?.id_genero,
+            NombreGenero = entidadPaciente.persona_navigation?.genero_navigation?.nombre,
+            Activo = entidadPaciente.activo
+        };
+
+        private static PacienteDto MapPersona(persona entidadPersona) => new()
+        {
+            IdPaciente = 0,
+            IdPersona = entidadPersona.id_persona,
+            Cedula = entidadPersona.cedula ?? string.Empty,
+            Nombres = entidadPersona.nombres ?? string.Empty,
+            Apellidos = entidadPersona.apellidos ?? string.Empty,
+            Correo = entidadPersona.usuario.FirstOrDefault(u => u.activo == true)?.correo
+                ?? entidadPersona.usuario.FirstOrDefault()?.correo
+                ?? string.Empty,
+            Telefono = entidadPersona.telefono ?? string.Empty,
+            Direccion = entidadPersona.direccion ?? string.Empty,
+            FechaNacimiento = (entidadPersona.fecha_nacimiento ?? DateOnly.MinValue).ToDateTime(TimeOnly.MinValue),
+            IdGenero = entidadPersona.id_genero,
+            NombreGenero = entidadPersona.genero_navigation?.nombre,
+            Activo = entidadPersona.activo
         };
 
         public async Task<List<PacienteDto>> ListarPacientesAsync()
         {
             var lista = await _context.Paciente
-                .Include(p => p.IdGeneroNavigation)
-                .Include(p => p.IdPersonaNavigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
                 .ToListAsync();
             return lista.Select(MapPaciente).ToList();
         }
@@ -46,10 +73,22 @@ namespace Lab_APIRest.Services.Pacientes
         public async Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente)
         {
             var entidadPaciente = await _context.Paciente
-                .Include(p => p.IdGeneroNavigation)
-                .Include(p => p.IdPersonaNavigation)
-                .FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
+                .FirstOrDefaultAsync(p => p.id_paciente == idPaciente);
             return entidadPaciente == null ? null : MapPaciente(entidadPaciente);
+        }
+
+        public async Task<PacienteDto?> ObtenerPersonaPorCedulaAsync(string cedula)
+        {
+            if (string.IsNullOrWhiteSpace(cedula)) return null;
+
+            var entidadPersona = await _context.Persona
+                .Include(p => p.genero_navigation)
+                .Include(p => p.usuario)
+                .FirstOrDefaultAsync(p => p.cedula == cedula);
+
+            return entidadPersona == null ? null : MapPersona(entidadPersona);
         }
 
         public async Task<List<PacienteDto>?> ListarPacientesAsync(string criterio, string valor)
@@ -58,37 +97,35 @@ namespace Lab_APIRest.Services.Pacientes
                 return new List<PacienteDto>();
 
             var campoLower = criterio.ToLower();
-            IQueryable<Paciente> query = _context.Paciente
-                .Include(p => p.IdGeneroNavigation)
-                .Include(p => p.IdPersonaNavigation);
+            IQueryable<paciente> query = _context.Paciente
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario);
             switch (campoLower)
             {
                 case "cedula":
-                    var porCedula = await query.FirstOrDefaultAsync(x => x.IdPersonaNavigation!.Cedula == valor);
+                    var porCedula = await query.FirstOrDefaultAsync(x => x.persona_navigation!.cedula == valor);
                     return porCedula == null ? new List<PacienteDto>() : new List<PacienteDto> { MapPaciente(porCedula) };
                 case "nombre":
-                    return await query.Where(p => (p.IdPersonaNavigation!.Nombres + " " + p.IdPersonaNavigation!.Apellidos).Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
-                case "correo":
-                    return await query.Where(p => p.IdPersonaNavigation!.Correo.Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
+                    return await query.Where(p => (p.persona_navigation!.nombres + " " + p.persona_navigation!.apellidos).Contains(valor)).Select(p => MapPaciente(p)).ToListAsync();
                 default:
-                    return new List<PacienteDto>();
+                    return null;
             }
         }
 
         public async Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro)
         {
             var query = _context.Paciente
-                .Include(p => p.IdGeneroNavigation)
-                .Include(p => p.IdPersonaNavigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
                 .AsNoTracking()
                 .AsQueryable();
 
             if (!(filtro.IncluirAnulados && filtro.IncluirVigentes))
             {
                 if (filtro.IncluirAnulados && !filtro.IncluirVigentes)
-                    query = query.Where(p => p.Activo == false);
+                    query = query.Where(p => p.activo == false);
                 else if (!filtro.IncluirAnulados && filtro.IncluirVigentes)
-                    query = query.Where(p => p.Activo == true);
+                    query = query.Where(p => p.activo == true);
             }
 
             if (!string.IsNullOrWhiteSpace(filtro.CriterioBusqueda) && !string.IsNullOrWhiteSpace(filtro.ValorBusqueda))
@@ -96,9 +133,8 @@ namespace Lab_APIRest.Services.Pacientes
                 var val = filtro.ValorBusqueda.ToLower();
                 switch (filtro.CriterioBusqueda)
                 {
-                    case "cedula": query = query.Where(p => (p.IdPersonaNavigation!.Cedula ?? "").ToLower().Contains(val)); break;
-                    case "nombre": query = query.Where(p => ((p.IdPersonaNavigation!.Nombres + " " + p.IdPersonaNavigation!.Apellidos) ?? "").ToLower().Contains(val)); break;
-                    case "correo": query = query.Where(p => (p.IdPersonaNavigation!.Correo ?? "").ToLower().Contains(val)); break;
+                    case "cedula": query = query.Where(p => (p.persona_navigation!.cedula ?? "").ToLower().Contains(val)); break;
+                    case "nombre": query = query.Where(p => ((p.persona_navigation!.nombres + " " + p.persona_navigation!.apellidos) ?? "").ToLower().Contains(val)); break;
                 }
             }
 
@@ -107,13 +143,12 @@ namespace Lab_APIRest.Services.Pacientes
             bool asc = filtro.SortAsc;
             query = filtro.SortBy switch
             {
-                nameof(PacienteDto.Cedula) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Cedula) : query.OrderByDescending(p => p.IdPersonaNavigation!.Cedula),
-                nameof(PacienteDto.Nombres) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Nombres) : query.OrderByDescending(p => p.IdPersonaNavigation!.Nombres),
-                nameof(PacienteDto.Apellidos) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Apellidos) : query.OrderByDescending(p => p.IdPersonaNavigation!.Apellidos),
-                nameof(PacienteDto.FechaNacimiento) => asc ? query.OrderBy(p => p.FechaNacPaciente) : query.OrderByDescending(p => p.FechaNacPaciente),
-                nameof(PacienteDto.Correo) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Correo) : query.OrderByDescending(p => p.IdPersonaNavigation!.Correo),
-                nameof(PacienteDto.Telefono) => asc ? query.OrderBy(p => p.IdPersonaNavigation!.Telefono) : query.OrderByDescending(p => p.IdPersonaNavigation!.Telefono),
-                _ => asc ? query.OrderBy(p => p.IdPaciente) : query.OrderByDescending(p => p.IdPaciente)
+                nameof(PacienteDto.Cedula) => asc ? query.OrderBy(p => p.persona_navigation!.cedula) : query.OrderByDescending(p => p.persona_navigation!.cedula),
+                nameof(PacienteDto.Nombres) => asc ? query.OrderBy(p => p.persona_navigation!.nombres) : query.OrderByDescending(p => p.persona_navigation!.nombres),
+                nameof(PacienteDto.Apellidos) => asc ? query.OrderBy(p => p.persona_navigation!.apellidos) : query.OrderByDescending(p => p.persona_navigation!.apellidos),
+                nameof(PacienteDto.FechaNacimiento) => asc ? query.OrderBy(p => p.persona_navigation!.fecha_nacimiento) : query.OrderByDescending(p => p.persona_navigation!.fecha_nacimiento),
+                nameof(PacienteDto.Telefono) => asc ? query.OrderBy(p => p.persona_navigation!.telefono) : query.OrderByDescending(p => p.persona_navigation!.telefono),
+                _ => asc ? query.OrderBy(p => p.id_paciente) : query.OrderByDescending(p => p.id_paciente)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;
@@ -137,66 +172,114 @@ namespace Lab_APIRest.Services.Pacientes
             if (!ValidarCedula(dto.Cedula))
                 return (false, "La cédula ingresada no es válida.", null);
 
+            if (!dto.IdGenero.HasValue)
+                return (false, "El género es obligatorio.", null);
+
             await using var transaccion = await _context.Database.BeginTransactionAsync();
 
-            var persona = new Persona
-            {
-                Cedula = dto.Cedula,
-                Nombres = dto.Nombres,
-                Apellidos = dto.Apellidos,
-                Correo = dto.Correo,
-                Telefono = dto.Telefono,
-                Direccion = dto.Direccion,
-                Activo = true,
-                FechaCreacion = DateTime.UtcNow
-            };
-            _context.Persona.Add(persona);
-            await _context.SaveChangesAsync();
+            var persona = await _context.Persona
+                .Include(p => p.usuario)
+                .FirstOrDefaultAsync(p => p.cedula == dto.Cedula);
 
-            var entidadPaciente = new Paciente
+            if (persona == null)
             {
-                IdPersona = persona.IdPersona,
-                FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacimiento),
-                IdGenero = dto.IdGenero,
-                Activo = true,
-                FechaCreacion = DateTime.UtcNow
+                persona = new persona
+                {
+                    cedula = dto.Cedula,
+                    nombres = dto.Nombres,
+                    apellidos = dto.Apellidos,
+                    telefono = dto.Telefono,
+                    direccion = dto.Direccion,
+                    fecha_nacimiento = dto.FechaNacimiento.HasValue ? DateOnly.FromDateTime(dto.FechaNacimiento.Value) : null,
+                    id_genero = dto.IdGenero.Value,
+                    activo = true,
+                    fecha_creacion = DateTime.UtcNow
+                };
+                _context.Persona.Add(persona);
+                await _context.SaveChangesAsync();
+            }
+
+            var pacienteExistente = await _context.Paciente
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
+                .FirstOrDefaultAsync(p => p.id_persona == persona.id_persona);
+
+            if (pacienteExistente != null)
+            {
+                await transaccion.RollbackAsync();
+                return (true, "La persona ya está registrada como paciente.", MapPaciente(pacienteExistente));
+            }
+
+            var entidadPaciente = new paciente
+            {
+                id_persona = persona.id_persona,
+                activo = true,
+                fecha_creacion = DateTime.UtcNow
             };
 
             _context.Paciente.Add(entidadPaciente);
             await _context.SaveChangesAsync();
 
+            usuario? usuarioPaciente = null;
+
+            var tieneUsuario = persona.usuario.Any();
+
+            if (!tieneUsuario && !string.IsNullOrWhiteSpace(dto.Correo))
+            {
+                var crearUsuario = await CrearUsuarioPacienteAsync(persona, dto.Correo);
+                if (!crearUsuario.Exito)
+                {
+                    await transaccion.RollbackAsync();
+                    return (false, crearUsuario.Mensaje, null);
+                }
+                usuarioPaciente = crearUsuario.UsuarioCreado;
+            }
+
             await transaccion.CommitAsync();
 
-            return (true, "Paciente registrado correctamente", MapPaciente(entidadPaciente));
+            var dtoRespuesta = MapPaciente(entidadPaciente);
+            dtoRespuesta.Correo = usuarioPaciente?.correo ?? dtoRespuesta.Correo;
+
+            return (true, "Paciente registrado correctamente", dtoRespuesta);
         }
 
         public async Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto)
         {
             var entidadPaciente = await _context.Paciente
-                .Include(p => p.IdPersonaNavigation)
-                .FirstOrDefaultAsync(p => p.IdPaciente == idPaciente);
+                .Include(p => p.persona_navigation)!.ThenInclude(per => per.usuario)
+                .FirstOrDefaultAsync(p => p.id_paciente == idPaciente);
             if (entidadPaciente == null) return false;
 
-            var persona = entidadPaciente.IdPersonaNavigation!;
-            persona.Cedula = dto.Cedula;
-            persona.Nombres = dto.Nombres;
-            persona.Apellidos = dto.Apellidos;
-            persona.Correo = dto.Correo;
-            persona.Telefono = dto.Telefono;
-            persona.Direccion = dto.Direccion;
-            persona.FechaActualizacion = DateTime.UtcNow;
+            var persona = entidadPaciente.persona_navigation!;
+            persona.cedula = dto.Cedula;
+            persona.nombres = dto.Nombres;
+            persona.apellidos = dto.Apellidos;
+            persona.telefono = dto.Telefono;
+            persona.direccion = dto.Direccion;
+            if (!dto.IdGenero.HasValue)
+                return false;
+            persona.id_genero = dto.IdGenero.Value;
+            persona.fecha_nacimiento = dto.FechaNacimiento.HasValue ? DateOnly.FromDateTime(dto.FechaNacimiento.Value) : null;
+            persona.fecha_actualizacion = DateTime.UtcNow;
 
-            entidadPaciente.FechaNacPaciente = DateOnly.FromDateTime(dto.FechaNacimiento);
-            entidadPaciente.IdGenero = dto.IdGenero;
-            entidadPaciente.Activo = dto.Activo;
-            entidadPaciente.FechaActualizacion = DateTime.UtcNow;
-            if (!entidadPaciente.Activo)
+            entidadPaciente.activo = dto.Activo;
+            entidadPaciente.fecha_actualizacion = DateTime.UtcNow;
+            if (!entidadPaciente.activo)
             {
-                entidadPaciente.FechaFin = entidadPaciente.FechaFin ?? DateTime.UtcNow;
+                entidadPaciente.fecha_fin = entidadPaciente.fecha_fin ?? DateTime.UtcNow;
             }
             else
             {
-                entidadPaciente.FechaFin = null;
+                entidadPaciente.fecha_fin = null;
+            }
+
+            var usuarioExistente = persona.usuario.FirstOrDefault();
+            var tieneCorreo = !string.IsNullOrWhiteSpace(usuarioExistente?.correo);
+
+            if (!tieneCorreo && !string.IsNullOrWhiteSpace(dto.Correo))
+            {
+                var crearUsuario = await CrearUsuarioPacienteAsync(persona, dto.Correo);
+                if (!crearUsuario.Exito) return false;
             }
 
             await _context.SaveChangesAsync();
@@ -207,10 +290,10 @@ namespace Lab_APIRest.Services.Pacientes
         {
             var entidadPaciente = await _context.Paciente.FindAsync(idPaciente);
             if (entidadPaciente == null) return false;
-            if (!entidadPaciente.Activo) return true;
-            entidadPaciente.Activo = false;
-            entidadPaciente.FechaFin = DateTime.UtcNow;
-            entidadPaciente.FechaActualizacion = DateTime.UtcNow;
+            if (!entidadPaciente.activo) return true;
+            entidadPaciente.activo = false;
+            entidadPaciente.fecha_fin = DateTime.UtcNow;
+            entidadPaciente.fecha_actualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -221,10 +304,10 @@ namespace Lab_APIRest.Services.Pacientes
                 .AsNoTracking()
                 .Select(g => new GeneroDto
                 {
-                    IdGenero = g.IdGenero,
-                    Nombre = g.Nombre,
-                    Descripcion = g.Descripcion,
-                    Activo = g.Activo
+                    IdGenero = g.id_genero,
+                    Nombre = g.nombre,
+                    Descripcion = g.descripcion,
+                    Activo = g.activo
                 })
                 .ToListAsync();
         }
@@ -248,12 +331,66 @@ namespace Lab_APIRest.Services.Pacientes
             return ultimoDigito == digitoCalculado;
         }
 
-        private static int CalcularEdad(DateTime fechaNacimiento)
+        private async Task<(bool Exito, string Mensaje, usuario? UsuarioCreado)> CrearUsuarioPacienteAsync(persona persona, string correo)
         {
-            var hoy = DateTime.Today;
-            var edad = hoy.Year - fechaNacimiento.Year;
-            if (fechaNacimiento > hoy.AddYears(-edad)) edad--;
-            return edad;
+            var rolPacienteId = await _context.Rol
+                .Where(r => r.nombre.ToLower() == "paciente")
+                .Select(r => (int?)r.id_rol)
+                .FirstOrDefaultAsync();
+
+            if (!rolPacienteId.HasValue)
+                return (false, "No se encontró el rol de paciente.", null);
+
+            var tokenBytes = RandomNumberGenerator.GetBytes(32);
+            var token = Convert.ToBase64String(tokenBytes);
+            var tokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+
+            var usuarioPaciente = new usuario
+            {
+                id_persona = persona.id_persona,
+                id_rol = rolPacienteId.Value,
+                correo = correo,
+                activo = false,
+                password_hash = Convert.ToHexString(tokenHash),
+                fecha_creacion = DateTime.UtcNow
+            };
+            _context.Usuario.Add(usuarioPaciente);
+            await _context.SaveChangesAsync();
+
+            var tokenRegistro = new tokens_usuarios
+            {
+                id_usuario = usuarioPaciente.id_usuario,
+                token_hash = tokenHash,
+                tipo_token = "activacion",
+                fecha_solicitud = DateTime.UtcNow,
+                fecha_expiracion = DateTime.UtcNow.AddHours(24),
+                usado = false
+            };
+            _context.TokensUsuarios.Add(tokenRegistro);
+            await _context.SaveChangesAsync();
+
+            var tokenUrl = Uri.EscapeDataString(token);
+            var dominio = "http://laboratorioinmaculada:9111";
+            var enlace = $"{dominio}/activar-cuenta?token={tokenUrl}";
+
+            var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
+            var cuerpo = $@"<p>Hola <strong>{persona.nombres} {persona.apellidos}</strong>,</p>
+
+<p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
+
+<p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
+
+<p>
+    <a href=""{enlace}"" target=""_blank"">Activar mi cuenta</a>
+</p>
+
+<p>Este enlace estará disponible durante 24 horas.</p>
+
+<p>Si no solicitaste este registro, puedes ignorar este mensaje.</p>";
+
+            await _emailService.EnviarCorreoAsync(usuarioPaciente.correo, $"{persona.nombres} {persona.apellidos}", asunto, cuerpo);
+
+            return (true, string.Empty, usuarioPaciente);
         }
     }
 }

@@ -63,7 +63,7 @@ namespace Lab_Blazor.Services.Pacientes
                 var dto = await resp.Content.ReadFromJsonAsync<PacienteDto?>();
                 return (true, "Paciente registrado correctamente.", dto);
             }
-            string errorMsg = resp.StatusCode == System.Net.HttpStatusCode.Conflict ? await resp.Content.ReadAsStringAsync() : $"Error {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}";
+            string errorMsg = await ExtraerMensajeErrorAsync(resp, $"Error {resp.StatusCode} al guardar paciente.");
             return (false, errorMsg, null);
         }
 
@@ -94,6 +94,18 @@ namespace Lab_Blazor.Services.Pacientes
             return lista?.FirstOrDefault();
         }
 
+        public async Task<PacienteDto?> ObtenerPersonaPorCedulaAsync(string cedula)
+        {
+            if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
+            var c = Uri.EscapeDataString(cedula ?? string.Empty);
+            var req = new HttpRequestMessage(HttpMethod.Get, $"api/pacientes/persona?cedula={c}");
+            AddTokenHeader(req);
+            var resp = await _http.SendAsync(req);
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadFromJsonAsync<PacienteDto>();
+        }
+
         public async Task<List<GeneroDto>> ListarGenerosAsync()
         {
             if (!await SetAuthHeaderAsync()) throw new HttpRequestException("Token no disponible o sesión expirada.");
@@ -101,6 +113,26 @@ namespace Lab_Blazor.Services.Pacientes
             AddTokenHeader(req);
             var resp = await _http.SendAsync(req); resp.EnsureSuccessStatusCode();
             return await resp.Content.ReadFromJsonAsync<List<GeneroDto>>() ?? new();
+        }
+
+        private static async Task<string> ExtraerMensajeErrorAsync(HttpResponseMessage resp, string predeterminado)
+        {
+            var contenido = await resp.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(contenido)) return predeterminado;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(contenido);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("Mensaje", out var m)) return m.GetString() ?? predeterminado;
+                    if (doc.RootElement.TryGetProperty("message", out var mm)) return mm.GetString() ?? predeterminado;
+                    if (doc.RootElement.TryGetProperty("title", out var t)) return t.GetString() ?? predeterminado;
+                }
+            }
+            catch { }
+
+            return contenido;
         }
     }
 }

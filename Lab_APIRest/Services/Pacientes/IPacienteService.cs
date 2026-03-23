@@ -8,6 +8,7 @@ namespace Lab_APIRest.Services.Pacientes
         Task<List<PacienteDto>> ListarPacientesAsync();
         Task<PacienteDto?> ObtenerDetallePacienteAsync(int idPaciente);
         Task<List<PacienteDto>?> ListarPacientesAsync(string criterio, string valor);
+        Task<PacienteDto?> ObtenerPersonaPorCedulaAsync(string cedula);
         Task<ResultadoPaginadoDto<PacienteDto>> ListarPacientesPaginadosAsync(PacienteFiltroDto filtro);
         Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto dto);
         Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto);

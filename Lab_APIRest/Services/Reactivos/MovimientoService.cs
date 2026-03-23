@@ -1,8 +1,10 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using movimiento_reactivo = Lab_APIRest.Infrastructure.EF.Models.movimiento_reactivo;
 using Lab_Contracts.Reactivos;
 using Microsoft.EntityFrameworkCore;
 using Lab_Contracts.Common;
+using System.Linq;
 
 namespace Lab_APIRest.Services.Reactivos
 {
@@ -15,49 +17,49 @@ namespace Lab_APIRest.Services.Reactivos
             _context = context;
         }
 
-        private static MovimientoReactivoDto MapMovimiento(MovimientoReactivo entidad) => new()
+        private static MovimientoReactivoDto MapMovimiento(movimiento_reactivo entidad) => new()
         {
-            IdMovimientoReactivo = entidad.IdMovimientoReactivo,
-            IdReactivo = entidad.IdReactivo ?? 0,
-            NombreReactivo = entidad.IdReactivoNavigation?.NombreReactivo ?? string.Empty,
-            TipoMovimiento = entidad.TipoMovimiento ?? string.Empty,
-            Cantidad = entidad.Cantidad ?? 0m,
-            FechaMovimiento = entidad.FechaMovimiento,
-            Observacion = entidad.Observacion ?? string.Empty,
-            IdDetalleResultado = entidad.DetalleResultado != null ? entidad.DetalleResultado.IdResultado : null,
-            NumeroResultado = entidad.DetalleResultado?.IdResultadoNavigation?.NumeroResultado
+            IdMovimientoReactivo = entidad.id_movimiento_reactivo,
+            IdReactivo = entidad.id_reactivo ?? 0,
+            NombreReactivo = entidad.reactivo_navigation?.nombre_reactivo ?? string.Empty,
+            TipoMovimiento = entidad.tipo_movimiento ?? string.Empty,
+            Cantidad = entidad.cantidad ?? 0m,
+            FechaMovimiento = entidad.fecha_movimiento,
+            Observacion = entidad.observacion ?? string.Empty,
+            IdDetalleResultado = entidad.detalle_resultado_navigation != null ? entidad.detalle_resultado_navigation.id_resultado : null,
+            NumeroResultado = entidad.detalle_resultado_navigation?.resultado_navigation?.numero_resultado
         };
 
         public async Task<List<MovimientoReactivoDto>> ListarMovimientosAsync(MovimientoReactivoFiltroDto filtro)
         {
             var consulta = _context.MovimientoReactivo
-                .Include(m => m.IdReactivoNavigation)
-                .Include(m => m.DetalleResultado)!.ThenInclude(dr => dr.IdResultadoNavigation)
+                .Include(m => m.reactivo_navigation)
+                .Include(m => m.detalle_resultado_navigation)!.ThenInclude(dr => dr.resultado_navigation)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.IdMovimientoReactivo) && int.TryParse(filtro.IdMovimientoReactivo, out int numeroMovimiento))
-                consulta = consulta.Where(m => m.IdMovimientoReactivo == numeroMovimiento);
+                consulta = consulta.Where(m => m.id_movimiento_reactivo == numeroMovimiento);
 
             if (!string.IsNullOrWhiteSpace(filtro.NombreReactivo))
-                consulta = consulta.Where(m => m.IdReactivoNavigation != null && m.IdReactivoNavigation.NombreReactivo.Contains(filtro.NombreReactivo));
+                consulta = consulta.Where(m => m.reactivo_navigation != null && m.reactivo_navigation.nombre_reactivo.Contains(filtro.NombreReactivo));
 
             if (!string.IsNullOrWhiteSpace(filtro.Observacion))
-                consulta = consulta.Where(m => (m.Observacion ?? "").Contains(filtro.Observacion));
+                consulta = consulta.Where(m => (m.observacion ?? "").Contains(filtro.Observacion));
 
             if (filtro.FechaDesde.HasValue)
-                consulta = consulta.Where(m => m.FechaMovimiento >= filtro.FechaDesde.Value);
+                consulta = consulta.Where(m => m.fecha_movimiento >= filtro.FechaDesde.Value);
             if (filtro.FechaHasta.HasValue)
-                consulta = consulta.Where(m => m.FechaMovimiento <= filtro.FechaHasta.Value);
+                consulta = consulta.Where(m => m.fecha_movimiento <= filtro.FechaHasta.Value);
 
             if (!(filtro.IncluirIngresos && filtro.IncluirEgresos))
             {
-                if (filtro.IncluirIngresos) consulta = consulta.Where(m => m.TipoMovimiento == "INGRESO");
-                else if (filtro.IncluirEgresos) consulta = consulta.Where(m => m.TipoMovimiento == "EGRESO");
+                if (filtro.IncluirIngresos) consulta = consulta.Where(m => m.tipo_movimiento == "INGRESO");
+                else if (filtro.IncluirEgresos) consulta = consulta.Where(m => m.tipo_movimiento == "EGRESO");
                 else consulta = consulta.Where(_ => false);
             }
 
             var movimientos = await consulta
-                .OrderByDescending(m => m.FechaMovimiento)
+                .OrderByDescending(m => m.fecha_movimiento)
                 .Select(m => MapMovimiento(m))
                 .ToListAsync();
 
@@ -67,25 +69,25 @@ namespace Lab_APIRest.Services.Reactivos
         public async Task<ResultadoPaginadoDto<MovimientoReactivoDto>> ListarMovimientosPaginadosAsync(MovimientoReactivoFiltroDto filtro)
         {
             var consulta = _context.MovimientoReactivo
-                .Include(m => m.IdReactivoNavigation)
-                .Include(m => m.DetalleResultado)!.ThenInclude(d => d.IdResultadoNavigation)
+                .Include(m => m.reactivo_navigation)
+                .Include(m => m.detalle_resultado_navigation)!.ThenInclude(d => d.resultado_navigation)
                 .AsNoTracking()
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.IdMovimientoReactivo) && int.TryParse(filtro.IdMovimientoReactivo, out int numeroMovimiento))
-                consulta = consulta.Where(m => m.IdMovimientoReactivo == numeroMovimiento);
+                consulta = consulta.Where(m => m.id_movimiento_reactivo == numeroMovimiento);
             if (!string.IsNullOrWhiteSpace(filtro.NombreReactivo))
-                consulta = consulta.Where(m => m.IdReactivoNavigation != null && m.IdReactivoNavigation.NombreReactivo.Contains(filtro.NombreReactivo));
+                consulta = consulta.Where(m => m.reactivo_navigation != null && m.reactivo_navigation.nombre_reactivo.Contains(filtro.NombreReactivo));
             if (!string.IsNullOrWhiteSpace(filtro.Observacion))
-                consulta = consulta.Where(m => (m.Observacion ?? "").Contains(filtro.Observacion));
+                consulta = consulta.Where(m => (m.observacion ?? "").Contains(filtro.Observacion));
             if (filtro.FechaDesde.HasValue)
-                consulta = consulta.Where(m => m.FechaMovimiento >= filtro.FechaDesde.Value);
+                consulta = consulta.Where(m => m.fecha_movimiento >= filtro.FechaDesde.Value);
             if (filtro.FechaHasta.HasValue)
-                consulta = consulta.Where(m => m.FechaMovimiento <= filtro.FechaHasta.Value);
+                consulta = consulta.Where(m => m.fecha_movimiento <= filtro.FechaHasta.Value);
             if (!(filtro.IncluirIngresos && filtro.IncluirEgresos))
             {
-                if (filtro.IncluirIngresos) consulta = consulta.Where(m => m.TipoMovimiento == "INGRESO");
-                else if (filtro.IncluirEgresos) consulta = consulta.Where(m => m.TipoMovimiento == "EGRESO");
+                if (filtro.IncluirIngresos) consulta = consulta.Where(m => m.tipo_movimiento == "INGRESO");
+                else if (filtro.IncluirEgresos) consulta = consulta.Where(m => m.tipo_movimiento == "EGRESO");
                 else consulta = consulta.Where(_ => false);
             }
 
@@ -94,11 +96,11 @@ namespace Lab_APIRest.Services.Reactivos
             bool asc = filtro.SortAsc;
             consulta = filtro.SortBy switch
             {
-                nameof(MovimientoReactivoDto.IdMovimientoReactivo) => asc ? consulta.OrderBy(m => m.IdMovimientoReactivo) : consulta.OrderByDescending(m => m.IdMovimientoReactivo),
-                nameof(MovimientoReactivoDto.NombreReactivo) => asc ? consulta.OrderBy(m => m.IdReactivoNavigation!.NombreReactivo) : consulta.OrderByDescending(m => m.IdReactivoNavigation!.NombreReactivo),
-                nameof(MovimientoReactivoDto.TipoMovimiento) => asc ? consulta.OrderBy(m => m.TipoMovimiento) : consulta.OrderByDescending(m => m.TipoMovimiento),
-                nameof(MovimientoReactivoDto.Cantidad) => asc ? consulta.OrderBy(m => m.Cantidad) : consulta.OrderByDescending(m => m.Cantidad),
-                _ => asc ? consulta.OrderBy(m => m.FechaMovimiento) : consulta.OrderByDescending(m => m.FechaMovimiento)
+                nameof(MovimientoReactivoDto.IdMovimientoReactivo) => asc ? consulta.OrderBy(m => m.id_movimiento_reactivo) : consulta.OrderByDescending(m => m.id_movimiento_reactivo),
+                nameof(MovimientoReactivoDto.NombreReactivo) => asc ? consulta.OrderBy(m => m.reactivo_navigation!.nombre_reactivo) : consulta.OrderByDescending(m => m.reactivo_navigation!.nombre_reactivo),
+                nameof(MovimientoReactivoDto.TipoMovimiento) => asc ? consulta.OrderBy(m => m.tipo_movimiento) : consulta.OrderByDescending(m => m.tipo_movimiento),
+                nameof(MovimientoReactivoDto.Cantidad) => asc ? consulta.OrderBy(m => m.cantidad) : consulta.OrderByDescending(m => m.cantidad),
+                _ => asc ? consulta.OrderBy(m => m.fecha_movimiento) : consulta.OrderByDescending(m => m.fecha_movimiento)
             };
 
             var pageNumber = filtro.PageNumber < 1 ? 1 : filtro.PageNumber;

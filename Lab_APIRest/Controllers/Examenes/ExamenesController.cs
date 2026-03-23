@@ -96,5 +96,30 @@ namespace Lab_APIRest.Controllers.Examenes
             if (!ok) return NotFound();
             return NoContent();
         }
+
+        [HttpGet("catalogos/{tipo}")]
+        public async Task<ActionResult<List<CatalogoExamenDto>>> ListarCatalogo(string tipo, [FromQuery] bool incluirInactivos = true)
+        {
+            var result = await _examenService.ListarCatalogoAsync(tipo, incluirInactivos);
+            return Ok(result);
+        }
+
+        [HttpPost("catalogos/{tipo}")]
+        [Authorize(Roles = "1")]
+        public async Task<ActionResult<CatalogoExamenDto>> GuardarCatalogo(string tipo, [FromBody] CatalogoExamenDto dto)
+        {
+            var guardado = await _examenService.GuardarCatalogoAsync(tipo, dto);
+            if (guardado == null) return BadRequest("Datos de catálogo inválidos.");
+            return Ok(guardado);
+        }
+
+        [HttpPut("catalogos/{tipo}/{id:int}/estado")]
+        [Authorize(Roles = "1")]
+        public async Task<IActionResult> CambiarEstadoCatalogo(string tipo, int id, [FromQuery] bool activo)
+        {
+            var ok = await _examenService.CambiarEstadoCatalogoAsync(tipo, id, activo);
+            if (!ok) return NotFound();
+            return NoContent();
+        }
     }
 }

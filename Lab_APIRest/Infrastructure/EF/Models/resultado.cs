@@ -3,35 +3,35 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Resultado
+public partial class resultado
 {
-    public int IdResultado { get; set; }
+    public int id_resultado { get; set; }
 
-    public string NumeroResultado { get; set; } = null!;
+    public string numero_resultado { get; set; } = null!;
 
-    public DateTime FechaResultado { get; set; }
+    public DateTime fecha_resultado { get; set; }
 
-    public string? Observaciones { get; set; }
+    public string? observaciones { get; set; }
 
-    public DateTime? FechaFin { get; set; }
+    public DateTime? fecha_fin { get; set; }
 
-    public bool Activo { get; set; }
+    public bool activo { get; set; }
 
-    public int IdOrden { get; set; }
+    public int id_orden { get; set; }
 
-    public int IdEstadoResultado { get; set; }
+    public int id_estado_resultado { get; set; }
 
-    public string? ObservacionRevision { get; set; }
+    public string? observacion_revision { get; set; }
 
-    public int? IdRevisor { get; set; }
+    public int? id_revisor { get; set; }
 
-    public DateTime? FechaRevision { get; set; }
+    public DateTime? fecha_revision { get; set; }
 
-    public virtual ICollection<DetalleResultado> DetalleResultado { get; set; } = new List<DetalleResultado>();
+    public virtual ICollection<detalle_resultado> detalle_resultado { get; set; } = new List<detalle_resultado>();
 
-    public virtual Orden IdOrdenNavigation { get; set; } = null!;
+    public virtual orden orden_navigation { get; set; } = null!;
 
-    public virtual Usuario? IdRevisorNavigation { get; set; }
+    public virtual usuario? revisor_navigation { get; set; }
 
-    public virtual EstadoResultado IdEstadoResultadoNavigation { get; set; } = null!;
+    public virtual estado_resultado estado_resultado_navigation { get; set; } = null!;
 }

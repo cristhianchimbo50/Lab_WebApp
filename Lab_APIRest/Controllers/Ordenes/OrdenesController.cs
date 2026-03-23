@@ -139,6 +139,22 @@ namespace Lab_APIRest.Controllers
             return Ok(respuesta);
         }
 
+        [Authorize(Roles = "1,2")]
+        [HttpPost("con-pago")]
+        public async Task<IActionResult> GuardarOrdenConPago([FromBody] OrdenPagoGuardarDto datos)
+        {
+            try
+            {
+                var respuesta = await _ordenService.GuardarOrdenConPagoAsync(datos);
+                if (respuesta == null) return BadRequest(new { Mensaje = "No se pudo registrar la orden y pago." });
+                return Ok(respuesta);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Mensaje = ex.Message });
+            }
+        }
+
         [Authorize(Roles = "1")]
         [HttpPut("anular/{idOrden}")]
         public async Task<IActionResult> AnularOrden(int idOrden)

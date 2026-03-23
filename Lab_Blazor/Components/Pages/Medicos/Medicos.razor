@@ -8,6 +8,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using Lab_Blazor.Services.Auth
+@using Microsoft.AspNetCore.Components.Web
 @inject SesionVerificacionService SesionService
 @inject IMedicosApiService MedicosApiService
 @inject IJSRuntime JS
@@ -32,7 +33,7 @@
                 <div class="card-body row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Buscar por</label>
-                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" class="form-select">
+                        <InputSelect @bind-Value="_filtro.CriterioBusqueda" @bind-Value:after="AjustarValorBusquedaSegunCriterio" class="form-select">
                             <option value="">-- Seleccione --</option>
                             <option value="nombre">Nombre</option>
                             <option value="especialidad">Especialidad</option>
@@ -42,11 +43,14 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Valor</label>
-                        <InputText class="form-control" @bind-Value="_filtro.ValorBusqueda" placeholder="Ingrese valor"
-                                   @onkeypress="@(e => { if (e.Key == "Enter") BuscarMedicosAsync(); })" />
+                        <input class="form-control @(_filtro.CriterioBusqueda is "nombre" or "especialidad" ? "text-uppercase" : string.Empty)"
+                               value="@ValorBusquedaFiltro"
+                               placeholder="Ingrese valor"
+                               @oninput="OnValorBusquedaInput"
+                               @onkeypress="OnValorBusquedaKeyPressAsync" />
                     </div>
                     <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                        <button class="btn btn-primary" @onclick="BuscarMedicosAsync" disabled="@_buscando">
+                        <button class="btn btn-primary" @onclick="(() => BuscarMedicosAsync(mostrarToastExito: true))" disabled="@_buscando">
                             @if (_buscando) {<span class="spinner-border spinner-border-sm me-1"></span>}<i class="bi bi-search me-1"></i>Buscar
                         </button>
                         <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaAsync" disabled="@_buscando">
@@ -163,11 +167,12 @@
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Nombre</label><InputText class="form-control text-uppercase" @bind-Value="_medicoActual.NombreMedico" @oninput="(e => _medicoActual.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
-                                    <div class="col-md-6"><label class="form-label">Especialidad</label><InputText class="form-control text-uppercase" @bind-Value="_medicoActual.Especialidad" @oninput="(e => _medicoActual.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Nombre <span class="text-danger">*</span></label><InputText class="form-control text-uppercase" @bind-Value="_medicoActual.NombreMedico" required @oninput="(e => _medicoActual.NombreMedico = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
+                                    <div class="col-md-6"><label class="form-label">Especialidad <span class="text-danger">*</span></label><InputText class="form-control text-uppercase" @bind-Value="_medicoActual.Especialidad" required @oninput="(e => _medicoActual.Especialidad = e.Value?.ToString()?.ToUpper() ?? string.Empty)" /></div>
                                     <div class="col-md-6"><label class="form-label">Correo Electrónico</label><InputText class="form-control" @bind-Value="_medicoActual.Correo" /></div>
                                     <div class="col-md-6"><label class="form-label">Teléfono</label><InputText class="form-control" @bind-Value="_medicoActual.Telefono" /></div>
                                 </div>
+                                <div class="mt-3 small text-danger">* Los datos en rojo son datos requeridos.</div>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary px-3"><i class="bi bi-save me-1"></i>Guardar</button>
@@ -197,13 +202,12 @@
             if (!await SesionService.VerificarOSalirAsync()) return;
             _filtro.PageNumber = 1; _filtro.PageSize = 10; _filtro.SortBy = nameof(MedicoDto.NombreMedico); _filtro.SortAsc = true; _filtro.IncluirAnulados = true; _filtro.IncluirVigentes = true;
             StateHasChanged();
-            await BuscarMedicosAsync();
         }
     }
 
     private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
-    private async Task BuscarMedicosAsync()
+    private async Task BuscarMedicosAsync(bool mostrarToastExito = false)
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
         if (_buscando) return;
@@ -211,13 +215,45 @@
         {
             _buscando = true;
             _resultado = await MedicosApiService.ListarMedicosPaginadosAsync(_filtro);
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
+            if (mostrarToastExito)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
+            }
         }
         catch
         {
             await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar médicos.", "danger");
         }
         finally { _buscando = false; }
+    }
+
+    private string ValorBusquedaFiltro
+    {
+        get => _filtro.ValorBusqueda ?? string.Empty;
+        set => _filtro.ValorBusqueda = (_filtro.CriterioBusqueda is "nombre" or "especialidad")
+            ? (value ?? string.Empty).ToUpper()
+            : value;
+    }
+
+    private void AjustarValorBusquedaSegunCriterio()
+    {
+        if (_filtro.CriterioBusqueda is "nombre" or "especialidad")
+        {
+            _filtro.ValorBusqueda = (_filtro.ValorBusqueda ?? string.Empty).ToUpper();
+        }
+    }
+
+    private async Task OnValorBusquedaKeyPressAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await BuscarMedicosAsync();
+        }
+    }
+
+    private void OnValorBusquedaInput(ChangeEventArgs e)
+    {
+        ValorBusquedaFiltro = e.Value?.ToString() ?? string.Empty;
     }
 
     private async Task LimpiarBusquedaAsync()
@@ -272,6 +308,11 @@
     private async Task ValidarYGuardarAsync()
     {
         if (!await SesionService.VerificarOSalirAsync()) return;
+        if (string.IsNullOrWhiteSpace(_medicoActual.NombreMedico) || string.IsNullOrWhiteSpace(_medicoActual.Especialidad))
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Nombre y especialidad son obligatorios.", "warning");
+            return;
+        }
         HttpResponseMessage result = _medicoActual.IdMedico == 0
             ? await MedicosApiService.GuardarMedicoAsync(_medicoActual)  
             : await MedicosApiService.GuardarMedicoAsync(_medicoActual.IdMedico, _medicoActual);

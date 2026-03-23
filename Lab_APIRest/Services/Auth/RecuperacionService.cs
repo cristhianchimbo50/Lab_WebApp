@@ -1,5 +1,6 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
+using tokens_usuarios = Lab_APIRest.Infrastructure.EF.Models.tokens_usuarios;
 using Lab_APIRest.Infrastructure.Services;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
@@ -26,21 +27,30 @@ namespace Lab_APIRest.Services.Auth
             var correo = (dto.Correo ?? string.Empty).Trim().ToLowerInvariant();
 
             var usuario = await _db.Usuario
-                .Include(u => u.IdPersonaNavigation)
-                .FirstOrDefaultAsync(u => u.IdPersonaNavigation.Correo.ToLower() == correo && u.Activo == true, ct);
+                .Where(u => u.activo == true && u.correo.ToLower() == correo)
+                .Select(u => new
+                {
+                    Usuario = u,
+                    u.id_usuario,
+                    u.id_persona,
+                    Nombres = u.persona_navigation.nombres,
+                    Apellidos = u.persona_navigation.apellidos
+                })
+                .FirstOrDefaultAsync(ct);
+
             if (usuario == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El correo no está registrado o el usuario está inactivo." };
 
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             var tokenHash = CalcularHash(token);
 
-            var registro = new TokensUsuarios
+            var registro = new tokens_usuarios
             {
-                IdUsuario = usuario.IdUsuario,
-                TokenHash = tokenHash,
-                FechaExpiracion = DateTime.UtcNow.AddMinutes(15),
-                Usado = false,
-                TipoToken = "recuperacion"
+                id_usuario = usuario.id_usuario,
+                token_hash = tokenHash,
+                fecha_expiracion = DateTime.UtcNow.AddMinutes(15),
+                usado = false,
+                tipo_token = "recuperacion"
             };
 
             _db.TokensUsuarios.Add(registro);
@@ -49,7 +59,7 @@ namespace Lab_APIRest.Services.Auth
             var link = $"http://laboratorioinmaculada:9111/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
             var asunto = "Recuperación de Contraseña - Laboratorio Clínico 'La Inmaculada'";
             var cuerpoHtml = $@"
-                <p>Hola <strong>{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}</strong>,</p>
+                <p>Hola <strong>{usuario.Nombres} {usuario.Apellidos}</strong>,</p>
 
                 <p>Recibimos una solicitud para restablecer tu contraseña.</p>
 
@@ -68,7 +78,8 @@ namespace Lab_APIRest.Services.Auth
                     <strong>Laboratorio Clínico ""La Inmaculada""</strong>
                 </p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.IdPersonaNavigation!.Correo, $"{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}", asunto, cuerpoHtml);
+            var nombreCompleto = $"{usuario.Nombres} {usuario.Apellidos}".Trim();
+            await _emailService.EnviarCorreoAsync(usuario.Usuario.correo, nombreCompleto, asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Se ha enviado un enlace de recuperación a tu correo electrónico." };
         }
@@ -81,26 +92,33 @@ namespace Lab_APIRest.Services.Auth
             var tokenHash = CalcularHash(dto.Token);
 
             var registro = await _db.TokensUsuarios
-                .Include(r => r.IdUsuarioNavigation)
-                .FirstOrDefaultAsync(r => r.TokenHash == tokenHash && !r.Usado && r.TipoToken == "recuperacion", ct);
+                .Include(r => r.usuario_navigation)
+                .FirstOrDefaultAsync(r => r.token_hash == tokenHash && !r.usado && r.tipo_token == "recuperacion", ct);
 
             if (registro == null)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace no es válido." };
 
-            if (registro.FechaExpiracion < DateTime.UtcNow)
+            if (registro.fecha_expiracion < DateTime.UtcNow)
                 return new RespuestaMensajeDto { Exito = false, Mensaje = "El enlace ha expirado. Solicita uno nuevo." };
 
-            var usuario = registro.IdUsuarioNavigation;
-            usuario.PasswordHash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
+            var usuario = registro.usuario_navigation;
+            usuario.password_hash = _hasher.HashPassword(null!, dto.NuevaContrasenia);
 
-            registro.Usado = true;
-            registro.UsadoEn = DateTime.UtcNow;
+            registro.usado = true;
+            registro.usado_en = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
 
+            var persona = await _db.Persona
+                .Where(p => p.id_persona == usuario.id_persona)
+                .Select(p => new { p.nombres, p.apellidos })
+                .FirstOrDefaultAsync(ct);
+
+            var nombreCompleto = $"{persona?.nombres} {persona?.apellidos}".Trim();
+
             var asunto = "Contraseña actualizada - Laboratorio Clínico La Inmaculada";
             var cuerpoHtml = $@"
-                <p>Hola <strong>{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}</strong>,</p>
+                <p>Hola <strong>{nombreCompleto}</strong>,</p>
 
                 <p>Tu contraseña fue restablecida correctamente.</p>
 
@@ -111,7 +129,7 @@ namespace Lab_APIRest.Services.Auth
                     <strong>Laboratorio Clínico ""La Inmaculada""</strong>
                 </p>";
 
-            await _emailService.EnviarCorreoAsync(usuario.IdPersonaNavigation!.Correo, $"{usuario.IdPersonaNavigation!.Nombres} {usuario.IdPersonaNavigation!.Apellidos}", asunto, cuerpoHtml);
+            await _emailService.EnviarCorreoAsync(usuario.correo, nombreCompleto, asunto, cuerpoHtml);
 
             return new RespuestaMensajeDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." };
         }

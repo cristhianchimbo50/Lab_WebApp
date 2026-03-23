@@ -3,31 +3,35 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Persona
+public partial class persona
 {
-    public int IdPersona { get; set; }
+    public int id_persona { get; set; }
 
-    public string Cedula { get; set; } = null!;
+    public string cedula { get; set; } = null!;
 
-    public string Nombres { get; set; } = null!;
+    public string nombres { get; set; } = null!;
 
-    public string Apellidos { get; set; } = null!;
+    public string apellidos { get; set; } = null!;
 
-    public string Correo { get; set; } = null!;
+    public int id_genero { get; set; }
 
-    public string? Telefono { get; set; }
+    public DateOnly? fecha_nacimiento { get; set; }
 
-    public string? Direccion { get; set; }
+    public string? telefono { get; set; }
 
-    public bool Activo { get; set; }
+    public string? direccion { get; set; }
 
-    public DateTime FechaCreacion { get; set; }
+    public bool activo { get; set; }
 
-    public DateTime? FechaActualizacion { get; set; }
+    public DateTime fecha_creacion { get; set; }
 
-    public DateTime? FechaFin { get; set; }
+    public DateTime? fecha_actualizacion { get; set; }
 
-    public virtual ICollection<Usuario> Usuario { get; set; } = new List<Usuario>();
+    public DateTime? fecha_fin { get; set; }
 
-    public virtual ICollection<Paciente> Paciente { get; set; } = new List<Paciente>();
+    public virtual genero genero_navigation { get; set; } = null!;
+
+    public virtual ICollection<usuario> usuario { get; set; } = new List<usuario>();
+
+    public virtual ICollection<paciente> paciente { get; set; } = new List<paciente>();
 }

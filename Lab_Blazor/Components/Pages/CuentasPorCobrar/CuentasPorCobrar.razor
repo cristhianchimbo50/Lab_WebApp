@@ -70,6 +70,7 @@
                         <select class="form-select" @bind="_filtro.EstadoPago">
                             <option value="">Todos</option>
                             <option value="PENDIENTE">Pendiente</option>
+                            <option value="ABONADO">Abonado</option>
                             <option value="PAGADO">Pagado</option>
                         </select>
                     </div>
@@ -179,7 +180,7 @@
                                         <td>@o.TotalPagado.ToString("C")</td>
                                         <td class="fw-bold @(o.SaldoPendiente > 0 ? "text-danger" : "text-success")">@o.SaldoPendiente.ToString("C")</td>
                                         <td>
-                                            <span class="badge bg-@(o.EstadoPago == "PAGADO" ? "success" : "warning text-dark")">@o.EstadoPago</span>
+                                            <span class="badge @ObtenerClaseEstadoPago(o.EstadoPago)">@o.EstadoPago</span>
                                         </td>
                                         <td>
                                             <button class="btn btn-success btn-sm shadow-sm" @onclick="(() => IrACobro(o.CedulaPaciente))">
@@ -221,6 +222,14 @@
     private int PageSize { get => _pageSize; set { if (_pageSize != value) { _pageSize = value; CurrentPage = 1; } } }
     private int CurrentPage = 1;
     private int TotalPages => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
+
+    private static string ObtenerClaseEstadoPago(string? estado) => estado switch
+    {
+        "PAGADO" => "bg-success",
+        "ABONADO" => "bg-info text-dark",
+        "PENDIENTE" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 
     protected override async void OnAfterRender(bool firstRender)
     {

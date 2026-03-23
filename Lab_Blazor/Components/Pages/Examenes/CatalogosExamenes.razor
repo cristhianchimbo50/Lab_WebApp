@@ -1,0 +1,202 @@
+@page "/catalogos-examenes"
+@rendermode InteractiveServer
+
+<PageTitle>Catálogos de Exámenes</PageTitle>
+
+@using Lab_Contracts.Examenes
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Lab_Blazor.Services.Auth
+@using Lab_Blazor.Services.Examenes
+@inject SesionVerificacionService SesionService
+@inject IExamenesApiService ExamenesApiService
+@inject IJSRuntime JS
+
+<AuthorizeView>
+    <Authorized Context="authState">
+        @{
+            var user = authState.User;
+            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+            bool puedeVer = rol is "1" or "3";
+            bool puedeModificar = rol == "1";
+        }
+
+        @if (!puedeVer)
+        {
+            <div class="alert alert-danger">No tienes permisos para acceder a este módulo.</div>
+        }
+        else
+        {
+            <h3 class="mb-3 d-flex align-items-center text-uppercase fw-bold">
+                <i class="bi bi-list-check text-primary fs-4 me-2"></i>Catálogos de Exámenes
+            </h3>
+            <p class="text-muted mb-4">Gestiona cada tabla base por separado: Estudio, Grupo Examen, Tipo Muestra, Tipo Examen y Técnica.</p>
+
+            <div class="row g-3">
+                @foreach (var seccion in _secciones)
+                {
+                    <div class="col-12 col-xl-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold text-uppercase">@seccion.Titulo</h6>
+                                <span class="badge bg-secondary">@seccion.Items.Count</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2 align-items-end mb-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                        <InputText class="form-control text-uppercase"
+                                                   @bind-Value="seccion.Actual.Nombre"
+                                                   @oninput="(e => seccion.Actual.Nombre = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                    </div>
+                                    <div class="col-md-4 d-grid d-md-flex gap-2 justify-content-md-end">
+                                        <button class="btn btn-primary" @onclick="(() => GuardarAsync(seccion))" disabled="@(!puedeModificar)">
+                                            <i class="bi bi-save me-1"></i>@(seccion.Actual.Id == 0 ? "Agregar" : "Actualizar")
+                                        </button>
+                                        <button class="btn btn-outline-secondary" @onclick="(() => LimpiarForm(seccion))">
+                                            Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="small text-danger mb-2">* Los datos en rojo son datos requeridos.</div>
+
+                                <div class="table-responsive" style="max-height: 270px; overflow-y: auto;">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th style="width:60%">Nombre</th>
+                                                <th style="width:18%">Estado</th>
+                                                <th style="width:22%">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (!seccion.Items.Any())
+                                            {
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-3">Sin registros.</td>
+                                                </tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var item in seccion.Items)
+                                                {
+                                                    <tr>
+                                                        <td>@item.Nombre</td>
+                                                        <td><span class="badge bg-@(item.Activo ? "success" : "danger")">@(item.Activo ? "Habilitado" : "Deshabilitado")</span></td>
+                                                        <td>
+                                                            <button class="btn btn-warning btn-sm me-1" @onclick="(() => Editar(seccion, item))" disabled="@(!puedeModificar)">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </button>
+                                                            @if (item.Activo)
+                                                            {
+                                                                <button class="btn btn-danger btn-sm" @onclick="(() => CambiarEstadoAsync(seccion, item, false))" disabled="@(!puedeModificar)">
+                                                                    <i class="bi bi-x-circle-fill"></i>
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button class="btn btn-success btn-sm" @onclick="(() => CambiarEstadoAsync(seccion, item, true))" disabled="@(!puedeModificar)">
+                                                                    <i class="bi bi-check-circle-fill"></i>
+                                                                </button>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private readonly List<SeccionCatalogo> _secciones =
+    [
+        new() { Tipo = "estudio", Titulo = "Estudio" },
+        new() { Tipo = "grupo_examen", Titulo = "Grupo Examen" },
+        new() { Tipo = "tipo_muestra", Titulo = "Tipo Muestra" },
+        new() { Tipo = "tipo_examen", Titulo = "Tipo Examen" },
+        new() { Tipo = "tecnica", Titulo = "Técnica" },
+        new() { Tipo = "tipo_registro", Titulo = "Tipo Registro" }
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        await CargarTodosAsync();
+    }
+
+    private async Task CargarTodosAsync()
+    {
+        foreach (var seccion in _secciones)
+        {
+            seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
+        }
+    }
+
+    private async Task GuardarAsync(SeccionCatalogo seccion)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        if (string.IsNullOrWhiteSpace(seccion.Actual.Nombre))
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", $"El nombre de {seccion.Titulo} es obligatorio.", "warning");
+            return;
+        }
+
+        try
+        {
+            await ExamenesApiService.GuardarCatalogoAsync(seccion.Tipo, seccion.Actual);
+            await JS.InvokeVoidAsync("mostrarToastAsync", $"{seccion.Titulo} guardado correctamente.", "success");
+            LimpiarForm(seccion);
+            seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", $"Error al guardar {seccion.Titulo}.", "danger");
+        }
+    }
+
+    private void Editar(SeccionCatalogo seccion, CatalogoExamenDto dto)
+    {
+        seccion.Actual = new CatalogoExamenDto
+        {
+            Id = dto.Id,
+            Nombre = dto.Nombre,
+            Activo = dto.Activo
+        };
+    }
+
+    private async Task CambiarEstadoAsync(SeccionCatalogo seccion, CatalogoExamenDto dto, bool activo)
+    {
+        if (!await SesionService.VerificarOSalirAsync()) return;
+        var accion = activo ? "habilitar" : "deshabilitar";
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Desea {accion} {dto.Nombre}?")) return;
+
+        var resp = await ExamenesApiService.CambiarEstadoCatalogoAsync(seccion.Tipo, dto.Id, activo);
+        if (resp.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Estado actualizado correctamente.", "success");
+            seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
+        }
+    }
+
+    private static void LimpiarForm(SeccionCatalogo seccion)
+    {
+        seccion.Actual = new CatalogoExamenDto();
+    }
+
+    private sealed class SeccionCatalogo
+    {
+        public required string Tipo { get; init; }
+        public required string Titulo { get; init; }
+        public List<CatalogoExamenDto> Items { get; set; } = new();
+        public CatalogoExamenDto Actual { get; set; } = new();
+    }
+}

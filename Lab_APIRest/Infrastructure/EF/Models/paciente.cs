@@ -3,27 +3,21 @@ using System.Collections.Generic;
 
 namespace Lab_APIRest.Infrastructure.EF.Models;
 
-public partial class Paciente
+public partial class paciente
 {
-    public int IdPaciente { get; set; }
+    public int id_paciente { get; set; }
 
-    public DateOnly FechaNacPaciente { get; set; }
+    public int id_persona { get; set; }
 
-    public int? IdGenero { get; set; }
+    public DateTime fecha_creacion { get; set; }
 
-    public int IdPersona { get; set; }
+    public DateTime? fecha_fin { get; set; }
 
-    public DateTime FechaCreacion { get; set; }
+    public DateTime? fecha_actualizacion { get; set; }
 
-    public DateTime? FechaFin { get; set; }
+    public bool activo { get; set; }
 
-    public DateTime? FechaActualizacion { get; set; }
+    public virtual persona persona_navigation { get; set; } = null!;
 
-    public bool Activo { get; set; }
-
-    public virtual Genero? IdGeneroNavigation { get; set; }
-
-    public virtual Persona IdPersonaNavigation { get; set; } = null!;
-
-    public virtual ICollection<Orden> Orden { get; set; } = new List<Orden>();
+    public virtual ICollection<orden> orden { get; set; } = new List<orden>();
 }

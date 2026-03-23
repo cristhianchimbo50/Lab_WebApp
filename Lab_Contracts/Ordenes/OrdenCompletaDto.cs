@@ -1,11 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
 
 namespace Lab_Contracts.Ordenes
 {
     public class OrdenCompletaDto
     {
-        public OrdenDto Orden { get; set; }
-        public List<int> IdsExamenes { get; set; }
+        public OrdenDto Orden { get; set; } = new();
+        public List<int> IdsExamenes { get; set; } = new();
     }
 
 
