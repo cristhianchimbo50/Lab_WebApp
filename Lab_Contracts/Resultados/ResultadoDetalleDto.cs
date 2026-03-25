@@ -20,6 +20,7 @@ namespace Lab_Contracts.Resultados
         public int IdPaciente { get; set; }
         public string NumeroOrden { get; set; } = "";
         public string EstadoPago { get; set; } = "";
+        public int IdEstadoResultado { get; set; }
         public string EstadoResultado { get; set; } = string.Empty;
         public string? ObservacionRevision { get; set; }
         public DateTime? FechaRevision { get; set; }

@@ -14,14 +14,47 @@ namespace Lab_Blazor.Services.Auth
         {
             var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/login") { Content = JsonContent.Create(solicitud) };
             var resp = await _http.SendAsync(req, ct);
-            if (!resp.IsSuccessStatusCode) return (false, "Credenciales inválidas o la cuenta está bloqueada.", null, false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var msg = await ExtraerMensajeErrorAsync(resp, "Credenciales inválidas o la cuenta está bloqueada.");
+                return (false, msg, null, false);
+            }
+
             var usuario = await resp.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
             return (true, "Inicio de sesión exitoso.", usuario, false);
         }
 
+        private static async Task<string> ExtraerMensajeErrorAsync(HttpResponseMessage resp, string predeterminado)
+        {
+            try
+            {
+                var contenido = await resp.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(contenido)) return predeterminado;
+
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(contenido);
+                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        if (doc.RootElement.TryGetProperty("Mensaje", out var m)) return m.GetString() ?? predeterminado;
+                        if (doc.RootElement.TryGetProperty("mensaje", out var mm)) return mm.GetString() ?? predeterminado;
+                        if (doc.RootElement.TryGetProperty("message", out var mmm)) return mmm.GetString() ?? predeterminado;
+                        if (doc.RootElement.TryGetProperty("title", out var t)) return t.GetString() ?? predeterminado;
+                    }
+                }
+                catch { }
+
+                return contenido;
+            }
+            catch
+            {
+                return predeterminado;
+            }
+        }
+
         public Task LogoutAsync(CancellationToken ct = default)
         {
-            return Task.CompletedTask;
+            return ClearAuthDataAsync();
         }
 
         public async Task<(bool Exito, string Mensaje)> CambiarContraseniaAsync(CambiarContraseniaDto solicitud, CancellationToken ct = default)

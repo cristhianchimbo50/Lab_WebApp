@@ -18,6 +18,7 @@ namespace Lab_Contracts.Ordenes
         public int? IdEstadoPago { get; set; }
         public string? NombreEstadoPago { get; set; }
         public DateTime? FechaCompletado { get; set; }
+        public int IdEstadoOrden { get; set; }
         public string EstadoOrden { get; set; } = "EN_PROCESO";
         public bool ResultadosHabilitados { get; set; }
         public bool Anulado { get; set; }

@@ -45,5 +45,27 @@ namespace Lab_Blazor.Services
             if (!string.IsNullOrEmpty(_token))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
         }
+
+        protected async Task ClearAuthDataAsync()
+        {
+            _token = null;
+
+            try
+            {
+                await _session.DeleteAsync("jwt");
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                await _js.InvokeVoidAsync("localStorage.removeItem", "jwt");
+                await _js.InvokeVoidAsync("localStorage.removeItem", "usuario");
+            }
+            catch
+            {
+            }
+        }
     }
 }

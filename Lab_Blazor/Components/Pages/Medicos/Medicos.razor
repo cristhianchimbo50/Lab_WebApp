@@ -199,33 +199,42 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-            if (!await SesionService.VerificarOSalirAsync()) return;
-            _filtro.PageNumber = 1; _filtro.PageSize = 10; _filtro.SortBy = nameof(MedicoDto.NombreMedico); _filtro.SortAsc = true; _filtro.IncluirAnulados = true; _filtro.IncluirVigentes = true;
-            StateHasChanged();
+
+            await SesionService.EjecutarConSesionAsync(() =>
+            {
+                _filtro.PageNumber = 1;
+                _filtro.PageSize = 10;
+                _filtro.SortBy = nameof(MedicoDto.NombreMedico);
+                _filtro.SortAsc = true;
+                _filtro.IncluirAnulados = true;
+                _filtro.IncluirVigentes = true;
+                StateHasChanged();
+                return Task.CompletedTask;
+            }, forzarVerificacion: true);
         }
     }
 
     private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
-    private async Task BuscarMedicosAsync(bool mostrarToastExito = false)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-        try
+    private Task BuscarMedicosAsync(bool mostrarToastExito = false)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _resultado = await MedicosApiService.ListarMedicosPaginadosAsync(_filtro);
-            if (mostrarToastExito)
+            if (_buscando) return;
+            try
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
+                _buscando = true;
+                _resultado = await MedicosApiService.ListarMedicosPaginadosAsync(_filtro);
+                if (mostrarToastExito)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Médicos cargados correctamente.", "success");
+                }
             }
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar médicos.", "danger");
-        }
-        finally { _buscando = false; }
-    }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar médicos.", "danger");
+            }
+            finally { _buscando = false; }
+        });
 
     private string ValorBusquedaFiltro
     {
@@ -286,64 +295,64 @@
         _ = BuscarMedicosAsync();
     }
 
-    private async Task MostrarModalNuevoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _medicoActual = new MedicoDto(); _modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task EditarMedicoAsync(MedicoDto medico)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        var authState = await AuthProvider.GetAuthenticationStateAsync(); var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? ""; if (rol != "1") { await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger"); return; }
-        _medicoActual = medico; _modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task ValidarYGuardarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (string.IsNullOrWhiteSpace(_medicoActual.NombreMedico) || string.IsNullOrWhiteSpace(_medicoActual.Especialidad))
+    private Task MostrarModalNuevoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Nombre y especialidad son obligatorios.", "warning");
-            return;
-        }
-        HttpResponseMessage result = _medicoActual.IdMedico == 0
-            ? await MedicosApiService.GuardarMedicoAsync(_medicoActual)  
-            : await MedicosApiService.GuardarMedicoAsync(_medicoActual.IdMedico, _medicoActual);
-        if (result.IsSuccessStatusCode)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Médico guardado correctamente.", "success"); _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarMedicosAsync();
-        }
-        else { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar médico.", "danger"); }
-    }
+            _medicoActual = new MedicoDto(); _modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
 
-    private async Task ConfirmarAnulacionAsync(int id)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este médico?"))
+    private Task CerrarModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var result = await MedicosApiService.AnularMedicoAsync(id);
+            _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado");
+        });
+
+    private Task EditarMedicoAsync(MedicoDto medico)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync(); var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? ""; if (rol != "1") { await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar médicos.", "danger"); return; }
+            _medicoActual = medico; _modalVisible = true; await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task ValidarYGuardarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(_medicoActual.NombreMedico) || string.IsNullOrWhiteSpace(_medicoActual.Especialidad))
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Nombre y especialidad son obligatorios.", "warning");
+                return;
+            }
+            HttpResponseMessage result = _medicoActual.IdMedico == 0
+                ? await MedicosApiService.GuardarMedicoAsync(_medicoActual)
+                : await MedicosApiService.GuardarMedicoAsync(_medicoActual.IdMedico, _medicoActual);
             if (result.IsSuccessStatusCode)
-            { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico deshabilitado correctamente.", "success"); await BuscarMedicosAsync(); }
-        }
-    }
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Médico guardado correctamente.", "success"); _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarMedicosAsync();
+            }
+            else { await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar médico.", "danger"); }
+        });
 
-    private async Task ConfirmarReactivacionAsync(MedicoDto medico)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?"))
+    private Task ConfirmarAnulacionAsync(int id)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            medico.Anulado = false; var result = await MedicosApiService.GuardarMedicoAsync(medico.IdMedico, medico); 
-            if (result.IsSuccessStatusCode)
-            { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico reactivado correctamente.", "success"); await BuscarMedicosAsync(); }
-        }
-    }
+            if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este médico?"))
+            {
+                var result = await MedicosApiService.AnularMedicoAsync(id);
+                if (result.IsSuccessStatusCode)
+                { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico deshabilitado correctamente.", "success"); await BuscarMedicosAsync(); }
+            }
+        });
+
+    private Task ConfirmarReactivacionAsync(MedicoDto medico)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al médico {medico.NombreMedico}?"))
+            {
+                medico.Anulado = false; var result = await MedicosApiService.GuardarMedicoAsync(medico.IdMedico, medico);
+                if (result.IsSuccessStatusCode)
+                { await JS.InvokeVoidAsync("mostrarToastAsync", "Médico reactivado correctamente.", "success"); await BuscarMedicosAsync(); }
+            }
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

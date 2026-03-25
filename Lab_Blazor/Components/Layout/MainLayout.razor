@@ -1,9 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @using Lab_Blazor.Components.Layout
 @using Lab_Blazor.Services.Auth
-@inject NavigationManager Navigation
-@inject IAuthApiService AuthApi
-@inject CustomAuthenticationStateProvider AuthProvider
+@inject SesionVerificacionService SesionService
 
 <div class="app-shell">
     <Sidebar />
@@ -39,22 +38,15 @@
         {
             try
             {
-                var sigueActiva = await AuthApi.VerificarSesionAsync();
-                if (!sigueActiva)
-                {
-                    if (AuthProvider is CustomAuthenticationStateProvider customAuth)
-                        await customAuth.CerrarSesionAsync();
-                    
-                    Navigation.NavigateTo("/login", forceLoad: true);
-                }
+                await InvokeAsync(async () => await SesionService.VerificarOSalirAsync(forzar: true));
             }
             catch
             {
             }
         },
         null,
-        TimeSpan.FromMinutes(10),
-        TimeSpan.FromMinutes(10)); 
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromMinutes(2));
     }
 
     public void Dispose()

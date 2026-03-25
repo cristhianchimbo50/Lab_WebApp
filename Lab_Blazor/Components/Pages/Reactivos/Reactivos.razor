@@ -264,49 +264,49 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            await BuscarReactivosAsync();
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                await BuscarReactivosAsync();
+            }, forzarVerificacion: true);
         }
     }
 
     private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
-    private async Task BuscarReactivosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-        try
+    private Task BuscarReactivosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _resultado = await ReactivosApiService.ListarReactivosPaginadosAsync(_filtro);
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar los reactivos.", "danger");
-        }
-        finally
-        {
-            _buscando = false;
-        }
-    }
+            if (_buscando) return;
+            try
+            {
+                _buscando = true;
+                _resultado = await ReactivosApiService.ListarReactivosPaginadosAsync(_filtro);
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar los reactivos.", "danger");
+            }
+            finally
+            {
+                _buscando = false;
+            }
+        });
 
-    private async Task LimpiarBusquedaAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _filtro = new ReactivoFiltroDto
+    private Task LimpiarBusquedaAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            PageNumber = 1,
-            PageSize = 10,
-            SortBy = nameof(ReactivoDto.NombreReactivo),
-            SortAsc = true,
-            IncluirAnulados = true,
-            IncluirVigentes = true
-        };
-        _resultado = null;
-        await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
-    }
+            _filtro = new ReactivoFiltroDto
+            {
+                PageNumber = 1,
+                PageSize = 10,
+                SortBy = nameof(ReactivoDto.NombreReactivo),
+                SortAsc = true,
+                IncluirAnulados = true,
+                IncluirVigentes = true
+            };
+            _resultado = null;
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Filtros restablecidos.", "secondary");
+        });
 
     private async Task CambiarPaginaAsync(int delta)
     {
@@ -337,91 +337,85 @@
         _ = BuscarReactivosAsync();
     }
 
-    private async Task MostrarModalNuevoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _reactivoActual = new ReactivoDto();
-        _modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _modalVisible = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task EditarReactivoAsync(ReactivoDto reactivo)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _reactivoActual = new()
+    private Task MostrarModalNuevoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            IdReactivo = reactivo.IdReactivo,
-            NombreReactivo = reactivo.NombreReactivo,
-            Fabricante = reactivo.Fabricante,
-            Unidad = reactivo.Unidad,
-            CantidadDisponible = reactivo.CantidadDisponible,
-            Anulado = reactivo.Anulado
-        };
-        _modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
+            _reactivoActual = new ReactivoDto();
+            _modalVisible = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
 
-    private async Task ValidarYGuardarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        HttpResponseMessage result = _reactivoActual.IdReactivo == 0
-            ? await ReactivosApiService.GuardarReactivoAsync(_reactivoActual)
-            : await ReactivosApiService.GuardarReactivoAsync(_reactivoActual.IdReactivo, _reactivoActual);
-
-        if (result.IsSuccessStatusCode)
+    private Task CerrarModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo guardado correctamente.", "success");
             _modalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
-            await BuscarReactivosAsync();
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar el reactivo.", "danger");
-        }
-    }
+        });
 
-    private async Task ConfirmarAnulacionAsync(int id)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?"))
+    private Task EditarReactivoAsync(ReactivoDto reactivo)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var result = await ReactivosApiService.AnularReactivoAsync(id);
+            _reactivoActual = new()
+            {
+                IdReactivo = reactivo.IdReactivo,
+                NombreReactivo = reactivo.NombreReactivo,
+                Fabricante = reactivo.Fabricante,
+                Unidad = reactivo.Unidad,
+                CantidadDisponible = reactivo.CantidadDisponible,
+                Anulado = reactivo.Anulado
+            };
+            _modalVisible = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task ValidarYGuardarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            HttpResponseMessage result = _reactivoActual.IdReactivo == 0
+                ? await ReactivosApiService.GuardarReactivoAsync(_reactivoActual)
+                : await ReactivosApiService.GuardarReactivoAsync(_reactivoActual.IdReactivo, _reactivoActual);
+
             if (result.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo anulado correctamente.", "success");
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo guardado correctamente.", "success");
+                _modalVisible = false;
+                await JS.InvokeVoidAsync("marcarModalCerrado");
                 await BuscarReactivosAsync();
             }
-        }
-    }
-
-    private async Task ReactivarReactivoAsync(ReactivoDto reactivo)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el reactivo {reactivo.NombreReactivo}?"))
-        {
-            reactivo.Anulado = false;
-            var result = await ReactivosApiService.GuardarReactivoAsync(reactivo.IdReactivo, reactivo);
-            if (result.IsSuccessStatusCode)
+            else
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo reactivado correctamente.", "success");
-                await BuscarReactivosAsync();
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al guardar el reactivo.", "danger");
             }
-        }
-    }
+        });
+
+    private Task ConfirmarAnulacionAsync(int id)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este reactivo?"))
+            {
+                var result = await ReactivosApiService.AnularReactivoAsync(id);
+                if (result.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo anulado correctamente.", "success");
+                    await BuscarReactivosAsync();
+                }
+            }
+        });
+
+    private Task ReactivarReactivoAsync(ReactivoDto reactivo)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el reactivo {reactivo.NombreReactivo}?"))
+            {
+                reactivo.Anulado = false;
+                var result = await ReactivosApiService.GuardarReactivoAsync(reactivo.IdReactivo, reactivo);
+                if (result.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Reactivo reactivado correctamente.", "success");
+                    await BuscarReactivosAsync();
+                }
+            }
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

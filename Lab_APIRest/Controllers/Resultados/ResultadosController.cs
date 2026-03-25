@@ -201,7 +201,7 @@ namespace Lab_APIRest.Controllers.Resultados
 
             try
             {
-                var ok = await _resultadoService.RevisarResultadoAsync(id, revision.EstadoResultado, revision.ObservacionRevision, idRevisor);
+                var ok = await _resultadoService.RevisarResultadoAsync(id, revision.IdEstadoResultado, revision.ObservacionRevision, idRevisor);
                 if (!ok) return NotFound("No se encontró el resultado o ya fue anulado.");
                 return Ok(new { mensaje = "Resultado actualizado correctamente." });
             }

@@ -223,73 +223,74 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            _cargado = true;
-            _resultado = null;
-            StateHasChanged();
+            await SesionService.EjecutarConSesionAsync(() =>
+            {
+                _cargado = true;
+                _resultado = null;
+                StateHasChanged();
+                return Task.CompletedTask;
+            }, forzarVerificacion: true);
         }
     }
 
     private int TotalPaginas => _resultado == null || _resultado.PageSize == 0 ? 1 : (int)Math.Ceiling(_resultado.TotalCount / (double)_resultado.PageSize);
 
-    private async Task FiltrarMovimientosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-
-        try
+    private Task FiltrarMovimientosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _filtro.PageNumber = 1;
+            if (_buscando) return;
 
-            _filtro.IdMovimientoReactivo = null;
-            _filtro.NombreReactivo = null;
-            _filtro.Observacion = null;
-
-            if (!string.IsNullOrWhiteSpace(_filtroSeleccionado) && !string.IsNullOrWhiteSpace(_valorFiltro))
+            try
             {
-                switch (_filtroSeleccionado)
+                _buscando = true;
+                _filtro.PageNumber = 1;
+
+                _filtro.IdMovimientoReactivo = null;
+                _filtro.NombreReactivo = null;
+                _filtro.Observacion = null;
+
+                if (!string.IsNullOrWhiteSpace(_filtroSeleccionado) && !string.IsNullOrWhiteSpace(_valorFiltro))
                 {
-                    case "numero":
-                        if (int.TryParse(_valorFiltro, out var id))
-                            _filtro.IdMovimientoReactivo = id.ToString();
-                        break;
-                    case "reactivo":
-                        _filtro.NombreReactivo = _valorFiltro;
-                        break;
-                    case "observacion":
-                        _filtro.Observacion = _valorFiltro;
-                        break;
+                    switch (_filtroSeleccionado)
+                    {
+                        case "numero":
+                            if (int.TryParse(_valorFiltro, out var id))
+                                _filtro.IdMovimientoReactivo = id.ToString();
+                            break;
+                        case "reactivo":
+                            _filtro.NombreReactivo = _valorFiltro;
+                            break;
+                        case "observacion":
+                            _filtro.Observacion = _valorFiltro;
+                            break;
+                    }
                 }
+
+                _resultado = await MovimientosApi.BuscarMovimientosAsync(_filtro);
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Movimientos cargados correctamente.", "success");
             }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar movimientos.", "danger");
+            }
+            finally
+            {
+                _buscando = false;
+                _cargado = true;
+                StateHasChanged();
+            }
+        });
 
-            _resultado = await MovimientosApi.BuscarMovimientosAsync(_filtro);
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Movimientos cargados correctamente.", "success");
-        }
-        catch
+    private Task LimpiarFiltrosAsync()
+        => SesionService.EjecutarConSesionAsync(() =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar movimientos.", "danger");
-        }
-        finally
-        {
-            _buscando = false;
-            _cargado = true;
+            _filtro = new();
+            _valorFiltro = string.Empty;
+            _filtroSeleccionado = null;
+            _resultado = null;
             StateHasChanged();
-        }
-    }
-
-    private async Task LimpiarFiltrosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _filtro = new();
-        _valorFiltro = string.Empty;
-        _filtroSeleccionado = null;
-        _resultado = null;
-        StateHasChanged();
-    }
+            return Task.CompletedTask;
+        });
 
     private async Task CambiarPaginaAsync(int delta)
     {

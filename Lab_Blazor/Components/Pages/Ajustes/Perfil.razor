@@ -141,24 +141,23 @@
     private PerfilDto? _perfilUsuario;
     private bool _cargado = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        try
+    protected override Task OnInitializedAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var respuesta = await PerfilService.ObtenerDetallePerfilAsync();
-            _perfilUsuario = respuesta?.Perfil;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al cargar perfil.");
-        }
-        finally
-        {
-            _cargado = true;
-        }
-    }
+            try
+            {
+                var respuesta = await PerfilService.ObtenerDetallePerfilAsync();
+                _perfilUsuario = respuesta?.Perfil;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error al cargar perfil.");
+            }
+            finally
+            {
+                _cargado = true;
+            }
+        });
 
     private async Task VolverAtrasAsync() => await JsRuntime.InvokeVoidAsync("history.back");
 }

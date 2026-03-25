@@ -80,7 +80,10 @@ builder.Services.AddScoped<PdfResultadoService>();
 builder.Services.AddScoped<IConvenioService, ConvenioService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com/v3/");
+});
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IRecuperacionService, RecuperacionService>();

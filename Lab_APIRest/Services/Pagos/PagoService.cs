@@ -14,9 +14,14 @@ namespace Lab_APIRest.Services.Pagos
 {
     public class PagoService : IPagoService
     {
-        private const int EstadoPagoPendienteId = 1;
-        private const int EstadoPagoAbonadoId = 2;
-        private const int EstadoPagoPagadoId = 3;
+        private const int EstadoPagoPendienteId = EstadoIds.Pago.Pendiente;
+        private const int EstadoPagoAbonadoId = EstadoIds.Pago.Abonado;
+        private const int EstadoPagoPagadoId = EstadoIds.Pago.Pagado;
+
+        private const int EstadoOrdenEnProcesoId = EstadoIds.Orden.EnProceso;
+        private const int EstadoOrdenFinalizadaId = EstadoIds.Orden.Finalizada;
+
+        private const int EstadoResultadoAprobadoId = EstadoIds.Resultado.Aprobado;
 
         private const int TipoPagoEfectivoId = 1;
         private const int TipoPagoTransferenciaId = 2;
@@ -170,6 +175,8 @@ namespace Lab_APIRest.Services.Pagos
             entidadOrden.id_estado_pago = entidadOrden.saldo_pendiente <= 0 ? EstadoPagoPagadoId : (pagadoAcumulado > 0 ? EstadoPagoAbonadoId : EstadoPagoPendienteId);
             await _context.SaveChangesAsync();
 
+            await RecalcularEstadoOrdenAsync(pagoDto.IdOrden);
+
             return MapPago(entidadPago);
         }
 
@@ -186,6 +193,7 @@ namespace Lab_APIRest.Services.Pagos
             EstadoPago = o.estado_pago_navigation?.nombre,
             IdEstadoPago = o.id_estado_pago,
             NombreEstadoPago = o.estado_pago_navigation?.nombre,
+            IdEstadoOrden = o.id_estado_orden,
             Anulado = !o.activo
         };
 
@@ -317,6 +325,53 @@ namespace Lab_APIRest.Services.Pagos
                 orden.id_estado_pago = EstadoPagoAbonadoId;
             else
                 orden.id_estado_pago = EstadoPagoPendienteId;
+
+            await _context.SaveChangesAsync();
+            await RecalcularEstadoOrdenAsync(idOrden.Value);
+        }
+
+        private async Task RecalcularEstadoOrdenAsync(int idOrden)
+        {
+            var orden = await _context.Orden
+                .Include(o => o.detalle_orden)
+                .Include(o => o.resultado.Where(r => r.activo))!.ThenInclude(r => r.detalle_resultado)
+                .FirstOrDefaultAsync(o => o.id_orden == idOrden);
+
+            if (orden == null) return;
+
+            var examenesOrden = orden.detalle_orden.Select(d => d.id_examen).Distinct().ToList();
+            var composicionesActivas = await _context.ExamenComposicion
+                .Where(ec => ec.activo && examenesOrden.Contains(ec.id_examen_padre))
+                .ToListAsync();
+
+            var padresConHijos = composicionesActivas
+                .Select(c => c.id_examen_padre)
+                .Distinct()
+                .ToHashSet();
+
+            var examenesRequeridos = examenesOrden
+                .Where(idExamen => !padresConHijos.Contains(idExamen))
+                .Concat(composicionesActivas.Select(c => c.id_examen_hijo))
+                .Distinct()
+                .ToList();
+
+            var examenesAprobados = orden.resultado
+                .Where(r => r.id_estado_resultado == EstadoResultadoAprobadoId)
+                .SelectMany(r => r.detalle_resultado)
+                .Select(dr => dr.id_examen)
+                .Distinct()
+                .ToList();
+
+            var todosAprobados = examenesRequeridos.Any() && examenesRequeridos.All(examenesAprobados.Contains);
+            var pagada = orden.id_estado_pago == EstadoPagoPagadoId;
+
+            var finalizada = todosAprobados && pagada;
+            orden.id_estado_orden = finalizada
+                ? EstadoOrdenFinalizadaId
+                : EstadoOrdenEnProcesoId;
+            orden.fecha_completado = finalizada
+                ? (orden.fecha_completado ?? DateTime.UtcNow)
+                : null;
 
             await _context.SaveChangesAsync();
         }

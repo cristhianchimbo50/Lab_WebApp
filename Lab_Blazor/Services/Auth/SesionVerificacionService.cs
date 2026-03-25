@@ -9,6 +9,11 @@ namespace Lab_Blazor.Services.Auth
         private readonly IAuthApiService _authService;
         private readonly IJSRuntime _jsRuntime;
         private readonly NavigationManager _navegacion;
+        private readonly SemaphoreSlim _mutex = new(1, 1);
+        private static readonly TimeSpan VentanaVerificacion = TimeSpan.FromSeconds(30);
+
+        private DateTime _ultimaVerificacionUtc = DateTime.MinValue;
+        private bool _sesionCerrada;
 
         public SesionVerificacionService(IAuthApiService authService, IJSRuntime jsRuntime, NavigationManager navegacion)
         {
@@ -17,19 +22,64 @@ namespace Lab_Blazor.Services.Auth
             _navegacion = navegacion;
         }
 
-        public async Task<bool> VerificarOSalirAsync()
+        public async Task<bool> VerificarOSalirAsync(bool forzar = false)
         {
-            bool isSessionValid = await _authService.VerificarSesionAsync();
-            if (!isSessionValid)
+            if (_sesionCerrada) return false;
+
+            if (!forzar && DateTime.UtcNow - _ultimaVerificacionUtc < VentanaVerificacion)
+                return true;
+
+            await _mutex.WaitAsync();
+            try
             {
-                var currentUrl = _navegacion.ToBaseRelativePath(_navegacion.Uri);
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "redirectAfterLogin", currentUrl);
+                if (_sesionCerrada) return false;
+                if (!forzar && DateTime.UtcNow - _ultimaVerificacionUtc < VentanaVerificacion)
+                    return true;
 
-                await _authService.LogoutAsync();
+                var isSessionValid = await _authService.VerificarSesionAsync();
+                _ultimaVerificacionUtc = DateTime.UtcNow;
 
-                _navegacion.NavigateTo("/login", forceLoad: true);
+                if (!isSessionValid)
+                {
+                    _sesionCerrada = true;
+                    await CerrarSesionYRedirigirAsync();
+                    return false;
+                }
+
+                return true;
             }
-            return isSessionValid;
+            finally
+            {
+                _mutex.Release();
+            }
+        }
+
+        public async Task EjecutarConSesionAsync(Func<Task> accion, bool forzarVerificacion = false)
+        {
+            if (!await VerificarOSalirAsync(forzarVerificacion))
+                return;
+
+            await accion();
+        }
+
+        public async Task<T?> EjecutarConSesionAsync<T>(Func<Task<T>> accion, bool forzarVerificacion = false, T? fallback = default)
+        {
+            if (!await VerificarOSalirAsync(forzarVerificacion))
+                return fallback;
+
+            return await accion();
+        }
+
+        private async Task CerrarSesionYRedirigirAsync()
+        {
+            var currentUrl = _navegacion.ToBaseRelativePath(_navegacion.Uri);
+            if (!string.IsNullOrWhiteSpace(currentUrl) && !currentUrl.StartsWith("login", StringComparison.OrdinalIgnoreCase))
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "redirectAfterLogin", currentUrl);
+            }
+
+            await _authService.LogoutAsync();
+            _navegacion.NavigateTo("/login", forceLoad: true);
         }
     }
 }

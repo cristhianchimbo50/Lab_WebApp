@@ -307,13 +307,13 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                _estaRenderizado = true;
+                StateHasChanged();
 
-            _estaRenderizado = true;
-            StateHasChanged();
-
-            await BuscarAsync();
+                await BuscarAsync();
+            }, forzarVerificacion: true);
         }
     }
 
@@ -350,78 +350,78 @@
         await BuscarAsync();
     }
 
-    private async Task BuscarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-
-        try
+    private Task BuscarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _resultado = await ConveniosApi.ListarConveniosPaginadosAsync(_filtro);
-        }
-        catch
+            if (_buscando) return;
+
+            try
+            {
+                _buscando = true;
+                _resultado = await ConveniosApi.ListarConveniosPaginadosAsync(_filtro);
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar los convenios.", "danger");
+            }
+            finally
+            {
+                _buscando = false;
+            }
+        });
+
+    private Task AbrirModalDetalleAsync(int idConvenio)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar los convenios.", "danger");
-        }
-        finally
+            _convenioDetalle = await ConveniosApi.ObtenerDetalleConvenioAsync(idConvenio);
+            _mostrarModal = _convenioDetalle != null;
+
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+            StateHasChanged();
+        });
+
+    private Task LimpiarBusquedaAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = false;
-        }
-    }
-
-    private async Task AbrirModalDetalleAsync(int idConvenio)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _convenioDetalle = await ConveniosApi.ObtenerDetalleConvenioAsync(idConvenio);
-        _mostrarModal = _convenioDetalle != null;
-
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-        StateHasChanged();
-    }
-
-    private async Task LimpiarBusquedaAsync()
-    {
-        _filtro = new ConvenioFiltroDto
-        {
-            FechaHasta = DateOnly.FromDateTime(DateTime.Today),
-            FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15)),
-            PageNumber = 1,
-            PageSize = 10,
-            SortBy = nameof(ConvenioDto.FechaConvenio),
-            SortAsc = false,
-            IncluirAnuladas = true,
-            IncluirVigentes = true
-        };
-        await BuscarAsync();
-    }
-
-    private async Task CerrarModalAsync()
-    {
-        _mostrarModal = false;
-        _convenioDetalle = null;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task AnularConvenioAsync(int idConvenio)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este convenio?");
-        if (!confirmar) return;
-
-        var resultadoAnular = await ConveniosApi.AnularConvenioAsync(idConvenio);
-        if (resultadoAnular)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio anulado correctamente.", "success");
+            _filtro = new ConvenioFiltroDto
+            {
+                FechaHasta = DateOnly.FromDateTime(DateTime.Today),
+                FechaDesde = DateOnly.FromDateTime(DateTime.Today.AddDays(-15)),
+                PageNumber = 1,
+                PageSize = 10,
+                SortBy = nameof(ConvenioDto.FechaConvenio),
+                SortAsc = false,
+                IncluirAnuladas = true,
+                IncluirVigentes = true
+            };
             await BuscarAsync();
-        }
-        else
+        });
+
+    private Task CerrarModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el convenio.", "danger");
-        }
-    }
+            _mostrarModal = false;
+            _convenioDetalle = null;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+        });
+
+    private Task AnularConvenioAsync(int idConvenio)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            bool confirmar = await JS.InvokeAsync<bool>("confirm", "¿Desea anular este convenio?");
+            if (!confirmar) return;
+
+            var resultadoAnular = await ConveniosApi.AnularConvenioAsync(idConvenio);
+            if (resultadoAnular)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio anulado correctamente.", "success");
+                await BuscarAsync();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo anular el convenio.", "danger");
+            }
+        });
 
     private void IrARegistrarConvenio() => Navigation.NavigateTo("/convenios/nuevo");
 

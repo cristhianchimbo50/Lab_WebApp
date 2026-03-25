@@ -2,7 +2,7 @@
 using Lab_APIRest.Infrastructure.EF.Models;
 using paciente = Lab_APIRest.Infrastructure.EF.Models.paciente;
 using persona = Lab_APIRest.Infrastructure.EF.Models.persona;
-using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Email;
 using Lab_Contracts.Pacientes;
 using Lab_Contracts.Common;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +17,9 @@ namespace Lab_APIRest.Services.Pacientes
     public class PacienteService : IPacienteService
     {
         private readonly LabDbContext _context;
-        private readonly EmailService _emailService;
+            private readonly IEmailService _emailService;
 
-        public PacienteService(LabDbContext context, EmailService emailService)
+            public PacienteService(LabDbContext context, IEmailService emailService)
         {
             _context = context;
             _emailService = emailService;

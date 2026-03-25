@@ -333,181 +333,183 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (!user.Identity?.IsAuthenticated ?? true)
+            await SesionService.EjecutarConSesionAsync(async () =>
             {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (!user.Identity?.IsAuthenticated ?? true)
+                {
+                    _isRendered = true;
+                    StateHasChanged();
+                    return;
+                }
+
+                var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
+                bool puedeVer = rol is "1" or "3";
+
+                if (puedeVer)
+                {
+                    var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+                    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                    var idParam = query.Get("idExamen");
+                    if (!string.IsNullOrWhiteSpace(idParam) && int.TryParse(idParam, out var id))
+                        await SeleccionarExamenPorIdAsync(id);
+                    else if (IdExamen is not null)
+                        await SeleccionarExamenPorIdAsync(IdExamen.Value);
+                }
+
                 _isRendered = true;
                 StateHasChanged();
+            }, forzarVerificacion: true);
+        }
+    }
+
+    private Task SeleccionarExamenPorIdAsync(int id)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _examenSeleccionado = await ExamenesApi.ObtenerDetalleExamenAsync(id);
+            _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(id) ?? new();
+        });
+
+    private Task MostrarModalExamenAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _examenesEncontrados = new();
+            _valorBusquedaExamen = "";
+            _mostrarModalExamen = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task CerrarModalExamenAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _mostrarModalExamen = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+        });
+
+    private Task BuscarExamenesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!_todosLosExamenes.Any())
+                _todosLosExamenes = await ExamenesApi.ListarExamenesAsync();
+
+            var val = _valorBusquedaExamen.Trim().ToLower();
+
+            if (string.IsNullOrWhiteSpace(val))
+            {
+                _examenesEncontrados = _todosLosExamenes;
+            }
+            else
+            {
+                _examenesEncontrados = _criterioBusquedaExamen switch
+                {
+                    "estudio" => _todosLosExamenes.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
+                    _ => _todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
+                };
+            }
+        });
+
+    private Task SeleccionarExamenAsync(ExamenDto examen)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (examen.Anulado)
+            {
+                await JS.InvokeVoidAsync("alert", "No puede seleccionar un examen deshabilitado.");
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? string.Empty;
-            bool puedeVer = rol is "1" or "3";
-
-            if (puedeVer)
-            {
-                var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                var idParam = query.Get("idExamen");
-                if (!string.IsNullOrWhiteSpace(idParam) && int.TryParse(idParam, out var id))
-                    await SeleccionarExamenPorIdAsync(id);
-                else if (IdExamen is not null)
-                    await SeleccionarExamenPorIdAsync(IdExamen.Value);
-            }
-
-            _isRendered = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task SeleccionarExamenPorIdAsync(int id)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _examenSeleccionado = await ExamenesApi.ObtenerDetalleExamenAsync(id);
-        _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(id) ?? new();
-    }
-
-    private async Task MostrarModalExamenAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _examenesEncontrados = new();
-        _valorBusquedaExamen = "";
-        _mostrarModalExamen = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalExamenAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModalExamen = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task BuscarExamenesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!_todosLosExamenes.Any())
-            _todosLosExamenes = await ExamenesApi.ListarExamenesAsync();
-
-        var val = _valorBusquedaExamen.Trim().ToLower();
-
-        if (string.IsNullOrWhiteSpace(val))
-        {
-            _examenesEncontrados = _todosLosExamenes;
-        }
-        else
-        {
-            _examenesEncontrados = _criterioBusquedaExamen switch
-            {
-                "estudio" => _todosLosExamenes.Where(e => e.Estudio?.ToLower().Contains(val) ?? false).ToList(),
-                _ => _todosLosExamenes.Where(e => e.NombreExamen.ToLower().Contains(val)).ToList()
-            };
-        }
-    }
-
-    private async Task SeleccionarExamenAsync(ExamenDto examen)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _examenSeleccionado = examen;
-        _mostrarModalExamen = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-        _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(examen.IdExamen) ?? new();
-        _currentPage = 1;
-    }
-
-    private async Task MostrarModalReactivoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _reactivosEncontrados = new();
-        _valorBusquedaReactivo = "";
-        _mostrarModalReactivo = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalReactivoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModalReactivo = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-    }
-
-    private async Task BuscarReactivosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!_todosLosReactivos.Any())
-            _todosLosReactivos = await ReactivosApi.ListarReactivosAsync();
-
-        var val = _valorBusquedaReactivo.Trim().ToLower();
-
-        if (string.IsNullOrWhiteSpace(val))
-        {
-            _reactivosEncontrados = _todosLosReactivos;
-        }
-        else
-        {
-            _reactivosEncontrados = _criterioBusquedaReactivo switch
-            {
-                "fabricante" => _todosLosReactivos.Where(r => r.Fabricante?.ToLower().Contains(val) ?? false).ToList(),
-                "unidad" => _todosLosReactivos.Where(r => r.Unidad?.ToLower().Contains(val) ?? false).ToList(),
-                _ => _todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList()
-            };
-        }
-    }
-
-    private async Task SeleccionarReactivoAsync(ReactivoDto reactivo)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
-        {
-            await JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
-            return;
-        }
-
-        _reactivosAsociados.Add(new AsociacionReactivoDto
-        {
-            IdReactivo = reactivo.IdReactivo,
-            NombreReactivo = reactivo.NombreReactivo,
-            Unidad = reactivo.Unidad,
-            CantidadUsada = 0
+            _examenSeleccionado = examen;
+            _mostrarModalExamen = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+            _reactivosAsociados = await AsociacionesApi.ListarAsociacionesPorExamenIdAsync(examen.IdExamen) ?? new();
+            _currentPage = 1;
         });
 
-        _mostrarModalReactivo = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-        StateHasChanged();
-    }
+    private Task MostrarModalReactivoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _reactivosEncontrados = new();
+            _valorBusquedaReactivo = "";
+            _mostrarModalReactivo = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task CerrarModalReactivoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _mostrarModalReactivo = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+        });
+
+    private Task BuscarReactivosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!_todosLosReactivos.Any())
+                _todosLosReactivos = await ReactivosApi.ListarReactivosAsync();
+
+            var val = _valorBusquedaReactivo.Trim().ToLower();
+
+            if (string.IsNullOrWhiteSpace(val))
+            {
+                _reactivosEncontrados = _todosLosReactivos;
+            }
+            else
+            {
+                _reactivosEncontrados = _criterioBusquedaReactivo switch
+                {
+                    "fabricante" => _todosLosReactivos.Where(r => r.Fabricante?.ToLower().Contains(val) ?? false).ToList(),
+                    "unidad" => _todosLosReactivos.Where(r => r.Unidad?.ToLower().Contains(val) ?? false).ToList(),
+                    _ => _todosLosReactivos.Where(r => r.NombreReactivo.ToLower().Contains(val)).ToList()
+                };
+            }
+        });
+
+    private Task SeleccionarReactivoAsync(ReactivoDto reactivo)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (reactivo.Anulado)
+            {
+                await JS.InvokeVoidAsync("alert", "No puede seleccionar un reactivo deshabilitado.");
+                return;
+            }
+
+            if (_reactivosAsociados.Any(r => r.IdReactivo == reactivo.IdReactivo))
+            {
+                await JS.InvokeVoidAsync("alert", "Este reactivo ya está en la lista.");
+                return;
+            }
+
+            _reactivosAsociados.Add(new AsociacionReactivoDto
+            {
+                IdReactivo = reactivo.IdReactivo,
+                NombreReactivo = reactivo.NombreReactivo,
+                Unidad = reactivo.Unidad,
+                CantidadUsada = 0
+            });
+
+            _mostrarModalReactivo = false;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+            StateHasChanged();
+        });
 
     private void QuitarReactivo(AsociacionReactivoDto item) => _reactivosAsociados.Remove(item);
 
-    private async Task GuardarAsociacionesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_examenSeleccionado == null)
+    private Task GuardarAsociacionesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("alert", "Debe seleccionar un examen.");
-            return;
-        }
+            if (_examenSeleccionado == null)
+            {
+                await JS.InvokeVoidAsync("alert", "Debe seleccionar un examen.");
+                return;
+            }
 
-        var exito = await AsociacionesApi.GuardarAsociacionesPorExamenAsync(_examenSeleccionado.IdExamen, _reactivosAsociados);
-        if (exito)
-            Navigation.NavigateTo("/asociaciones-reactivos", true);
-        else
-            await JS.InvokeVoidAsync("alert", "Error al guardar asociaciones.");
-    }
+            var exito = await AsociacionesApi.GuardarAsociacionesPorExamenAsync(_examenSeleccionado.IdExamen, _reactivosAsociados);
+            if (exito)
+                Navigation.NavigateTo("/asociaciones-reactivos", true);
+            else
+                await JS.InvokeVoidAsync("alert", "Error al guardar asociaciones.");
+        });
 
     private int PageSize
     {

@@ -5,7 +5,7 @@ using usuario = Lab_APIRest.Infrastructure.EF.Models.usuario;
 using persona = Lab_APIRest.Infrastructure.EF.Models.persona;
 using tokens_usuarios = Lab_APIRest.Infrastructure.EF.Models.tokens_usuarios;
 using Microsoft.EntityFrameworkCore;
-using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Email;
 using System;
 using System.Linq;
 
@@ -14,9 +14,9 @@ namespace Lab_APIRest.Services.Usuarios
     public class UsuariosService : IUsuariosService
     {
         private readonly LabDbContext _context;
-        private readonly EmailService _emailService;
+            private readonly IEmailService _emailService;
 
-        public UsuariosService(LabDbContext context, EmailService emailService)
+            public UsuariosService(LabDbContext context, IEmailService emailService)
         {
             _context = context;
             _emailService = emailService;

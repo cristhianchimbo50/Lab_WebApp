@@ -127,11 +127,11 @@
         new() { Tipo = "tipo_registro", Titulo = "Tipo Registro" }
     ];
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        await CargarTodosAsync();
-    }
+    protected override Task OnInitializedAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            await CargarTodosAsync();
+        });
 
     private async Task CargarTodosAsync()
     {
@@ -141,27 +141,27 @@
         }
     }
 
-    private async Task GuardarAsync(SeccionCatalogo seccion)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (string.IsNullOrWhiteSpace(seccion.Actual.Nombre))
+    private Task GuardarAsync(SeccionCatalogo seccion)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", $"El nombre de {seccion.Titulo} es obligatorio.", "warning");
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(seccion.Actual.Nombre))
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"El nombre de {seccion.Titulo} es obligatorio.", "warning");
+                return;
+            }
 
-        try
-        {
-            await ExamenesApiService.GuardarCatalogoAsync(seccion.Tipo, seccion.Actual);
-            await JS.InvokeVoidAsync("mostrarToastAsync", $"{seccion.Titulo} guardado correctamente.", "success");
-            LimpiarForm(seccion);
-            seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", $"Error al guardar {seccion.Titulo}.", "danger");
-        }
-    }
+            try
+            {
+                await ExamenesApiService.GuardarCatalogoAsync(seccion.Tipo, seccion.Actual);
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"{seccion.Titulo} guardado correctamente.", "success");
+                LimpiarForm(seccion);
+                seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"Error al guardar {seccion.Titulo}.", "danger");
+            }
+        });
 
     private void Editar(SeccionCatalogo seccion, CatalogoExamenDto dto)
     {
@@ -173,19 +173,19 @@
         };
     }
 
-    private async Task CambiarEstadoAsync(SeccionCatalogo seccion, CatalogoExamenDto dto, bool activo)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        var accion = activo ? "habilitar" : "deshabilitar";
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Desea {accion} {dto.Nombre}?")) return;
-
-        var resp = await ExamenesApiService.CambiarEstadoCatalogoAsync(seccion.Tipo, dto.Id, activo);
-        if (resp.IsSuccessStatusCode)
+    private Task CambiarEstadoAsync(SeccionCatalogo seccion, CatalogoExamenDto dto, bool activo)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Estado actualizado correctamente.", "success");
-            seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
-        }
-    }
+            var accion = activo ? "habilitar" : "deshabilitar";
+            if (!await JS.InvokeAsync<bool>("confirm", $"¿Desea {accion} {dto.Nombre}?")) return;
+
+            var resp = await ExamenesApiService.CambiarEstadoCatalogoAsync(seccion.Tipo, dto.Id, activo);
+            if (resp.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Estado actualizado correctamente.", "success");
+                seccion.Items = await ExamenesApiService.ListarCatalogoAsync(seccion.Tipo, incluirInactivos: true);
+            }
+        });
 
     private static void LimpiarForm(SeccionCatalogo seccion)
     {

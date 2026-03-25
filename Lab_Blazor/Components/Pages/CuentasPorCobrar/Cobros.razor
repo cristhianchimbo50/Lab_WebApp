@@ -345,124 +345,117 @@
         }
     }
 
-    private async Task CargarOrdenesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        var filtro = new PagoFiltroDto { Cedula = cedula, IncluirAnulados = false };
-        var ordenes = await PagosApi.ListarCuentasPorCobrarAsync(filtro);
-        _ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
-        if (_ordenesPorCobrar.Any()) _nombrePaciente = _ordenesPorCobrar.First().NombrePaciente ?? "";
-        _totalDeuda = _ordenesPorCobrar.Sum(o => o.SaldoPendiente);
-    }
-
-    private async Task CargarPagosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _pagosPrevios.Clear();
-        foreach (var orden in _ordenesSeleccionadas)
+    private Task CargarOrdenesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var pagos = await PagosApi.ListarPagosAsync(orden.IdOrden);
-            foreach (var pago in pagos)
-                if (pago.DetallePagos != null)
-                    _pagosPrevios.AddRange(pago.DetallePagos.Select(d => new DetallePagoDto
-                    {
-                        IdDetallePago = d.IdDetallePago,
-                        IdPago = pago.IdPago,
-                        TipoPago = d.TipoPago,
-                        Monto = d.Monto,
-                        FechaPago = pago.FechaPago
-                    }));
-        }
-        _totalPagos = _pagosPrevios.Sum(p => p.Monto);
-    }
+            var filtro = new PagoFiltroDto { Cedula = cedula, IncluirAnulados = false };
+            var ordenes = await PagosApi.ListarCuentasPorCobrarAsync(filtro);
+            _ordenesPorCobrar = ordenes.Where(o => o.SaldoPendiente > 0 && (o.Anulado == null || o.Anulado == false)).ToList();
+            if (_ordenesPorCobrar.Any()) _nombrePaciente = _ordenesPorCobrar.First().NombrePaciente ?? "";
+            _totalDeuda = _ordenesPorCobrar.Sum(o => o.SaldoPendiente);
+        });
 
-    private async Task SeleccionarOrdenAsync(OrdenDto orden)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!_ordenesSeleccionadas.Any(o => o.IdOrden == orden.IdOrden))
+    private Task CargarPagosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _ordenesSeleccionadas.Add(orden);
-            _ordenesPorCobrar.Remove(orden);
+            _pagosPrevios.Clear();
+            foreach (var orden in _ordenesSeleccionadas)
+            {
+                var pagos = await PagosApi.ListarPagosAsync(orden.IdOrden);
+                foreach (var pago in pagos)
+                    if (pago.DetallePagos != null)
+                        _pagosPrevios.AddRange(pago.DetallePagos.Select(d => new DetallePagoDto
+                        {
+                            IdDetallePago = d.IdDetallePago,
+                            IdPago = pago.IdPago,
+                            TipoPago = d.TipoPago,
+                            Monto = d.Monto,
+                            FechaPago = pago.FechaPago
+                        }));
+            }
+            _totalPagos = _pagosPrevios.Sum(p => p.Monto);
+        });
+
+    private Task SeleccionarOrdenAsync(OrdenDto orden)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!_ordenesSeleccionadas.Any(o => o.IdOrden == orden.IdOrden))
+            {
+                _ordenesSeleccionadas.Add(orden);
+                _ordenesPorCobrar.Remove(orden);
+                await CargarPagosAsync();
+                CalcularSaldoSeleccionado();
+                StateHasChanged();
+            }
+        });
+
+    private Task QuitarOrdenAsync(OrdenDto orden)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _ordenesPorCobrar.Add(orden);
+            _ordenesSeleccionadas.Remove(orden);
             await CargarPagosAsync();
             CalcularSaldoSeleccionado();
             StateHasChanged();
-        }
-    }
-
-    private async Task QuitarOrdenAsync(OrdenDto orden)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _ordenesPorCobrar.Add(orden);
-        _ordenesSeleccionadas.Remove(orden);
-        await CargarPagosAsync();
-        CalcularSaldoSeleccionado();
-        StateHasChanged();
-    }
+        });
 
     private void CalcularSaldoSeleccionado() => _totalSaldoSeleccionado = _ordenesSeleccionadas.Sum(o => o.SaldoPendiente);
  
-     private async Task MostrarModalCobroAsync()
-     {
-         if (!await SesionService.VerificarOSalirAsync()) return;
- 
-         _mostrarModalCobro = true;
-         await JS.InvokeVoidAsync("marcarModalAbierto");
-     }
- 
-     private async Task CerrarModalCobroAsync()
-     {
-         if (!await SesionService.VerificarOSalirAsync()) return;
- 
-         _mostrarModalCobro = false;
-         await JS.InvokeVoidAsync("marcarModalCerrado");
-     }
- 
-     private async Task RegistrarCobroAsync()
-     {
-         if (!await SesionService.VerificarOSalirAsync()) return;
- 
-         decimal saldoTotal = _totalSaldoSeleccionado;
-         decimal cobroTotal = TotalCobro;
-         decimal cambio = 0;
- 
-         if (cobroTotal > saldoTotal)
+     private Task MostrarModalCobroAsync()
+         => SesionService.EjecutarConSesionAsync(async () =>
          {
-             cambio = cobroTotal - saldoTotal;
-             cobroTotal = saldoTotal;
-         }
+             _mostrarModalCobro = true;
+             await JS.InvokeVoidAsync("marcarModalAbierto");
+         });
  
-         var pagoDto = new PagoDto
+     private Task CerrarModalCobroAsync()
+         => SesionService.EjecutarConSesionAsync(async () =>
          {
-             DineroEfectivo = _dineroEfectivo,
-             Transferencia = _transferencia,
-             Observacion = _observacion
-         };
+             _mostrarModalCobro = false;
+             await JS.InvokeVoidAsync("marcarModalCerrado");
+         });
  
-         bool errores = false;
- 
-         foreach (var orden in _ordenesSeleccionadas)
+     private Task RegistrarCobroAsync()
+         => SesionService.EjecutarConSesionAsync(async () =>
          {
-             if (!await SesionService.VerificarOSalirAsync()) return;
- 
-             pagoDto.IdOrden = orden.IdOrden;
-             var response = await PagosApi.GuardarCobroCuentaPorCobrarAsync(pagoDto);
-             if (response == null)
-                 errores = true;
-             if (cobroTotal <= 0)
-                 break;
-         }
- 
-         if (errores)
-             await JS.InvokeVoidAsync("alert", "Algunos pagos no se registraron correctamente.");
-         else if (cambio > 0)
-             await JS.InvokeVoidAsync("alert", $"Pago registrado correctamente. Cambio: {cambio.ToString("C")}");
-         else
-             await JS.InvokeVoidAsync("alert", "Pago registrado exitosamente.");
- 
-         Navigation.NavigateTo(Navigation.Uri, true);
-     }
+             decimal saldoTotal = _totalSaldoSeleccionado;
+             decimal cobroTotal = TotalCobro;
+             decimal cambio = 0;
+
+             if (cobroTotal > saldoTotal)
+             {
+                 cambio = cobroTotal - saldoTotal;
+                 cobroTotal = saldoTotal;
+             }
+
+             var pagoDto = new PagoDto
+             {
+                 DineroEfectivo = _dineroEfectivo,
+                 Transferencia = _transferencia,
+                 Observacion = _observacion
+             };
+
+             bool errores = false;
+
+             foreach (var orden in _ordenesSeleccionadas)
+             {
+                 pagoDto.IdOrden = orden.IdOrden;
+                 var response = await PagosApi.GuardarCobroCuentaPorCobrarAsync(pagoDto);
+                 if (response == null)
+                     errores = true;
+                 if (cobroTotal <= 0)
+                     break;
+             }
+
+             if (errores)
+                 await JS.InvokeVoidAsync("alert", "Algunos pagos no se registraron correctamente.");
+             else if (cambio > 0)
+                 await JS.InvokeVoidAsync("alert", $"Pago registrado correctamente. Cambio: {cambio.ToString("C")}");
+             else
+                 await JS.InvokeVoidAsync("alert", "Pago registrado exitosamente.");
+
+             Navigation.NavigateTo(Navigation.Uri, true);
+         });
  
      private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
  }

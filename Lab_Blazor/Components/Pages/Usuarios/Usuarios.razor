@@ -325,13 +325,13 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            var auth = await AuthProvider.GetAuthenticationStateAsync();
-            _usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
-            await CargarGenerosAsync();
-            StateHasChanged();
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                var auth = await AuthProvider.GetAuthenticationStateAsync();
+                _usuarioActualCorreo = auth.User?.Identity?.Name ?? "";
+                await CargarGenerosAsync();
+                StateHasChanged();
+            }, forzarVerificacion: true);
         }
     }
 
@@ -349,41 +349,40 @@
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
-    private async Task BuscarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostroBusqueda = true;
-        _filtro = new();
-        if (!string.IsNullOrWhiteSpace(_campoFiltro) && !string.IsNullOrWhiteSpace(_valorFiltro))
+    private Task BuscarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            switch (_campoFiltro)
+            _mostroBusqueda = true;
+            _filtro = new();
+            if (!string.IsNullOrWhiteSpace(_campoFiltro) && !string.IsNullOrWhiteSpace(_valorFiltro))
             {
-                case "nombre": _filtro.Nombre = _valorFiltro; break;
-                case "correo": _filtro.Correo = _valorFiltro; break;
-                case "rol":
-                    if (int.TryParse(_valorFiltro, out var idRol)) _filtro.IdRol = idRol;
-                    break;
-                case "activo": _filtro.Activo = _valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
+                switch (_campoFiltro)
+                {
+                    case "nombre": _filtro.Nombre = _valorFiltro; break;
+                    case "correo": _filtro.Correo = _valorFiltro; break;
+                    case "rol":
+                        if (int.TryParse(_valorFiltro, out var idRol)) _filtro.IdRol = idRol;
+                        break;
+                    case "activo": _filtro.Activo = _valorFiltro switch { "true" => true, "false" => false, _ => null }; break;
+                }
             }
-        }
-        try
-        {
-            _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
-            _mensaje = null;
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden || ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            _mensaje = "No autorizado. Inicie sesión como administrador para ver usuarios.";
-            _tipoMensaje = "danger";
-            _usuarios.Clear();
-        }
-        catch (Exception ex)
-        {
-            _mensaje = $"Error al buscar usuarios: {ex.Message}";
-            _tipoMensaje = "danger";
-        }
-    }
+            try
+            {
+                _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
+                _mensaje = null;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden || ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                _mensaje = "No autorizado. Inicie sesión como administrador para ver usuarios.";
+                _tipoMensaje = "danger";
+                _usuarios.Clear();
+            }
+            catch (Exception ex)
+            {
+                _mensaje = $"Error al buscar usuarios: {ex.Message}";
+                _tipoMensaje = "danger";
+            }
+        });
 
     private void LimpiarFiltro()
     {
@@ -498,102 +497,99 @@
         _cedulaYaRegistradaComoUsuario = false;
     }
 
-    private async Task GuardarUsuarioAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _cargando = true;
-        try
+    private Task GuardarUsuarioAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            if (_esNuevo)
+            _cargando = true;
+            try
             {
-                if (_cedulaYaRegistradaComoPaciente)
+                if (_esNuevo)
                 {
-                    await JS.InvokeVoidAsync("alert", "La cédula ingresada ya corresponde a un paciente registrado. No se puede guardar.");
-                    return;
+                    if (_cedulaYaRegistradaComoPaciente)
+                    {
+                        await JS.InvokeVoidAsync("alert", "La cédula ingresada ya corresponde a un paciente registrado. No se puede guardar.");
+                        return;
+                    }
+
+                    if (_cedulaYaRegistradaComoUsuario)
+                    {
+                        await JS.InvokeVoidAsync("alert", "La cédula ingresada ya tiene un usuario registrado. No se puede guardar.");
+                        return;
+                    }
+
+                    var crearDto = new UsuarioCrearDto
+                    {
+                        Cedula = _usuarioActual.Cedula,
+                        Nombres = _usuarioActual.Nombres,
+                        Apellidos = _usuarioActual.Apellidos,
+                        FechaNacimiento = _usuarioActual.FechaNacimiento,
+                        IdGenero = _usuarioActual.IdGenero,
+                        Correo = _usuarioActual.Correo,
+                        Telefono = _usuarioActual.Telefono,
+                        Direccion = _usuarioActual.Direccion,
+                        IdRol = _usuarioActual.IdRol
+                    };
+
+                    await UsuariosApi.GuardarUsuarioAsync(crearDto);
+                    _mensaje = "Usuario registrado correctamente. Se ha enviado un enlace de activación al correo del usuario.";
+                }
+                else
+                {
+                    await UsuariosApi.GuardarUsuarioAsync(_usuarioActual);
+                    _mensaje = "Usuario actualizado correctamente.";
                 }
 
-                if (_cedulaYaRegistradaComoUsuario)
-                {
-                    await JS.InvokeVoidAsync("alert", "La cédula ingresada ya tiene un usuario registrado. No se puede guardar.");
-                    return;
-                }
-
-                var crearDto = new UsuarioCrearDto
-                {
-                    Cedula = _usuarioActual.Cedula,
-                    Nombres = _usuarioActual.Nombres,
-                    Apellidos = _usuarioActual.Apellidos,
-                    FechaNacimiento = _usuarioActual.FechaNacimiento,
-                    IdGenero = _usuarioActual.IdGenero,
-                    Correo = _usuarioActual.Correo,
-                    Telefono = _usuarioActual.Telefono,
-                    Direccion = _usuarioActual.Direccion,
-                    IdRol = _usuarioActual.IdRol
-                };
-
-                await UsuariosApi.GuardarUsuarioAsync(crearDto);
-                _mensaje = "Usuario registrado correctamente. Se ha enviado un enlace de activación al correo del usuario.";
+                _tipoMensaje = "success";
+                _modalVisible = false;
+                await BuscarAsync();
             }
-            else
+            catch (Exception ex)
             {
-                await UsuariosApi.GuardarUsuarioAsync(_usuarioActual);
-                _mensaje = "Usuario actualizado correctamente.";
+                _mensaje = $"Error: {ex.Message}";
+                _tipoMensaje = "danger";
+                await JS.InvokeVoidAsync("alert", ex.Message);
+            }
+            finally
+            {
+                _cargando = false;
+                JS.InvokeVoidAsync("marcarModalCerrado");
+            }
+        });
+
+    private Task CambiarEstadoAsync(UsuarioListadoDto usuario)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (usuario.Correo == _usuarioActualCorreo)
+            {
+                _mensaje = "No puedes deshabilitar tu propio usuario.";
+                _tipoMensaje = "warning";
+                return;
             }
 
-            _tipoMensaje = "success";
-            _modalVisible = false;
-            await BuscarAsync();
-        }
-        catch (Exception ex)
+            bool confirmar = await JS.InvokeAsync<bool>("confirm", usuario.Activo ? "¿Deseas deshabilitar este usuario?" : "¿Deseas habilitar este usuario?");
+            if (!confirmar) return;
+
+            try
+            {
+                await UsuariosApi.CambiarEstadoUsuarioAsync(usuario.IdUsuario, !usuario.Activo);
+                _mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
+                _tipoMensaje = "success";
+                await BuscarAsync();
+            }
+            catch (Exception ex)
+            {
+                _mensaje = ex.Message;
+                _tipoMensaje = "danger";
+            }
+        });
+
+    private Task AbrirModalDetalleAsync(int idUsuario)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _mensaje = $"Error: {ex.Message}";
-            _tipoMensaje = "danger";
-            await JS.InvokeVoidAsync("alert", ex.Message);
-        }
-        finally
-        {
-            _cargando = false;
-            JS.InvokeVoidAsync("marcarModalCerrado");
-        }
-    }
-
-    private async Task CambiarEstadoAsync(UsuarioListadoDto usuario)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (usuario.Correo == _usuarioActualCorreo)
-        {
-            _mensaje = "No puedes deshabilitar tu propio usuario.";
-            _tipoMensaje = "warning";
-            return;
-        }
-
-        bool confirmar = await JS.InvokeAsync<bool>("confirm", usuario.Activo ? "¿Deseas deshabilitar este usuario?" : "¿Deseas habilitar este usuario?");
-        if (!confirmar) return;
-
-        try
-        {
-            await UsuariosApi.CambiarEstadoUsuarioAsync(usuario.IdUsuario, !usuario.Activo);
-            _mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
-            _tipoMensaje = "success";
-            await BuscarAsync();
-        }
-        catch (Exception ex)
-        {
-            _mensaje = ex.Message;
-            _tipoMensaje = "danger";
-        }
-    }
-
-    private async Task AbrirModalDetalleAsync(int idUsuario)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _detalleUsuario = await UsuariosApi.ObtenerDetalleUsuarioAsync(idUsuario);
-        _modalDetalleVisible = true;
-        JS.InvokeVoidAsync("marcarModalAbierto");
-    }
+            _detalleUsuario = await UsuariosApi.ObtenerDetalleUsuarioAsync(idUsuario);
+            _modalDetalleVisible = true;
+            JS.InvokeVoidAsync("marcarModalAbierto");
+        });
 
     private void CerrarModalDetalle()
     {

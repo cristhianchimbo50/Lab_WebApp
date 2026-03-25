@@ -23,13 +23,12 @@
     <Authorized Context="EstadoAutenticacion">
         @{
             var usuario = EstadoAutenticacion.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
-            var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
-            bool esPaciente = rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase);
-            bool esAdmin = rol == "1";
-            bool esLaboratorista = rol == "3";
-            bool puedeVer = rol is "1" or "2" or "3" or "4";
-            bool puedeEditarResultados = esAdmin || esLaboratorista;
+            var rol = ObtenerRol(usuario);
+            bool esPaciente = EsRolPaciente(rol);
+            bool esAdmin = EsRolAdmin(rol);
+            bool esLaboratorista = EsRolLaboratorista(rol);
+            bool puedeVer = PuedeVerOrdenes(rol);
+            bool puedeEditarResultados = PuedeEditarResultados(rol);
         }
 
         @if (!puedeVer)
@@ -259,7 +258,7 @@
                                                 </span>
                                             </td>
                                             <td data-label="Estado Orden">
-                                                <span class="badge bg-@(string.Equals(orden.EstadoOrden, "FINALIZADO", StringComparison.OrdinalIgnoreCase) || string.Equals(orden.EstadoOrden, "FINALIZADA", StringComparison.OrdinalIgnoreCase) ? "success" : "info")">
+                                                <span class="badge bg-@(EsOrdenFinalizada(orden.IdEstadoOrden) ? "success" : "info")">
                                                     @TextoEstadoOrden(orden.EstadoOrden)
                                                 </span>
                                             </td>
@@ -286,7 +285,7 @@
             @if (_mostrarDetalleOrden && _detalleActual is not null)
             {
                 <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:1100px;">
                         <div class="modal-content shadow-lg border-0">
                             @if (!string.IsNullOrEmpty(_pdfUrl))
                             {
@@ -355,13 +354,9 @@
                                             <label><strong>Género</strong></label>
                                             <input class="form-control" value="@_detalleActual.GeneroPaciente" disabled />
                                         </div>
-                                        <div class="col-md-3 col-6 mb-2">
-                                            <label><strong>Resultados habilitados</strong></label>
-                                            <input class="form-control" value="@(_detalleActual.ResultadosHabilitados ? "Sí" : "No")" disabled />
-                                        </div>
                                     </div>
                                     <h5 class="mt-4 mb-3"><i class="fas fa-vials me-2"></i>Exámenes</h5>
-                                    <div class="table-responsive">
+                                <div class="table-responsive" style="max-height:220px; overflow-y:auto;">
                                         <table class="table table-sm table-bordered align-middle text-center">
                                             <thead class="table-light">
                                                 <tr>
@@ -391,8 +386,8 @@
                                                         <td>@examen.NombreExamen</td>
                                                         <td>@examen.NombreEstudio</td>
                                                         <td>
-                                                            <span class="badge bg-@ObtenerClaseEstadoResultado(examen.EstadoResultado)">
-                                                                @EstadoResultadoTexto(examen.EstadoResultado)
+                                                            <span class="badge bg-@ObtenerClaseEstadoResultado(examen.IdEstadoResultado)">
+                                                                @EstadoResultadoTexto(examen.IdEstadoResultado)
                                                             </span>
                                                         </td>
                                                         <td>
@@ -416,7 +411,7 @@
                                                                             <i class="bi bi-eye"></i>
                                                                         </button>
                                                                     }
-                                                                    @if (puedeEditarResultados && string.Equals(examen.EstadoResultado, "CORRECTION", StringComparison.OrdinalIgnoreCase))
+                                                                    @if (puedeEditarResultados && examen.IdEstadoResultado == EstadoResultadoCorreccionId)
                                                                     {
                                                                         <button class="btn btn-warning btn-sm" title="Editar resultado"
                                                                                 @onclick="() => EditarResultadoAsync(examen.IdResultado!.Value)">
@@ -476,17 +471,18 @@
             @if (_mostrarResultadoModal && _resultadoDetalleActual is not null)
             {
                 <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index:1056;">
-                    <div class="modal-dialog modal-xl modal-dialog-centered">
-                        <div class="modal-content shadow-lg border-0">
+                    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:900px;">
+                        <div class="modal-content shadow-lg border-0" style="max-height:100vh; overflow:hidden;">
                             <div class="modal-header bg-secondary text-white">
                                 <h5 class="modal-title d-flex align-items-center gap-2">
                                     <i class="bi bi-eye-fill"></i>
                                     <span>Detalle de Resultado</span>
                                     <span class="badge bg-light text-dark">@_resultadoDetalleActual.NumeroResultado</span>
-                                    <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.EstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.EstadoResultado)</span>
+                                    <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.IdEstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.IdEstadoResultado)</span>
                                 </h5>
                                 <button class="btn-close btn-close-white" @onclick="CerrarResultadoModal"></button>
                             </div>
+                            @{ var yaAprobado = _resultadoDetalleActual != null && EsResultadoAprobado(_resultadoDetalleActual.IdEstadoResultado); }
                             <div class="modal-body">
                                 @if (_resultadoDetalleActual.Anulado)
                                 {
@@ -512,7 +508,8 @@
                                 </div>
 
                                 <h6 class="mt-3 mb-2"><i class="fas fa-vial me-1"></i>Resultados</h6>
-                                <div class="table-responsive">
+                                <div style="max-height:25vh; overflow-y:auto;">
+                                    <div class="table-responsive">
                                     <table class="table table-sm table-bordered align-middle text-center">
                                         <thead class="table-light">
                                             <tr>
@@ -534,6 +531,7 @@
                                             }
                                         </tbody>
                                     </table>
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -549,7 +547,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Historial de revisión</label>
                                         <div class="border rounded p-3 bg-light">
-                                            <div class="fw-semibold">Estado actual: <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.EstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.EstadoResultado)</span></div>
+                                            <div class="fw-semibold">Estado actual: <span class="badge bg-@ObtenerClaseEstadoResultado(_resultadoDetalleActual.IdEstadoResultado)">@EstadoResultadoTexto(_resultadoDetalleActual.IdEstadoResultado)</span></div>
                                             <div>Revisor: @(_resultadoDetalleActual.NombreRevisor ?? "-")</div>
                                             <div>Fecha: @(_resultadoDetalleActual.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
                                             <div>Observación: @(_resultadoDetalleActual.ObservacionRevision ?? "-")</div>
@@ -557,27 +555,30 @@
                                     </div>
                                 </div>
 
-                                @if (!_resultadoDetalleActual.Anulado && esAdmin)
-                                {
-                                    var yaAprobado = string.Equals(_resultadoDetalleActual.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase);
-                                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
-                                        <button class="btn btn-success" disabled="@(_procesandoRevision || yaAprobado)" @onclick='() => RevisarResultadoAsync("APROBADO")'>
+
+                                @* Buttons moved to modal-footer to keep spacing consistent *@
+                            </div>
+                            @if (!_resultadoDetalleActual.Anulado && esAdmin)
+                            {
+                                <div class="modal-footer">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+                                        <button class="btn btn-success" disabled="@(_procesandoRevision || yaAprobado)" @onclick='() => RevisarResultadoAsync(EstadoResultadoAprobadoId)'>
                                             @if (_procesandoRevision)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-1"></span>
                                             }
-                                            <i class="bi bi-check-lg me-1"></i>Aprobar
+                                            <i class="bi bi-check-lg me-1"></i> Aprobar
                                         </button>
-                                        <button class="btn btn-danger" disabled='@(_procesandoRevision || yaAprobado)' @onclick='() => RevisarResultadoAsync("CORRECCION")'>
+                                        <button class="btn btn-danger" disabled='@(_procesandoRevision || yaAprobado)' @onclick='() => RevisarResultadoAsync(EstadoResultadoCorreccionId)'>
                                             @if (_procesandoRevision)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-1"></span>
                                             }
-                                            <i class="bi bi-x-circle me-1"></i>Rechazar / Corrección
+                                            <i class="bi bi-x-circle me-1"></i> Rechazar / Corrección
                                         </button>
                                     </div>
-                                }
-                            </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -604,6 +605,19 @@
 </AuthorizeView>
 
 @code {
+    private const string RolAdminId = "1";
+    private const string RolRecepcionId = "2";
+    private const string RolLaboratoristaId = "3";
+    private const string RolPacienteId = "4";
+    private const string RolPacienteNombre = "paciente";
+    private const string CriterioBusquedaNumero = "numero";
+
+    private const int EstadoPagoPagadoId = EstadoIds.Pago.Pagado;
+    private const int EstadoResultadoPendienteId = EstadoIds.Resultado.Pendiente;
+    private const int EstadoResultadoRevisionId = EstadoIds.Resultado.EnRevision;
+    private const int EstadoResultadoCorreccionId = EstadoIds.Resultado.Correccion;
+    private const int EstadoResultadoAprobadoId = EstadoIds.Resultado.Aprobado;
+
     private ResultadoPaginadoDto<OrdenDto>? _resultado;
     private OrdenFiltroDto _filtro = new();
     private OrdenDetalleDto? _detalleActual;
@@ -623,21 +637,21 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                _filtro.FechaHasta = null;
+                _filtro.FechaDesde = null;
+                _filtro.PageNumber = 1;
+                _filtro.PageSize = 10;
+                _filtro.SortBy = nameof(OrdenDto.IdOrden);
+                _filtro.SortAsc = false;
+                _filtro.CriterioBusqueda = CriterioBusquedaNumero;
 
-            _filtro.FechaHasta = null;
-            _filtro.FechaDesde = null;
-            _filtro.PageNumber = 1;
-            _filtro.PageSize = 10;
-            _filtro.SortBy = nameof(OrdenDto.IdOrden);
-            _filtro.SortAsc = false;
-            _filtro.CriterioBusqueda = "numero";
+                _contenidoCargado = true;
+                StateHasChanged();
 
-            _contenidoCargado = true;
-            StateHasChanged();
-
-            await BuscarOrdenesAsync();
+                await BuscarOrdenesAsync();
+            }, forzarVerificacion: true);
         }
     }
 
@@ -647,37 +661,56 @@
 
     private void IrANuevaOrden() => Navigation.NavigateTo("/nueva-orden", true);
 
-    private async Task VerDetalleOrdenAsync(int idOrden)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
+    private static string ObtenerRol(ClaimsPrincipal usuario)
+        => usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
 
+    private static bool EsRolPaciente(string rol)
+        => rol == RolPacienteId || rol.Equals(RolPacienteNombre, StringComparison.OrdinalIgnoreCase);
+
+    private static bool EsRolAdmin(string rol) => rol == RolAdminId;
+
+    private static bool EsRolLaboratorista(string rol) => rol == RolLaboratoristaId;
+
+    private static bool PuedeVerOrdenes(string rol)
+        => rol is RolAdminId or RolRecepcionId or RolLaboratoristaId or RolPacienteId;
+
+    private static bool PuedeEditarResultados(string rol)
+        => EsRolAdmin(rol) || EsRolLaboratorista(rol);
+
+    private async Task<(ClaimsPrincipal Usuario, string Rol, string? IdPacienteClaim)> ObtenerContextoUsuarioAsync()
+    {
         var estado = await AuthProvider.GetAuthenticationStateAsync();
         var usuario = estado.User;
-        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
-        var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
-
-        if (rol == "4" && int.TryParse(idPacienteClaim, out var idPaciente))
-        {
-            var result = await OrdenesApi.ObtenerDetalleOrdenPorPacienteAsync(idPaciente, idOrden);
-            _detalleActual = result.Detalle;
-
-            if (result.TieneSaldoPendiente)
-            {
-                await JS.InvokeVoidAsync("alert",
-                    "Tiene un saldo pendiente. Por favor acérquese al laboratorio para completar su pago antes de visualizar los resultados.");
-            }
-        }
-        else
-        {
-            _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
-        }
-
-        if (_detalleActual?.Examenes != null)
-            foreach (var ex in _detalleActual.Examenes)
-                ex.Seleccionado = false;
-
-        _mostrarDetalleOrden = true;
+        return (usuario, ObtenerRol(usuario), usuario.FindFirst("IdPaciente")?.Value);
     }
+
+    private Task VerDetalleOrdenAsync(int idOrden)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var (_, rol, idPacienteClaim) = await ObtenerContextoUsuarioAsync();
+
+            if (EsRolPaciente(rol) && int.TryParse(idPacienteClaim, out var idPaciente))
+            {
+                var result = await OrdenesApi.ObtenerDetalleOrdenPorPacienteAsync(idPaciente, idOrden);
+                _detalleActual = result.Detalle;
+
+                if (result.TieneSaldoPendiente)
+                {
+                    await JS.InvokeVoidAsync("alert",
+                        "Tiene un saldo pendiente. Por favor acérquese al laboratorio para completar su pago antes de visualizar los resultados.");
+                }
+            }
+            else
+            {
+                _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+            }
+
+            if (_detalleActual?.Examenes != null)
+                foreach (var ex in _detalleActual.Examenes)
+                    ex.Seleccionado = false;
+
+            _mostrarDetalleOrden = true;
+        });
 
     private void CerrarDetalle()
     {
@@ -687,127 +720,121 @@
         _observacionRevision = string.Empty;
     }
 
-    private async Task VisualizarTicketOrdenAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_detalleActual == null) return;
-        var pdfBytes = await OrdenesApi.GenerarOrdenTicketPdfAsync(_detalleActual.IdOrden);
-        if (pdfBytes == null || pdfBytes.Length == 0)
+    private Task VisualizarTicketOrdenAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("alert", "Error al generar el ticket.");
-            return;
-        }
-        _pdfUrl = $"data:application/pdf;base64,{Convert.ToBase64String(pdfBytes)}";
-    }
+            if (_detalleActual == null) return;
+            var pdfBytes = await OrdenesApi.GenerarOrdenTicketPdfAsync(_detalleActual.IdOrden);
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Error al generar el ticket.");
+                return;
+            }
+            _pdfUrl = $"data:application/pdf;base64,{Convert.ToBase64String(pdfBytes)}";
+        });
 
-    private async Task IrAIngresarResultadosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_detalleActual == null) return;
-        var seleccionados = _detalleActual.Examenes.Where(e => e.Seleccionado && !e.IdResultado.HasValue).ToList();
-        if (!seleccionados.Any())
+    private Task IrAIngresarResultadosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("alert", "Seleccione al menos un examen pendiente.");
-            return;
-        }
-        var estudio = seleccionados.First().NombreEstudio;
-        if (seleccionados.Any(e => e.NombreEstudio != estudio))
+            if (_detalleActual == null) return;
+            var seleccionados = _detalleActual.Examenes.Where(e => e.Seleccionado && !e.IdResultado.HasValue).ToList();
+            if (!seleccionados.Any())
+            {
+                await JS.InvokeVoidAsync("alert", "Seleccione al menos un examen pendiente.");
+                return;
+            }
+            var estudio = seleccionados.First().NombreEstudio;
+            if (seleccionados.Any(e => e.NombreEstudio != estudio))
+            {
+                await JS.InvokeVoidAsync("alert", "Debe seleccionar exámenes del mismo estudio.");
+                return;
+            }
+            var noSeleccionadosDelMismoEstudio = _detalleActual.Examenes
+                .Where(e => !e.Seleccionado && e.NombreEstudio == estudio && !e.IdResultado.HasValue).ToList();
+            if (noSeleccionadosDelMismoEstudio.Any())
+            {
+                await JS.InvokeVoidAsync("alert", $"Debe seleccionar todos los exámenes del estudio: {estudio}.");
+                return;
+            }
+            var query = string.Join("&", seleccionados.Select(e => $"idsExamenes={e.IdExamen}"));
+            Navigation.NavigateTo($"/resultados/ingresar?idOrden={_detalleActual.IdOrden}&{query}");
+        });
+
+    private Task ImprimirResultadosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("alert", "Debe seleccionar exámenes del mismo estudio.");
-            return;
-        }
-        var noSeleccionadosDelMismoEstudio = _detalleActual.Examenes
-            .Where(e => !e.Seleccionado && e.NombreEstudio == estudio && !e.IdResultado.HasValue).ToList();
-        if (noSeleccionadosDelMismoEstudio.Any())
-        {
-            await JS.InvokeVoidAsync("alert", $"Debe seleccionar todos los exámenes del estudio: {estudio}.");
-            return;
-        }
-        var query = string.Join("&", seleccionados.Select(e => $"idsExamenes={e.IdExamen}"));
-        Navigation.NavigateTo($"/resultados/ingresar?idOrden={_detalleActual.IdOrden}&{query}");
-    }
+            if (_detalleActual == null) return;
 
-    private async Task ImprimirResultadosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
+            var (_, rol, _) = await ObtenerContextoUsuarioAsync();
+            if (EsRolPaciente(rol) && _detalleActual.IdEstadoPago != EstadoPagoPagadoId)
+            {
+                await JS.InvokeVoidAsync("alert", "No puede imprimir los resultados hasta completar el pago de la orden.");
+                return;
+            }
+            if (EsRolPaciente(rol) && !EsOrdenFinalizada(_detalleActual.IdEstadoOrden))
+            {
+                await JS.InvokeVoidAsync("alert", "Los resultados aún no están habilitados. Inténtelo más tarde.");
+                return;
+            }
 
-        if (_detalleActual == null) return;
+            var idsResultados = _detalleActual.Examenes
+                .Where(e => e.IdResultado.HasValue)
+                .Select(e => e.IdResultado!.Value)
+                .Distinct()
+                .ToList();
 
-        var estado = await AuthProvider.GetAuthenticationStateAsync();
-        var usuario = estado.User;
-        var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
-        if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && !_detalleActual.EstadoPago.Equals("PAGADO", StringComparison.OrdinalIgnoreCase))
-        {
-            await JS.InvokeVoidAsync("alert", "No puede imprimir los resultados hasta completar el pago de la orden.");
-            return;
-        }
-        if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && !_detalleActual.ResultadosHabilitados)
-        {
-            await JS.InvokeVoidAsync("alert", "Los resultados aún no están habilitados. Inténtelo más tarde.");
-            return;
-        }
+            if (!idsResultados.Any())
+            {
+                await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
+                return;
+            }
 
-        var idsResultados = _detalleActual.Examenes
-            .Where(e => e.IdResultado.HasValue)
-            .Select(e => e.IdResultado!.Value)
-            .Distinct()
-            .ToList();
+            if (!EsOrdenFinalizada(_detalleActual.IdEstadoOrden))
+            {
+                await JS.InvokeVoidAsync("alert", "Los resultados no están habilitados todavía.");
+                return;
+            }
 
-        if (!idsResultados.Any())
-        {
-            await JS.InvokeVoidAsync("alert", "No hay resultados para imprimir.");
-            return;
-        }
+            if (!_detalleActual.Examenes.Any(e => EsResultadoAprobado(e.IdEstadoResultado)))
+            {
+                await JS.InvokeVoidAsync("alert", "No se puede generar el PDF porque ningún resultado está aprobado.");
+                return;
+            }
 
-        if (!_detalleActual.ResultadosHabilitados)
-        {
-            await JS.InvokeVoidAsync("alert", "Los resultados no están habilitados todavía.");
-            return;
-        }
+            var pdfBytes = await ResultadosApi.GenerarResultadosPdfAsync(idsResultados);
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
+                return;
+            }
 
-        if (!_detalleActual.Examenes.Any(e => string.Equals(e.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase)))
-        {
-            await JS.InvokeVoidAsync("alert", "No se puede generar el PDF porque ningún resultado está aprobado.");
-            return;
-        }
-
-        var pdfBytes = await ResultadosApi.GenerarResultadosPdfAsync(idsResultados);
-        if (pdfBytes == null || pdfBytes.Length == 0)
-        {
-            await JS.InvokeVoidAsync("alert", "Error al generar el PDF de resultados.");
-            return;
-        }
-
-        var base64Pdf = Convert.ToBase64String(pdfBytes);
-        _pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
-    }
+            var base64Pdf = Convert.ToBase64String(pdfBytes);
+            _pdfUrl = $"data:application/pdf;base64,{base64Pdf}";
+        });
 
     private void CerrarPdf()
     {
         _pdfUrl = null;
     }
 
-    private async Task AnularOrdenAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_detalleActual == null) return;
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular esta orden? Esto anulará también resultados y pagos relacionados.")) return;
-
-        var response = await OrdenesApi.AnularOrdenCompletaAsync(_detalleActual.IdOrden);
-        if (response.IsSuccessStatusCode)
+    private Task AnularOrdenAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Orden anulada correctamente.", "success");
-            await BuscarOrdenesAsync();
-            _mostrarDetalleOrden = false;
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular la orden.", "danger");
-        }
-    }
+            if (_detalleActual == null) return;
+            if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea anular esta orden? Esto anulará también resultados y pagos relacionados.")) return;
+
+            var response = await OrdenesApi.AnularOrdenCompletaAsync(_detalleActual.IdOrden);
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Orden anulada correctamente.", "success");
+                await BuscarOrdenesAsync();
+                _mostrarDetalleOrden = false;
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al anular la orden.", "danger");
+            }
+        });
 
     private void ValidarRangoFechas()
     {
@@ -846,94 +873,89 @@
         await BuscarOrdenesAsync();
     }
 
-    private async Task BuscarOrdenesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-
-        try
+    private Task BuscarOrdenesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            var estado = await AuthProvider.GetAuthenticationStateAsync();
-            var usuario = estado.User;
-            var rol = usuario.FindFirst(ClaimTypes.Role)?.Value ?? usuario.FindFirst("IdRol")?.Value ?? string.Empty;
-            var idPacienteClaim = usuario.FindFirst("IdPaciente")?.Value;
+            if (_buscando) return;
 
-            if ((rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase)) && int.TryParse(idPacienteClaim, out var idPaciente))
+            try
             {
-                _filtro.IdPaciente = idPaciente;
-                _filtro.IncluirAnuladas = false;
-                _filtro.IncluirVigentes = true;
-                _filtro.CriterioBusqueda = "numero";
-                _filtro.FechaDesde = null;
-                _filtro.FechaHasta = null;
+                _buscando = true;
+                var (_, rol, idPacienteClaim) = await ObtenerContextoUsuarioAsync();
+
+                if (EsRolPaciente(rol) && int.TryParse(idPacienteClaim, out var idPaciente))
+                {
+                    _filtro.IdPaciente = idPaciente;
+                    _filtro.IncluirAnuladas = false;
+                    _filtro.IncluirVigentes = true;
+                    _filtro.CriterioBusqueda = CriterioBusquedaNumero;
+                    _filtro.FechaDesde = null;
+                    _filtro.FechaHasta = null;
+                }
+                else
+                {
+                    _filtro.IdPaciente = null;
+                }
+
+                _resultado = await OrdenesApi.ListarOrdenesPaginadosAsync(_filtro);
             }
-            else
+            catch (Exception ex)
             {
-                _filtro.IdPaciente = null;
+                await JS.InvokeVoidAsync("console.error", $"Error al buscar las órdenes: {ex.Message}");
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar las órdenes.", "danger");
             }
+            finally
+            {
+                _buscando = false;
+            }
+        });
 
-            _resultado = await OrdenesApi.ListarOrdenesPaginadosAsync(_filtro);
-        }
-        catch (Exception ex)
+    private Task LimpiarBusquedaAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("console.error", $"Error al buscar las órdenes: {ex.Message}");
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar las órdenes.", "danger");
-        }
-        finally
-        {
-            _buscando = false;
-        }
-    }
+            var (_, rol, _) = await ObtenerContextoUsuarioAsync();
+            bool esPaciente = EsRolPaciente(rol);
 
-    private async Task LimpiarBusquedaAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var auth = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
-        bool esPaciente = rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase);
-
-        _filtro = new OrdenFiltroDto
-        {
-            FechaHasta = null,
-            FechaDesde = null,
-            PageNumber = 1,
-            PageSize = 10,
-            SortBy = nameof(OrdenDto.IdOrden),
-            SortAsc = false,
-            IncluirAnuladas = esPaciente ? false : true,
-            IncluirVigentes = true,
-            CriterioBusqueda = esPaciente ? "numero" : string.Empty,
-            ValorBusqueda = string.Empty
-        };
-        await BuscarOrdenesAsync();
-    }
+            _filtro = new OrdenFiltroDto
+            {
+                FechaHasta = null,
+                FechaDesde = null,
+                PageNumber = 1,
+                PageSize = 10,
+                SortBy = nameof(OrdenDto.IdOrden),
+                SortAsc = false,
+                IncluirAnuladas = esPaciente ? false : true,
+                IncluirVigentes = true,
+                CriterioBusqueda = esPaciente ? CriterioBusquedaNumero : string.Empty,
+                ValorBusqueda = string.Empty
+            };
+            await BuscarOrdenesAsync();
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
-    private string ObtenerClaseEstadoResultado(string? estado)
+    private static bool EsResultadoAprobado(int? idEstadoResultado) => idEstadoResultado == EstadoResultadoAprobadoId;
+
+    private string ObtenerClaseEstadoResultado(int? idEstadoResultado)
     {
-        var val = (estado ?? "REVISION").ToUpperInvariant();
-        return val switch
+        return idEstadoResultado switch
         {
-            "APROBADO" => "success",
-            "CORRECCION" => "warning text-dark",
-            "REVISION" => "info",
-            "REGISTRO" => "secondary",
+            EstadoResultadoAprobadoId => "success",
+            EstadoResultadoCorreccionId => "warning text-dark",
+            EstadoResultadoRevisionId => "info",
+            EstadoResultadoPendienteId => "secondary",
             _ => "secondary"
         };
     }
 
-    private string EstadoResultadoTexto(string? estado)
+    private string EstadoResultadoTexto(int? idEstadoResultado)
     {
-        var val = (estado ?? "REVISION").ToUpperInvariant();
-        return val switch
+        return idEstadoResultado switch
         {
-            "APROBADO" => "Aprobado",
-            "CORRECCION" => "Corrección",
-            "REVISION" => "En revisión",
-            "REGISTRO" => "Registrado",
+            EstadoResultadoAprobadoId => "Aprobado",
+            EstadoResultadoCorreccionId => "Corrección",
+            EstadoResultadoRevisionId => "En revisión",
+            EstadoResultadoPendienteId => "Pendiente",
             _ => "Pendiente"
         };
     }
@@ -959,24 +981,25 @@
         _ => "bg-secondary"
     };
 
-    private async Task VerResultadoAsync(int idResultado)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        try
+    private static bool EsOrdenFinalizada(int idEstadoOrden) => idEstadoOrden == EstadoIds.Orden.Finalizada;
+
+    private Task VerResultadoAsync(int idResultado)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var auth = await AuthProvider.GetAuthenticationStateAsync();
-            var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
-            _resultadoDetalleActual = (rol == "4" || rol.Equals("paciente", StringComparison.OrdinalIgnoreCase))
-                ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado)
-                : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
-            _observacionRevision = _resultadoDetalleActual?.ObservacionRevision ?? string.Empty;
-            _mostrarResultadoModal = _resultadoDetalleActual != null;
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el resultado.", "danger");
-        }
-    }
+            try
+            {
+                var (_, rol, _) = await ObtenerContextoUsuarioAsync();
+                _resultadoDetalleActual = EsRolPaciente(rol)
+                    ? await ResultadosApi.ObtenerDetalleResultadoPacienteAsync(idResultado)
+                    : await ResultadosApi.ObtenerDetalleResultadoAsync(idResultado);
+                _observacionRevision = _resultadoDetalleActual?.ObservacionRevision ?? string.Empty;
+                _mostrarResultadoModal = _resultadoDetalleActual != null;
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar el resultado.", "danger");
+            }
+        });
 
     private void CerrarResultadoModal()
     {
@@ -985,102 +1008,104 @@
         _observacionRevision = string.Empty;
     }
 
-    private async Task RevisarResultadoAsync(string estado)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_resultadoDetalleActual == null) return;
-
-        var auth = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = auth.User.FindFirst(ClaimTypes.Role)?.Value ?? auth.User.FindFirst("IdRol")?.Value ?? string.Empty;
-        if (rol != "1")
+    private Task RevisarResultadoAsync(int idEstadoResultado)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Solo administradores pueden revisar resultados.", "warning");
-            return;
-        }
+            if (_resultadoDetalleActual == null) return;
 
-        if (estado == "CORRECCION" && string.IsNullOrWhiteSpace(_observacionRevision))
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Ingrese una observación al rechazar.", "warning");
-            return;
-        }
-
-        try
-        {
-            _procesandoRevision = true;
-            var revision = new ResultadoRevisionDto
+            var (usuario, rol, _) = await ObtenerContextoUsuarioAsync();
+            if (!EsRolAdmin(rol))
             {
-                EstadoResultado = estado,
-                ObservacionRevision = string.IsNullOrWhiteSpace(_observacionRevision) ? null : _observacionRevision.Trim()
-            };
-            var ok = await ResultadosApi.RevisarResultadoAsync(_resultadoDetalleActual.IdResultado, revision);
-            if (ok)
-            {
-                _resultadoDetalleActual.EstadoResultado = estado;
-                _resultadoDetalleActual.ObservacionRevision = revision.ObservacionRevision;
-                _resultadoDetalleActual.FechaRevision = DateTime.Now;
-                _resultadoDetalleActual.NombreRevisor = auth.User.Identity?.Name ?? auth.User.FindFirst(ClaimTypes.Name)?.Value;
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Estado de resultado actualizado.", "success");
-                await VerificarYHabilitarResultadosAsync();
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Solo administradores pueden revisar resultados.", "warning");
+                return;
             }
-            else
-            {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo actualizar el resultado.", "danger");
-            }
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al actualizar el resultado.", "danger");
-        }
-        finally
-        {
-            _procesandoRevision = false;
-        }
-    }
 
-    private async Task EditarResultadoAsync(int idResultado)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        Navigation.NavigateTo($"/resultados/ingresar?idResultado={idResultado}");
-    }
+            if (idEstadoResultado == EstadoResultadoCorreccionId && string.IsNullOrWhiteSpace(_observacionRevision))
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Ingrese una observación al rechazar.", "warning");
+                return;
+            }
+
+            try
+            {
+                _procesandoRevision = true;
+                var revision = new ResultadoRevisionDto
+                {
+                    IdEstadoResultado = idEstadoResultado,
+                    ObservacionRevision = string.IsNullOrWhiteSpace(_observacionRevision) ? null : _observacionRevision.Trim()
+                };
+                var ok = await ResultadosApi.RevisarResultadoAsync(_resultadoDetalleActual.IdResultado, revision);
+                if (ok)
+                {
+                    _resultadoDetalleActual.IdEstadoResultado = idEstadoResultado;
+                    _resultadoDetalleActual.ObservacionRevision = revision.ObservacionRevision;
+                    _resultadoDetalleActual.FechaRevision = DateTime.Now;
+                    _resultadoDetalleActual.NombreRevisor = usuario.Identity?.Name ?? usuario.FindFirst(ClaimTypes.Name)?.Value;
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Estado de resultado actualizado.", "success");
+                    await VerificarYHabilitarResultadosAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo actualizar el resultado.", "danger");
+                }
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al actualizar el resultado.", "danger");
+            }
+            finally
+            {
+                _procesandoRevision = false;
+            }
+        });
+
+    private Task EditarResultadoAsync(int idResultado)
+        => SesionService.EjecutarConSesionAsync(() =>
+        {
+            Navigation.NavigateTo($"/resultados/ingresar?idResultado={idResultado}");
+            return Task.CompletedTask;
+        });
 
     private async Task RecargarDetalleOrdenAsync(int? idOrden = null)
     {
         var targetId = idOrden ?? _detalleActual?.IdOrden;
         if (!targetId.HasValue) return;
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(targetId.Value);
-        if (_detalleActual?.Examenes != null)
+
+        await SesionService.EjecutarConSesionAsync(async () =>
         {
-            foreach (var ex in _detalleActual.Examenes)
-                ex.Seleccionado = false;
-        }
-    }
-
-    private async Task VerificarYHabilitarResultadosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var idOrden = _detalleActual?.IdOrden ?? _resultadoDetalleActual?.IdOrden;
-        if (!idOrden.HasValue || idOrden.Value <= 0) return;
-
-        await RecargarDetalleOrdenAsync(idOrden.Value);
-        if (_detalleActual == null) return;
-
-        if (!string.Equals(_detalleActual.EstadoPago, "PAGADO", StringComparison.OrdinalIgnoreCase)) return;
-
-        var hayPendientes = _detalleActual.Examenes.Any(e => !e.IdResultado.HasValue || !string.Equals(e.EstadoResultado, "APROBADO", StringComparison.OrdinalIgnoreCase));
-        if (hayPendientes || _detalleActual.ResultadosHabilitados) return;
-
-        var resp = await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden.Value);
-        if (resp.IsSuccessStatusCode)
-        {
-            await RecargarDetalleOrdenAsync(idOrden.Value);
-            if (_detalleActual != null)
+            _detalleActual = await OrdenesApi.ObtenerDetalleOrdenAsync(targetId.Value);
+            if (_detalleActual?.Examenes != null)
             {
-                _detalleActual.ResultadosHabilitados = true;
-                _detalleActual.EstadoOrden = "FINALIZADA";
+                foreach (var ex in _detalleActual.Examenes)
+                    ex.Seleccionado = false;
             }
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados habilitados para el paciente.", "success");
-        }
+        });
     }
+
+    private Task VerificarYHabilitarResultadosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var idOrden = _detalleActual?.IdOrden ?? _resultadoDetalleActual?.IdOrden;
+            if (!idOrden.HasValue || idOrden.Value <= 0) return;
+
+            await RecargarDetalleOrdenAsync(idOrden.Value);
+            if (_detalleActual == null) return;
+
+            if (_detalleActual.IdEstadoPago != EstadoPagoPagadoId) return;
+
+            var hayPendientes = _detalleActual.Examenes.Any(e => !e.IdResultado.HasValue || !EsResultadoAprobado(e.IdEstadoResultado));
+            if (hayPendientes || EsOrdenFinalizada(_detalleActual.IdEstadoOrden)) return;
+
+            var resp = await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden.Value);
+            if (resp.IsSuccessStatusCode)
+            {
+                await RecargarDetalleOrdenAsync(idOrden.Value);
+                if (_detalleActual != null)
+                {
+                    _detalleActual.IdEstadoOrden = EstadoIds.Orden.Finalizada;
+                    _detalleActual.EstadoOrden = "FINALIZADA";
+                }
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados habilitados para el paciente.", "success");
+            }
+        });
 }

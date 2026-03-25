@@ -274,119 +274,115 @@
         {
             _sesionVerificada = true;
 
-            if (!await SesionService.VerificarOSalirAsync())
-                return;
-
-            var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (!user.Identity?.IsAuthenticated ?? true)
+            await SesionService.EjecutarConSesionAsync(async () =>
             {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (!user.Identity?.IsAuthenticated ?? true)
+                {
+                    _isRendered = true;
+                    StateHasChanged();
+                    return;
+                }
+
+                var rol = user.FindFirst(ClaimTypes.Role)?.Value
+                    ?? user.FindFirst("role")?.Value
+                    ?? user.FindFirst("roles")?.Value
+                    ?? "";
+
+                bool puedeVer = rol is "administrador" or "recepcionista";
+
+                if (puedeVer)
+                {
+                    _medicos = await MedicosApi.ListarMedicosAsync();
+                }
+
                 _isRendered = true;
                 StateHasChanged();
-                return;
+            }, forzarVerificacion: true);
+        }
+    }
+
+    private Task CargarOrdenesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (_idMedicoSeleccionado.HasValue)
+            {
+                _cargandoOrdenes = true;
+                StateHasChanged();
+
+                var result = await ConveniosApi.ListarOrdenesDisponiblesPorMedicoAsync(_idMedicoSeleccionado.Value);
+
+                _ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
+                {
+                    IdOrden = o.IdOrden,
+                    NumeroOrden = o.NumeroOrden,
+                    Paciente = o.Paciente,
+                    FechaOrden = o.FechaOrden,
+                    Total = o.Total
+                }).ToList();
+
+                _cargandoOrdenes = false;
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"{_ordenesDisponibles.Count} órdenes cargadas correctamente.", "success");
+                StateHasChanged();
             }
+        });
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value
-                ?? user.FindFirst("role")?.Value
-                ?? user.FindFirst("roles")?.Value
-                ?? "";
+    private Task MostrarModalPagoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _mostrarModal = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+            StateHasChanged();
+        });
 
-            bool puedeVer = rol is "administrador" or "recepcionista";
+    private Task CerrarModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _mostrarModal = false;
+            _porcentajeComision = 0;
+            await JS.InvokeVoidAsync("marcarModalCerrado");
+            StateHasChanged();
+        });
 
-            if (puedeVer)
+    private Task RegistrarConvenioAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var dto = new ConvenioRegistroDto
             {
-                _medicos = await MedicosApi.ListarMedicosAsync();
+                IdMedico = _idMedicoSeleccionado,
+                FechaConvenio = DateOnly.FromDateTime(_fechaConvenio),
+                PorcentajeComision = _porcentajeComision,
+                MontoTotal = OrdenesSeleccionadas.Sum(o => o.Total),
+                Ordenes = OrdenesSeleccionadas.Select(o => new DetalleConvenioRegistroDto
+                {
+                    IdOrden = o.IdOrden,
+                    Subtotal = o.Total
+                }).ToList()
+            };
+
+            var exito = await ConveniosApi.RegistrarConvenioAsync(dto);
+
+            _mostrarModal = false;
+            await JS.InvokeVoidAsync("eval", @"
+            document.body.classList.remove('modal-activo','modal-open');
+            document.body.style.overflow='';
+            const backdrop=document.querySelector('.modal-backdrop');
+            if(backdrop) backdrop.remove();
+        ");
+            StateHasChanged();
+
+            if (exito)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio registrado correctamente.", "success");
+                Navigation.NavigateTo("/convenios");
             }
-
-            _isRendered = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CargarOrdenesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_idMedicoSeleccionado.HasValue)
-        {
-            _cargandoOrdenes = true;
-            StateHasChanged();
-
-            var result = await ConveniosApi.ListarOrdenesDisponiblesPorMedicoAsync(_idMedicoSeleccionado.Value);
-
-            _ordenesDisponibles = result.Select(o => new OrdenDisponibleExtendida
+            else
             {
-                IdOrden = o.IdOrden,
-                NumeroOrden = o.NumeroOrden,
-                Paciente = o.Paciente,
-                FechaOrden = o.FechaOrden,
-                Total = o.Total
-            }).ToList();
-
-            _cargandoOrdenes = false;
-            await JS.InvokeVoidAsync("mostrarToastAsync", $"{_ordenesDisponibles.Count} órdenes cargadas correctamente.", "success");
-            StateHasChanged();
-        }
-    }
-
-    private async Task MostrarModalPagoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModal = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-        StateHasChanged();
-    }
-
-    private async Task CerrarModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _mostrarModal = false;
-        _porcentajeComision = 0;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-        StateHasChanged();
-    }
-
-    private async Task RegistrarConvenioAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var dto = new ConvenioRegistroDto
-        {
-            IdMedico = _idMedicoSeleccionado,
-            FechaConvenio = DateOnly.FromDateTime(_fechaConvenio),
-            PorcentajeComision = _porcentajeComision,
-            MontoTotal = OrdenesSeleccionadas.Sum(o => o.Total),
-            Ordenes = OrdenesSeleccionadas.Select(o => new DetalleConvenioRegistroDto
-            {
-                IdOrden = o.IdOrden,
-                Subtotal = o.Total
-            }).ToList()
-        };
-
-        var exito = await ConveniosApi.RegistrarConvenioAsync(dto);
-
-        _mostrarModal = false;
-        await JS.InvokeVoidAsync("eval", @"
-        document.body.classList.remove('modal-activo','modal-open');
-        document.body.style.overflow='';
-        const backdrop=document.querySelector('.modal-backdrop');
-        if(backdrop) backdrop.remove();
-    ");
-        StateHasChanged();
-
-        if (exito)
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Convenio registrado correctamente.", "success");
-            Navigation.NavigateTo("/convenios");
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al registrar el convenio.", "danger");
-        }
-    }
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al registrar el convenio.", "danger");
+            }
+        });
 
     public class OrdenDisponibleExtendida : OrdenDisponibleDto
     {

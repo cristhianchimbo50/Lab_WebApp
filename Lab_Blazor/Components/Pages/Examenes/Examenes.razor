@@ -455,155 +455,150 @@
         _tiposRegistroCatalogo = await ExamenesApiService.ListarCatalogoAsync("tipo_registro", incluirInactivos: false);
     }
 
-    private async Task BuscarExamenesAsync(bool mostrarToast = true)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-        try
+    private Task BuscarExamenesAsync(bool mostrarToast = true)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _resultado = await ExamenesApiService.ListarExamenesPaginadosAsync(_filtro);
-            if (mostrarToast)
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Exámenes cargados correctamente.", "success");
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar exámenes.", "danger");
-        }
-        finally { _buscando = false; }
-    }
-
-    private async Task MostrarModalNuevoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _examenActual = new ExamenDto();
-        _hijosSeleccionados = new();
-        _valorMinReferencia = null;
-        _valorMaxReferencia = null;
-        await CargarCatalogosAsync();
-        _modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task CerrarModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _modalVisible = false;
-        await JS.InvokeVoidAsync("marcarModalCerrado");
-        _mensaje = string.Empty;
-    }
-
-    private async Task EditarExamenAsync(ExamenDto examen)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? string.Empty;
-        if (rol != "1")
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar exámenes.", "danger");
-            return;
-        }
-
-        _examenActual = examen;
-        _hijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
-        var refActual = _examenActual.Referencias.FirstOrDefault();
-        _valorMinReferencia = refActual?.ValorMin;
-        _valorMaxReferencia = refActual?.ValorMax;
-        await CargarCatalogosAsync();
-        _modalVisible = true;
-        await JS.InvokeVoidAsync("marcarModalAbierto");
-    }
-
-    private async Task ValidarYGuardarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!string.IsNullOrWhiteSpace(_examenActual.ValorReferencia)
-            || !string.IsNullOrWhiteSpace(_examenActual.Unidad)
-            || _valorMinReferencia.HasValue
-            || _valorMaxReferencia.HasValue)
-        {
-            _examenActual.Referencias = new List<ReferenciaExamenDto>
+            if (_buscando) return;
+            try
             {
-                new()
-                {
-                    ValorMin = _valorMinReferencia,
-                    ValorMax = _valorMaxReferencia,
-                    ValorTexto = _examenActual.ValorReferencia,
-                    Unidad = _examenActual.Unidad,
-                    Activo = true
-                }
-            };
-        }
-
-        HttpResponseMessage result;
-
-        if (_examenActual.IdExamen == 0)
-        {
-            result = await ExamenesApiService.GuardarExamenAsync(_examenActual);
-            if (result.IsSuccessStatusCode)
-            {
-                var nuevo = await result.Content.ReadFromJsonAsync<ExamenDto>();
-                _examenActual.IdExamen = nuevo?.IdExamen ?? 0;
+                _buscando = true;
+                _resultado = await ExamenesApiService.ListarExamenesPaginadosAsync(_filtro);
+                if (mostrarToast)
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Exámenes cargados correctamente.", "success");
             }
-        }
-        else
-        {
-            result = await ExamenesApiService.GuardarExamenAsync(_examenActual.IdExamen, _examenActual);
-        }
-
-        if (result.IsSuccessStatusCode)
-        {
-            if (_hijosSeleccionados.Any())
+            catch
             {
-                var hijosExistentes = await ExamenesApiService.ListarExamenesHijosAsync(_examenActual.IdExamen);
-                foreach (var hijo in hijosExistentes)
-                {
-                    await ExamenComposicionApiService.EliminarComposicionAsync(_examenActual.IdExamen, hijo.IdExamen);
-                }
-
-                foreach (var hijo in _hijosSeleccionados)
-                {
-                    await ExamenComposicionApiService.GuardarComposicionAsync(new ExamenComposicionDto
-                    {
-                        IdExamenPadre = _examenActual.IdExamen,
-                        IdExamenHijo = hijo.IdExamen
-                    });
-                }
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar exámenes.", "danger");
             }
-            _mensaje = "Examen y composiciones guardadas correctamente.";
-            _tipoMensaje = "success";
-            await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
+            finally { _buscando = false; }
+        });
+
+    private Task MostrarModalNuevoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _examenActual = new ExamenDto();
+            _hijosSeleccionados = new();
+            _valorMinReferencia = null;
+            _valorMaxReferencia = null;
+            await CargarCatalogosAsync();
+            _modalVisible = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task CerrarModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
             _modalVisible = false;
             await JS.InvokeVoidAsync("marcarModalCerrado");
-            await BuscarExamenesAsync();
-        }
-        else
-        {
-            _mensaje = "Error al guardar examen.";
-            _tipoMensaje = "danger";
-            await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
-        }
-    }
+            _mensaje = string.Empty;
+        });
 
-    private async Task ConfirmarAnulacionAsync(int id)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este examen?"))
+    private Task EditarExamenAsync(ExamenDto examen)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var result = await ExamenesApiService.AnularExamenAsync(id);
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var rol = authState.User.FindFirst(ClaimTypes.Role)?.Value ?? authState.User.FindFirst("IdRol")?.Value ?? string.Empty;
+            if (rol != "1")
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No tienes permisos para editar exámenes.", "danger");
+                return;
+            }
+
+            _examenActual = examen;
+            _hijosSeleccionados = await ExamenesApiService.ListarExamenesHijosAsync(examen.IdExamen) ?? new();
+            var refActual = _examenActual.Referencias.FirstOrDefault();
+            _valorMinReferencia = refActual?.ValorMin;
+            _valorMaxReferencia = refActual?.ValorMax;
+            await CargarCatalogosAsync();
+            _modalVisible = true;
+            await JS.InvokeVoidAsync("marcarModalAbierto");
+        });
+
+    private Task ValidarYGuardarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!string.IsNullOrWhiteSpace(_examenActual.ValorReferencia)
+                || !string.IsNullOrWhiteSpace(_examenActual.Unidad)
+                || _valorMinReferencia.HasValue
+                || _valorMaxReferencia.HasValue)
+            {
+                _examenActual.Referencias = new List<ReferenciaExamenDto>
+                {
+                    new()
+                    {
+                        ValorMin = _valorMinReferencia,
+                        ValorMax = _valorMaxReferencia,
+                        ValorTexto = _examenActual.ValorReferencia,
+                        Unidad = _examenActual.Unidad,
+                        Activo = true
+                    }
+                };
+            }
+
+            HttpResponseMessage result;
+
+            if (_examenActual.IdExamen == 0)
+            {
+                result = await ExamenesApiService.GuardarExamenAsync(_examenActual);
+                if (result.IsSuccessStatusCode)
+                {
+                    var nuevo = await result.Content.ReadFromJsonAsync<ExamenDto>();
+                    _examenActual.IdExamen = nuevo?.IdExamen ?? 0;
+                }
+            }
+            else
+            {
+                result = await ExamenesApiService.GuardarExamenAsync(_examenActual.IdExamen, _examenActual);
+            }
+
             if (result.IsSuccessStatusCode)
             {
-                _mensaje = "Examen anulado correctamente.";
+                if (_hijosSeleccionados.Any())
+                {
+                    var hijosExistentes = await ExamenesApiService.ListarExamenesHijosAsync(_examenActual.IdExamen);
+                    foreach (var hijo in hijosExistentes)
+                    {
+                        await ExamenComposicionApiService.EliminarComposicionAsync(_examenActual.IdExamen, hijo.IdExamen);
+                    }
+
+                    foreach (var hijo in _hijosSeleccionados)
+                    {
+                        await ExamenComposicionApiService.GuardarComposicionAsync(new ExamenComposicionDto
+                        {
+                            IdExamenPadre = _examenActual.IdExamen,
+                            IdExamenHijo = hijo.IdExamen
+                        });
+                    }
+                }
+                _mensaje = "Examen y composiciones guardadas correctamente.";
                 _tipoMensaje = "success";
+                await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
+                _modalVisible = false;
+                await JS.InvokeVoidAsync("marcarModalCerrado");
                 await BuscarExamenesAsync();
             }
-        }
-    }
+            else
+            {
+                _mensaje = "Error al guardar examen.";
+                _tipoMensaje = "danger";
+                await JS.InvokeVoidAsync("mostrarToastAsync", _mensaje, _tipoMensaje);
+            }
+        });
+
+    private Task ConfirmarAnulacionAsync(int id)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (await JS.InvokeAsync<bool>("confirm", "¿Desea anular este examen?"))
+            {
+                var result = await ExamenesApiService.AnularExamenAsync(id);
+                if (result.IsSuccessStatusCode)
+                {
+                    _mensaje = "Examen anulado correctamente.";
+                    _tipoMensaje = "success";
+                    await BuscarExamenesAsync();
+                }
+            }
+        });
 
     private async Task BuscarHijosAsync()
     {
@@ -617,25 +612,24 @@
         };
     }
 
-    private async Task ConfirmarReactivacionAsync(ExamenDto examen)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el examen {examen.NombreExamen}?"))
+    private Task ConfirmarReactivacionAsync(ExamenDto examen)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            examen.Anulado = false;
-            var result = await ExamenesApiService.GuardarExamenAsync(examen.IdExamen, examen);
-            if (result.IsSuccessStatusCode)
+            if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar el examen {examen.NombreExamen}?"))
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
-                await BuscarExamenesAsync();
+                examen.Anulado = false;
+                var result = await ExamenesApiService.GuardarExamenAsync(examen.IdExamen, examen);
+                if (result.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Examen reactivado correctamente.", "success");
+                    await BuscarExamenesAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Error al reactivar el examen.", "danger");
+                }
             }
-            else
-            {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al reactivar el examen.", "danger");
-            }
-        }
-    }
+        });
 
     private async void SeleccionarHijoAsync(ExamenDto examen)
     {

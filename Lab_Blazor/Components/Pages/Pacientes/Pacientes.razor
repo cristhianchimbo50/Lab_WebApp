@@ -242,8 +242,11 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-            if (!await SesionService.VerificarOSalirAsync()) return;
-            await CargarGenerosAsync();
+
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                await CargarGenerosAsync();
+            }, forzarVerificacion: true);
         }
     }
 
@@ -261,29 +264,29 @@
         }
     }
 
-    private async Task BuscarPacientesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (_buscando) return;
-        try
+    private Task BuscarPacientesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _buscando = true;
-            _resultado = await PacientesApiService.ListarPacientesPaginadosAsync(_filtro);
-            if (_mostrarToastPorClickBuscar)
+            if (_buscando) return;
+            try
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
+                _buscando = true;
+                _resultado = await PacientesApiService.ListarPacientesPaginadosAsync(_filtro);
+                if (_mostrarToastPorClickBuscar)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Pacientes cargados correctamente.", "success");
+                }
             }
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar pacientes.", "danger");
-        }
-        finally
-        {
-            _buscando = false;
-            _mostrarToastPorClickBuscar = false;
-        }
-    }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al buscar pacientes.", "danger");
+            }
+            finally
+            {
+                _buscando = false;
+                _mostrarToastPorClickBuscar = false;
+            }
+        });
 
     private async Task OnBuscarClickAsync()
     {
@@ -393,37 +396,36 @@
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 
-    private async Task ValidarYGuardarAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _pacienteActual.Telefono = string.IsNullOrWhiteSpace(_pacienteActual.Telefono) ? null : _pacienteActual.Telefono.Trim();
-        _pacienteActual.Direccion = string.IsNullOrWhiteSpace(_pacienteActual.Direccion) ? null : _pacienteActual.Direccion.Trim();
-        _pacienteActual.Correo = string.IsNullOrWhiteSpace(_pacienteActual.Correo) ? null : _pacienteActual.Correo.Trim();
-
-        if (_pacienteActual.IdPaciente == 0)
+    private Task ValidarYGuardarAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            if (_cedulaYaRegistradaComoPaciente)
-            {
-                await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente. No se puede guardar.");
-                return;
-            }
+            _pacienteActual.Telefono = string.IsNullOrWhiteSpace(_pacienteActual.Telefono) ? null : _pacienteActual.Telefono.Trim();
+            _pacienteActual.Direccion = string.IsNullOrWhiteSpace(_pacienteActual.Direccion) ? null : _pacienteActual.Direccion.Trim();
+            _pacienteActual.Correo = string.IsNullOrWhiteSpace(_pacienteActual.Correo) ? null : _pacienteActual.Correo.Trim();
 
-            var (exito, msg, _) = await PacientesApiService.GuardarPacienteAsync(_pacienteActual);
-            await JS.InvokeVoidAsync("mostrarToastAsync", msg, exito ? "success" : "danger");
-            if (exito)
+            if (_pacienteActual.IdPaciente == 0)
             {
-                _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync();
+                if (_cedulaYaRegistradaComoPaciente)
+                {
+                    await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente. No se puede guardar.");
+                    return;
+                }
+
+                var (exito, msg, _) = await PacientesApiService.GuardarPacienteAsync(_pacienteActual);
+                await JS.InvokeVoidAsync("mostrarToastAsync", msg, exito ? "success" : "danger");
+                if (exito)
+                {
+                    _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync();
+                }
             }
-        }
-        else
-        {
-            var resultadoOp = await PacientesApiService.GuardarPacienteAsync(_pacienteActual.IdPaciente, _pacienteActual);
-            var mensaje = resultadoOp.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
-            await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, resultadoOp.IsSuccessStatusCode ? "success" : "danger");
-            if (resultadoOp.IsSuccessStatusCode) { _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync(); }
-        }
-    }
+            else
+            {
+                var resultadoOp = await PacientesApiService.GuardarPacienteAsync(_pacienteActual.IdPaciente, _pacienteActual);
+                var mensaje = resultadoOp.IsSuccessStatusCode ? "Paciente actualizado correctamente." : "Error al actualizar paciente.";
+                await JS.InvokeVoidAsync("mostrarToastAsync", mensaje, resultadoOp.IsSuccessStatusCode ? "success" : "danger");
+                if (resultadoOp.IsSuccessStatusCode) { _modalVisible = false; await JS.InvokeVoidAsync("marcarModalCerrado"); await BuscarPacientesAsync(); }
+            }
+        });
 
     private bool _camposPersonaBloqueados => _datosAutocompletados;
 
@@ -478,34 +480,34 @@
         }
     }
 
-    private async Task ConfirmarAnulacionAsync(int id)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este paciente?"))
+    private Task ConfirmarAnulacionAsync(int id)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            var resultadoOp = await PacientesApiService.AnularPacienteAsync(id);
-            if (resultadoOp.IsSuccessStatusCode)
+            if (await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar este paciente?"))
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente deshabilitado correctamente.", "success");
-                await BuscarPacientesAsync();
+                var resultadoOp = await PacientesApiService.AnularPacienteAsync(id);
+                if (resultadoOp.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente deshabilitado correctamente.", "success");
+                    await BuscarPacientesAsync();
+                }
             }
-        }
-    }
+        });
 
-    private async Task ConfirmarReactivacionAsync(PacienteDto paciente)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.Nombres} {paciente.Apellidos}?"))
+    private Task ConfirmarReactivacionAsync(PacienteDto paciente)
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            paciente.Activo = true;
-            var resultadoOp = await PacientesApiService.GuardarPacienteAsync(paciente.IdPaciente, paciente);
-            if (resultadoOp.IsSuccessStatusCode)
+            if (await JS.InvokeAsync<bool>("confirm", $"¿Desea reactivar al paciente {paciente.Nombres} {paciente.Apellidos}?"))
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente reactivado correctamente.", "success");
-                await BuscarPacientesAsync();
+                paciente.Activo = true;
+                var resultadoOp = await PacientesApiService.GuardarPacienteAsync(paciente.IdPaciente, paciente);
+                if (resultadoOp.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente reactivado correctamente.", "success");
+                    await BuscarPacientesAsync();
+                }
             }
-        }
-    }
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 

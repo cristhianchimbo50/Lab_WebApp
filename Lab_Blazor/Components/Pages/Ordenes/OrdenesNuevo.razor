@@ -73,7 +73,7 @@
                         <div class="card-body row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Fecha de la Orden</label>
-                                <InputDate class="form-control" @bind-Value="_fechaOrden" TValue="DateOnly" disabled />
+                                <InputDate class="form-control" @bind-Value="_fechaOrden" TValue="DateOnly" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Cédula del Paciente</label>
@@ -524,6 +524,13 @@
                                             <label>Transferencia</label>
                                             <InputNumber class="form-control" @bind-Value="_montoTransferencia" />
                                         </div>
+                                        @if (_montoTransferencia > 0)
+                                        {
+                                            <div class="mb-2">
+                                                <label>N° Comprobante (Transferencia)</label>
+                                                <InputText class="form-control" @bind-Value="_numeroComprobanteTransferencia" />
+                                            </div>
+                                        }
                                         @if (ObtenerCambio() > 0)
                                         {
                                             <div class="mb-2">
@@ -592,13 +599,16 @@
     private PagoDto _pagoActual = new();
     private decimal _montoEfectivo;
     private decimal _montoTransferencia;
+    private string _numeroComprobanteTransferencia = string.Empty;
     private bool _mostrarModalRegistrarPaciente;
     private bool _mostrarModalBuscarPaciente;
     private bool _mostrarModalMedico;
     private bool _mostrarModalExamen;
     private bool _mostrarModalPago;
     private bool _bloquearDatosPersonaExistente;
-    private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.Nombres), SortAsc = true, IncluirAnulados = true, IncluirVigentes = true };
+    private bool _buscandoCedula;
+    private string _ultimaCedulaConsultada = string.Empty;
+    private PacienteFiltroDto _filtroPaciente = new() { PageNumber = 1, PageSize = 10, SortBy = nameof(PacienteDto.Nombres), SortAsc = true, IncluirAnulados = false, IncluirVigentes = true };
     private ResultadoPaginadoDto<PacienteDto>? _resultadoPacientes;
     private ExamenFiltroDto _filtroExamen = new() { CriterioBusqueda = "nombre", PageNumber = 1, PageSize = 10, SortBy = nameof(ExamenDto.NombreExamen), SortAsc = true, IncluirAnulados = false, IncluirVigentes = true };
     private ResultadoPaginadoDto<ExamenDto>? _resultadoExamenes;
@@ -610,82 +620,134 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
-            if (!await SesionService.VerificarOSalirAsync()) return;
-            _listaMedicos = await MedicosApi.ListarMedicosAsync();
-            _generos = await PacientesApi.ListarGenerosAsync();
-            _contenidoCargado = true;
-            StateHasChanged();
+
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                _listaMedicos = await MedicosApi.ListarMedicosAsync();
+                _generos = await PacientesApi.ListarGenerosAsync();
+                _contenidoCargado = true;
+                StateHasChanged();
+            }, forzarVerificacion: true);
         }
     }
-    private async Task BuscarPorCedulaAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (string.IsNullOrWhiteSpace(_cedulaPaciente))
+    private Task BuscarPorCedulaAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _mostrarModalBuscarPaciente = true;
-            _resultadoPacientes = null;
-            await JS.InvokeVoidAsync("marcarModalAbierto");
-            return;
-        }
-        var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(_cedulaPaciente);
-        if (paciente != null)
-        {
-            _pacienteSeleccionado = paciente;
-            _bloquearDatosPersonaExistente = false;
-            await JS.InvokeVoidAsync("alert", "La cédula ingresada ya está registrada como paciente.");
-        }
-        else
-        {
-            var persona = await PacientesApi.ObtenerPersonaPorCedulaAsync(_cedulaPaciente);
-            if (persona != null)
+            if (_buscandoCedula) return;
+            _buscandoCedula = true;
+            try
             {
-                _pacienteNuevo = new PacienteDto
+            if (string.IsNullOrWhiteSpace(_cedulaPaciente))
+            {
+                _mostrarModalBuscarPaciente = true;
+                _resultadoPacientes = null;
+                await JS.InvokeVoidAsync("marcarModalAbierto");
+                _ultimaCedulaConsultada = string.Empty;
+                return;
+            }
+            var paciente = await PacientesApi.ObtenerPacientePorCedulaAsync(_cedulaPaciente);
+            if (paciente != null)
+            {
+                if (!paciente.Activo)
                 {
-                    IdPersona = persona.IdPersona,
-                    Cedula = persona.Cedula,
-                    Nombres = persona.Nombres,
-                    Apellidos = persona.Apellidos,
-                    Correo = persona.Correo,
-                    Telefono = persona.Telefono,
-                    Direccion = persona.Direccion,
-                    FechaNacimiento = persona.FechaNacimiento,
-                    IdGenero = persona.IdGenero,
-                    Activo = true
-                };
-                _bloquearDatosPersonaExistente = true;
-                var mensaje = string.IsNullOrWhiteSpace(persona.Correo)
-                    ? "Se encontraron datos de la persona con esa cédula."
-                    : "La cédula ya tiene un usuario registrado. Se cargaron sus datos.";
-                await JS.InvokeVoidAsync("alert", mensaje);
+                    if (_ultimaCedulaConsultada == _cedulaPaciente) return;
+                    _ultimaCedulaConsultada = _cedulaPaciente;
+                    var deseaReactivar = await JS.InvokeAsync<bool>("confirm", "El paciente encontrado está inactivo. ¿Desea reactivar la cuenta y usarlo?");
+                    if (deseaReactivar)
+                    {
+                        var detalle = await PacientesApi.ObtenerDetallePacienteAsync(paciente.IdPaciente);
+                        if (detalle == null)
+                        {
+                            await JS.InvokeVoidAsync("alert", "No se pudo obtener detalle del paciente.");
+                            return;
+                        }
+                        detalle.Activo = true;
+                        var resp = await PacientesApi.GuardarPacienteAsync(detalle.IdPaciente, detalle);
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            var recargado = await PacientesApi.ObtenerDetallePacienteAsync(detalle.IdPaciente);
+                            _pacienteSeleccionado = recargado ?? detalle;
+                            _cedulaPaciente = _pacienteSeleccionado.Cedula;
+                            await JS.InvokeVoidAsync("mostrarToastAsync", "Paciente reactivado y cargado correctamente.", "success");
+                        }
+                        else
+                        {
+                            var msg = await resp.Content.ReadAsStringAsync();
+                            await JS.InvokeVoidAsync("alert", $"Error al reactivar paciente: {msg}");
+                        }
+                    }
+                    else
+                    {
+                        await JS.InvokeVoidAsync("alert", "No puede usar un paciente inactivo.");
+                    }
+
+                    return;
+                }
+
+                _pacienteSeleccionado = paciente;
+                _bloquearDatosPersonaExistente = false;
+                _ultimaCedulaConsultada = string.Empty;
+            }
+            else
+            {
+                var persona = await PacientesApi.ObtenerPersonaPorCedulaAsync(_cedulaPaciente);
+                if (persona != null)
+                {
+                    // Si existe la persona pero no el paciente, cargar datos en el modelo
+                    // y pedir confirmación para registrar como paciente
+                    _pacienteNuevo = new PacienteDto
+                    {
+                        IdPersona = persona.IdPersona,
+                        Cedula = persona.Cedula,
+                        Nombres = persona.Nombres,
+                        Apellidos = persona.Apellidos,
+                        Correo = persona.Correo,
+                        Telefono = persona.Telefono,
+                        Direccion = persona.Direccion,
+                        FechaNacimiento = persona.FechaNacimiento,
+                        IdGenero = persona.IdGenero,
+                        Activo = true
+                    };
+                    _bloquearDatosPersonaExistente = true;
+                    // Evitar mostrar el confirm repetidas veces para la misma cédula
+                    if (_ultimaCedulaConsultada == _cedulaPaciente) return;
+                    _ultimaCedulaConsultada = _cedulaPaciente;
+                    var deseaRegistrar = await JS.InvokeAsync<bool>("confirm", "Se encontraron datos de persona con esa cédula. ¿Desea registrarlo como paciente?");
+                    if (deseaRegistrar)
+                    {
+                        _mostrarModalRegistrarPaciente = true;
+                        await JS.InvokeVoidAsync("marcarModalAbierto");
+                    }
+                    return;
+                }
+                // No se encontró persona ni paciente: abrir modal de registro directamente
+                if (!ValidarCedula(_cedulaPaciente))
+                {
+                    await JS.InvokeVoidAsync("alert", "La cédula ingresada no es válida.");
+                    return;
+                }
+                _pacienteNuevo = new PacienteDto { Cedula = _cedulaPaciente, FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
+                _bloquearDatosPersonaExistente = false;
                 _mostrarModalRegistrarPaciente = true;
                 await JS.InvokeVoidAsync("marcarModalAbierto");
-                return;
             }
-
-            var deseaRegistrar = await JS.InvokeAsync<bool>("confirm", "No se encontró paciente con esa cédula. ¿Desea registrarlo?");
-            if (!deseaRegistrar) return;
-            if (!ValidarCedula(_cedulaPaciente))
+            }
+            finally
             {
-                await JS.InvokeVoidAsync("alert", "La cédula ingresada no es válida.");
-                return;
+                _buscandoCedula = false;
             }
-            _pacienteNuevo = new PacienteDto { Cedula = _cedulaPaciente, FechaNacimiento = DateTime.Today.AddYears(-20), Activo = true };
-            _bloquearDatosPersonaExistente = false;
-            _mostrarModalRegistrarPaciente = true;
-            await JS.InvokeVoidAsync("marcarModalAbierto");
-        }
-    }
+        });
 
     private async Task OnCedulaBlurAsync(FocusEventArgs _)
     {
         if (string.IsNullOrWhiteSpace(_cedulaPaciente)) return;
         await BuscarPorCedulaAsync();
     }
-    private async Task BuscarPacientesModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        _resultadoPacientes = await PacientesApi.ListarPacientesPaginadosAsync(_filtroPaciente);
-    }
+    private Task BuscarPacientesModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _resultadoPacientes = await PacientesApi.ListarPacientesPaginadosAsync(_filtroPaciente);
+        });
     private async Task CambiarPaginaPacienteAsync(int delta)
     {
         if (_resultadoPacientes == null) return;
@@ -712,17 +774,11 @@
         _mostrarModalBuscarPaciente = false;
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
-    private async Task BuscarExamenesModalAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        if (string.IsNullOrWhiteSpace(_filtroExamen.ValorBusqueda))
+    private Task BuscarExamenesModalAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _resultadoExamenes = null;
-            StateHasChanged();
-            return;
-        }
-        _resultadoExamenes = await ExamenesApi.ListarExamenesPaginadosAsync(_filtroExamen);
-    }
+            _resultadoExamenes = await ExamenesApi.ListarExamenesPaginadosAsync(_filtroExamen);
+        });
     private async Task AbrirModalExamenAsync()
     {
         _mostrarModalExamen = true;
@@ -752,6 +808,12 @@
     }
     private async Task SeleccionarExamen(ExamenDto examen)
     {
+        if (examen.Anulado)
+        {
+            await JS.InvokeVoidAsync("alert", "No puede seleccionar un examen deshabilitado.");
+            return;
+        }
+
         if (!_examenesSeleccionados.Any(e => e.IdExamen == examen.IdExamen))
             _examenesSeleccionados.Add(examen);
         _mostrarModalExamen = false;
@@ -765,23 +827,23 @@
         _mostrarModalMedico = true;
         await JS.InvokeVoidAsync("marcarModalAbierto");
     }
-    private async Task GuardarNuevoMedicoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        var respuesta = await MedicosApi.GuardarMedicoAsync(_medicoNuevo);
-        if (respuesta.IsSuccessStatusCode)
+    private Task GuardarNuevoMedicoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _listaMedicos = await MedicosApi.ListarMedicosAsync();
-            _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.NombreMedico == _medicoNuevo.NombreMedico);
-            _mostrarModalMedico = false;
-            await JS.InvokeVoidAsync("marcarModalCerrado");
-        }
-        else
-        {
-            var mensaje = await respuesta.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al crear médico: {mensaje}");
-        }
-    }
+            var respuesta = await MedicosApi.GuardarMedicoAsync(_medicoNuevo);
+            if (respuesta.IsSuccessStatusCode)
+            {
+                _listaMedicos = await MedicosApi.ListarMedicosAsync();
+                _medicoSeleccionado = _listaMedicos.FirstOrDefault(m => m.NombreMedico == _medicoNuevo.NombreMedico);
+                _mostrarModalMedico = false;
+                await JS.InvokeVoidAsync("marcarModalCerrado");
+            }
+            else
+            {
+                var mensaje = await respuesta.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Error al crear médico: {mensaje}");
+            }
+        });
     private async Task AbrirModalPago(EditContext? _ = null)
     {
         if (_pacienteSeleccionado == null || _medicoSeleccionado == null || !_examenesSeleccionados.Any())
@@ -791,6 +853,7 @@
         }
         _montoEfectivo = 0;
         _montoTransferencia = 0;
+        _numeroComprobanteTransferencia = string.Empty;
         _pagoActual = new PagoDto();
         _mostrarModalPago = true;
         StateHasChanged();
@@ -798,69 +861,68 @@
     private decimal CalcularTotal() => _examenesSeleccionados.Sum(e => e.Precio);
     private decimal ObtenerSaldoPendiente() => Math.Max(0, CalcularTotal() - (_montoEfectivo + _montoTransferencia));
     private decimal ObtenerCambio() => Math.Max(0, (_montoEfectivo + _montoTransferencia) - CalcularTotal());
-    private async Task GuardarPagoAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (_montoEfectivo < 0 || _montoTransferencia < 0)
+    private Task GuardarPagoAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            await JS.InvokeVoidAsync("alert", "Los montos de pago no pueden ser negativos.");
-            return;
-        }
-
-        var totalPagado = _montoEfectivo + _montoTransferencia;
-        if (totalPagado <= 0)
-        {
-            await JS.InvokeVoidAsync("alert", "Debe ingresar al menos un monto de pago mayor a cero.");
-            return;
-        }
-
-        var saldoPendiente = ObtenerSaldoPendiente();
-        _ordenActual.IdPaciente = _pacienteSeleccionado!.IdPaciente;
-        _ordenActual.IdMedico = _medicoSeleccionado!.IdMedico;
-        _ordenActual.FechaOrden = _fechaOrden;
-        _ordenActual.Total = CalcularTotal();
-        _ordenActual.SaldoPendiente = saldoPendiente;
-        _ordenActual.TotalPagado = totalPagado;
-        _ordenActual.EstadoPago = saldoPendiente == 0 ? "PAGADO" : "PENDIENTE";
-        _ordenActual.Anulado = false;
-        _ordenActual.NumeroOrden = "";
-        _ordenActual.Observacion = "";
-        _ordenActual.Detalles = _examenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
-        var dtoOrdenCompleta = new OrdenCompletaDto { Orden = _ordenActual, IdsExamenes = _examenesSeleccionados.Select(e => e.IdExamen).ToList() };
-        var pago = new PagoDto
-        {
-            FechaPago = DateTime.Now,
-            MontoPagado = totalPagado,
-            Observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion) ? "PAGO DESDE ORDEN" : _pagoActual.Observacion,
-            DetallePagos = new List<DetallePagoDto>()
-        };
-
-        if (_montoEfectivo > 0)
-            pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "EFECTIVO", Monto = _montoEfectivo });
-        if (_montoTransferencia > 0)
-            pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "TRANSFERENCIA", Monto = _montoTransferencia });
-
-        var respuestaOrden = await OrdenesApi.GuardarOrdenConPagoHttpAsync(new OrdenPagoGuardarDto
-        {
-            Orden = dtoOrdenCompleta,
-            Pago = pago
-        });
-        if (respuestaOrden.IsSuccessStatusCode)
-        {
-            var respuestaContenido = await respuestaOrden.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
-            if (respuestaContenido != null && respuestaContenido.IdOrden > 0)
+            if (_montoEfectivo < 0 || _montoTransferencia < 0)
             {
-                Navigation.NavigateTo("/ordenes");
+                await JS.InvokeVoidAsync("alert", "Los montos de pago no pueden ser negativos.");
+                return;
             }
-            else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
-        }
-        else
-        {
-            var msg = await respuestaOrden.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {msg}");
-        }
-    }
+
+            var totalPagado = _montoEfectivo + _montoTransferencia;
+            if (totalPagado <= 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Debe ingresar al menos un monto de pago mayor a cero.");
+                return;
+            }
+
+            var saldoPendiente = ObtenerSaldoPendiente();
+            _ordenActual.IdPaciente = _pacienteSeleccionado!.IdPaciente;
+            _ordenActual.IdMedico = _medicoSeleccionado!.IdMedico;
+            _ordenActual.FechaOrden = _fechaOrden;
+            _ordenActual.Total = CalcularTotal();
+            _ordenActual.SaldoPendiente = saldoPendiente;
+            _ordenActual.TotalPagado = totalPagado;
+            _ordenActual.EstadoPago = saldoPendiente == 0 ? "PAGADO" : "PENDIENTE";
+            _ordenActual.Anulado = false;
+            _ordenActual.NumeroOrden = "";
+            _ordenActual.Observacion = "";
+            _ordenActual.Detalles = _examenesSeleccionados.Select(e => new DetalleOrdenDto { IdExamen = e.IdExamen, Precio = e.Precio }).ToList();
+            var dtoOrdenCompleta = new OrdenCompletaDto { Orden = _ordenActual, IdsExamenes = _examenesSeleccionados.Select(e => e.IdExamen).ToList() };
+            var pago = new PagoDto
+            {
+                FechaPago = DateTime.Now,
+                MontoPagado = totalPagado,
+                Observacion = string.IsNullOrWhiteSpace(_pagoActual.Observacion) ? "PAGO DESDE ORDEN" : _pagoActual.Observacion,
+                DetallePagos = new List<DetallePagoDto>()
+            };
+
+            if (_montoEfectivo > 0)
+                pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "EFECTIVO", Monto = _montoEfectivo });
+            if (_montoTransferencia > 0)
+                pago.DetallePagos.Add(new DetallePagoDto { TipoPago = "TRANSFERENCIA", Monto = _montoTransferencia, NumeroComprobante = _numeroComprobanteTransferencia });
+
+            var respuestaOrden = await OrdenesApi.GuardarOrdenConPagoHttpAsync(new OrdenPagoGuardarDto
+            {
+                Orden = dtoOrdenCompleta,
+                Pago = pago
+            });
+            if (respuestaOrden.IsSuccessStatusCode)
+            {
+                var respuestaContenido = await respuestaOrden.Content.ReadFromJsonAsync<OrdenRespuestaDto>();
+                if (respuestaContenido != null && respuestaContenido.IdOrden > 0)
+                {
+                    Navigation.NavigateTo("/ordenes");
+                }
+                else await JS.InvokeVoidAsync("alert", "No se pudo registrar la orden.");
+            }
+            else
+            {
+                var msg = await respuestaOrden.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Error al registrar la orden: {msg}");
+            }
+        });
     private bool ValidarCedula(string cedula)
     {
         if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10 || !cedula.All(char.IsDigit)) return false;
@@ -904,20 +966,64 @@
         await JS.InvokeVoidAsync("marcarModalCerrado");
     }
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
-    private async Task RegistrarNuevoPacienteAsync(EditContext? _ = null)
+    private Task RegistrarNuevoPacienteAsync(EditContext? _ = null)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var resultado = await PacientesApi.GuardarPacienteAsync(_pacienteNuevo);
+            if (resultado.Exito && resultado.Paciente != null)
+            {
+                // Después de guardar, obtener el detalle completo del paciente para cargar todos los campos
+                var pacienteGuardado = resultado.Paciente;
+                if (pacienteGuardado.IdPaciente > 0)
+                {
+                    var detalle = await PacientesApi.ObtenerDetallePacienteAsync(pacienteGuardado.IdPaciente);
+                    if (detalle != null)
+                    {
+                        _pacienteSeleccionado = detalle;
+                        _cedulaPaciente = detalle.Cedula;
+                    }
+                    else
+                    {
+                        // Fallback si no se obtiene detalle
+                        _pacienteSeleccionado = pacienteGuardado;
+                        _cedulaPaciente = pacienteGuardado.Cedula;
+                    }
+                }
+                else
+                {
+                    _pacienteSeleccionado = pacienteGuardado;
+                    _cedulaPaciente = pacienteGuardado.Cedula;
+                }
+                _mostrarModalRegistrarPaciente = false;
+                await JS.InvokeVoidAsync("marcarModalCerrado");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Error al registrar paciente: {resultado.Mensaje}");
+            }
+        });
+
+    private async Task AbrirModalEditarPacienteAsync()
     {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-        var resultado = await PacientesApi.GuardarPacienteAsync(_pacienteNuevo);
-        if (resultado.Exito && resultado.Paciente != null)
+        if (_pacienteSeleccionado == null) return;
+        // Cargar en el modelo de edición para permitir modificar campos vacíos
+        _pacienteNuevo = new PacienteDto
         {
-            _pacienteSeleccionado = resultado.Paciente;
-            _cedulaPaciente = resultado.Paciente.Cedula;
-            _mostrarModalRegistrarPaciente = false;
-            await JS.InvokeVoidAsync("marcarModalCerrado");
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("alert", $"Error al registrar paciente: {resultado.Mensaje}");
-        }
+            IdPaciente = _pacienteSeleccionado.IdPaciente,
+            IdPersona = _pacienteSeleccionado.IdPersona,
+            Cedula = _pacienteSeleccionado.Cedula,
+            Nombres = _pacienteSeleccionado.Nombres,
+            Apellidos = _pacienteSeleccionado.Apellidos,
+            Correo = _pacienteSeleccionado.Correo,
+            Telefono = _pacienteSeleccionado.Telefono,
+            Direccion = _pacienteSeleccionado.Direccion,
+            FechaNacimiento = _pacienteSeleccionado.FechaNacimiento,
+            IdGenero = _pacienteSeleccionado.IdGenero,
+            Activo = _pacienteSeleccionado.Activo
+        };
+        // Permitir editar los campos aunque vinieran de persona
+        _bloquearDatosPersonaExistente = false;
+        _mostrarModalRegistrarPaciente = true;
+        await JS.InvokeVoidAsync("marcarModalAbierto");
     }
 }

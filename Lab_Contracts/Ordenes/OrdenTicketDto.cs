@@ -17,7 +17,7 @@ namespace Lab_Contracts.Ordenes
         public decimal Total { get; set; }
         public decimal TotalPagado { get; set; }
         public decimal SaldoPendiente { get; set; }
-        public string TipoPago { get; set; }
+        public List<string> TipoPago { get; set; } = new();
         public List<ExamenTicketDto> Examenes { get; set; } = new();
     }
 

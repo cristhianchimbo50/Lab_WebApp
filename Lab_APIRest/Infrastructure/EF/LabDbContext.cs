@@ -778,9 +778,6 @@ public partial class LabDbContext : DbContext
             entity.Property(e => e.observacion)
                 .HasMaxLength(255)
                 .HasColumnName("observacion");
-            entity.Property(e => e.resultados_habilitados)
-                .HasDefaultValue(false)
-                .HasColumnName("resultados_habilitados");
             entity.Property(e => e.saldo_pendiente)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(10, 2)")

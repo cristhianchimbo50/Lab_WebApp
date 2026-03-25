@@ -80,20 +80,13 @@ namespace Lab_APIRest.Controllers.Auth
         [HttpGet("verificar-sesion")]
         public IActionResult VerificarSesion()
         {
-            try
+            return Ok(new
             {
-                return Ok(new
-                {
-                    Activa = true,
-                    Usuario = User.Identity?.Name,
-                    Rol = User.FindFirst(ClaimTypes.Role)?.Value,
-                    Mensaje = "Sesión válida."
-                });
-            }
-            catch
-            {
-                return Unauthorized(new { Activa = false, Mensaje = "Sesión inválida o expirada." });
-            }
+                Activa = true,
+                Usuario = User.Identity?.Name,
+                Rol = User.FindFirst(ClaimTypes.Role)?.Value,
+                Mensaje = "Sesión válida."
+            });
         }
 
         [AllowAnonymous]

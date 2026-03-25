@@ -1,4 +1,4 @@
-﻿using Lab_APIRest.Infrastructure.Services;
+﻿using Lab_APIRest.Services.Email;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab_APIRest.Controllers
@@ -7,9 +7,9 @@ namespace Lab_APIRest.Controllers
     [Route("api/test")]
     public class TestEmailController : ControllerBase
     {
-        private readonly EmailService _email;
+        private readonly IEmailService _email;
 
-        public TestEmailController(EmailService email)
+        public TestEmailController(IEmailService email)
         {
             _email = email;
         }

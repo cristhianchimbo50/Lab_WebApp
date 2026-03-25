@@ -1,7 +1,7 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
 using Lab_APIRest.Infrastructure.EF.Models;
 using tokens_usuarios = Lab_APIRest.Infrastructure.EF.Models.tokens_usuarios;
-using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +13,10 @@ namespace Lab_APIRest.Services.Auth
     public class RecuperacionService : IRecuperacionService
     {
         private readonly LabDbContext _db;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
         private readonly PasswordHasher<object> _hasher = new();
 
-        public RecuperacionService(LabDbContext db, EmailService emailService)
+        public RecuperacionService(LabDbContext db, IEmailService emailService)
         {
             _db = db;
             _emailService = emailService;

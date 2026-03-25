@@ -12,7 +12,9 @@ namespace Lab_Contracts.Ordenes
         public string? NumeroOrden { get; set; }
 
         public DateOnly FechaOrden { get; set; }
+        public int IdEstadoPago { get; set; }
         public string? EstadoPago { get; set; }
+        public int IdEstadoOrden { get; set; }
         public string? EstadoOrden { get; set; }
         public bool ResultadosHabilitados { get; set; }
 
@@ -43,6 +45,7 @@ namespace Lab_Contracts.Ordenes
         public string? NombreEstudio { get; set; }
         public int? IdResultado { get; set; }
         public string? NumeroResultado { get; set; }
+        public int? IdEstadoResultado { get; set; }
         public string? EstadoResultado { get; set; }
 
         public bool Seleccionado { get; set; } = false;

@@ -225,83 +225,81 @@
         return Task.CompletedTask;
     }
 
-    private async Task BuscarAsociacionesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _cargando = true;
-        StateHasChanged();
-
-        try
+    private Task BuscarAsociacionesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
         {
-            _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
-            var valor = _valorBusqueda?.Trim().ToLower() ?? string.Empty;
+            _cargando = true;
+            StateHasChanged();
 
-            if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
+            try
             {
+                _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
+                var valor = _valorBusqueda?.Trim().ToLower() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
+                {
+                    _asociacionesFiltradas = _asociaciones.ToList();
+                }
+                else
+                {
+                    _asociacionesFiltradas = _criterioBusqueda switch
+                    {
+                        "examen" => _asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
+                        "reactivo" => _asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
+                        "unidad" => _asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
+                        _ => _asociaciones.ToList()
+                    };
+                }
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar asociaciones.", "danger");
+            }
+
+            _cargando = false;
+            StateHasChanged();
+        });
+
+    private Task LimpiarBusquedaAsync()
+        => SesionService.EjecutarConSesionAsync(() =>
+        {
+            _criterioBusqueda = "";
+            _valorBusqueda = "";
+            _asociacionesFiltradas = null;
+            return Task.CompletedTask;
+        });
+
+    private Task EliminarAsociacionAsync(int idAsociacion)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!await JS.InvokeAsync<bool>("confirm", "¿Desea eliminar esta asociación?")) return;
+
+            var ok = await AsociacionesApi.EliminarAsociacionAsync(idAsociacion);
+            if (ok)
+            {
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación eliminada correctamente.", "success");
+                _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
                 _asociacionesFiltradas = _asociaciones.ToList();
             }
             else
             {
-                _asociacionesFiltradas = _criterioBusqueda switch
-                {
-                    "examen" => _asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
-                    "reactivo" => _asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
-                    "unidad" => _asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
-                    _ => _asociaciones.ToList()
-                };
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al eliminar la asociación.", "danger");
             }
-        }
-        catch
+        });
+
+    private Task IrAEditarAsync(int idExamen)
+        => SesionService.EjecutarConSesionAsync(() =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al cargar asociaciones.", "danger");
-        }
+            Navigation.NavigateTo($"/examenes-reactivos?idExamen={idExamen}");
+            return Task.CompletedTask;
+        });
 
-        _cargando = false;
-        StateHasChanged();
-    }
-
-    private async Task LimpiarBusquedaAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _criterioBusqueda = "";
-        _valorBusqueda = "";
-        _asociacionesFiltradas = null;
-    }
-
-    private async Task EliminarAsociacionAsync(int idAsociacion)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Desea eliminar esta asociación?")) return;
-
-        var ok = await AsociacionesApi.EliminarAsociacionAsync(idAsociacion);
-        if (ok)
+    private Task IrAVinculoReactivosAsync()
+        => SesionService.EjecutarConSesionAsync(() =>
         {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación eliminada correctamente.", "success");
-            _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
-            _asociacionesFiltradas = _asociaciones.ToList();
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("mostrarToastAsync", "Error al eliminar la asociación.", "danger");
-        }
-    }
-
-    private async Task IrAEditarAsync(int idExamen)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        Navigation.NavigateTo($"/examenes-reactivos?idExamen={idExamen}");
-    }
-
-    private async Task IrAVinculoReactivosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        Navigation.NavigateTo("/examenes-reactivos");
-    }
+            Navigation.NavigateTo("/examenes-reactivos");
+            return Task.CompletedTask;
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

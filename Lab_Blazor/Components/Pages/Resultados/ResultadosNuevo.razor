@@ -5,6 +5,7 @@
 @using Lab_Contracts.Ordenes
 @using Lab_Contracts.Examenes
 @using Lab_Contracts.Resultados
+@using Lab_Contracts.Common
 @using Lab_Blazor.Services.Ordenes
 @using Lab_Blazor.Services.Examenes
 @using Lab_Blazor.Services.Resultados
@@ -178,6 +179,8 @@
 </AuthorizeView>
 
 @code {
+    private const int EstadoResultadoCorreccionId = EstadoIds.Resultado.Correccion;
+
     [Parameter] public int idOrden { get; set; }
     [Parameter] public List<int> idsExamenes { get; set; } = new();
 
@@ -198,210 +201,206 @@
         if (firstRender && !_sesionVerificada)
         {
             _sesionVerificada = true;
+            await SesionService.EjecutarConSesionAsync(async () =>
+            {
+                try
+                {
+                    var authState = await AuthProvider.GetAuthenticationStateAsync();
+                    var user = authState.User;
+                    if (user.Identity?.IsAuthenticated ?? false)
+                    {
+                        var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+                        if (rol is "1" or "3")
+                        {
+                            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+                            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+                            if (query.TryGetValue("idResultado", out var idResultadoStr) && int.TryParse(idResultadoStr, out var idResultado))
+                            {
+                                _modoEdicion = true;
+                                _idResultadoEdicion = idResultado;
+                                await InicializarDatosEdicionAsync();
+                            }
+                            else
+                            {
+                                if (query.TryGetValue("idOrden", out var idOrdenStr))
+                                    idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
+                                if (query.TryGetValue("idsExamenes", out var ids))
+                                    idsExamenes = ids.Select(int.Parse).ToList();
+                                await InicializarDatosAsync();
+                            }
+                        }
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    await JS.InvokeVoidAsync("alert", "No autorizado para cargar datos de resultados.");
+                }
+                finally
+                {
+                    _cargando = false;
+                    StateHasChanged();
+                }
+            }, forzarVerificacion: true);
+        }
+    }
 
-            if (!await SesionService.VerificarOSalirAsync())
+    private Task InicializarDatosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+            if (_datosOrden == null) return;
+
+            var todos = await ExamenesApi.ListarExamenesAsync();
+            foreach (var idPadre in idsExamenes)
+            {
+                var padre = todos.FirstOrDefault(e => e.IdExamen == idPadre);
+                if (padre == null) continue;
+                var hijos = await ExamenesApi.ListarExamenesHijosAsync(idPadre);
+                _examenesAgrupados.Add((padre, hijos));
+                _valoresIngresados.TryAdd(padre.IdExamen, string.Empty);
+                foreach (var hijo in hijos)
+                    _valoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
+            }
+        });
+
+    private Task InicializarDatosEdicionAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            _detalleResultadoEdicion = await ResultadosApi.ObtenerDetalleResultadoAsync(_idResultadoEdicion);
+            if (_detalleResultadoEdicion == null)
+            {
+                await JS.InvokeVoidAsync("alert", "No se encontró el resultado para editar.");
                 return;
+            }
 
+            if (_detalleResultadoEdicion.IdEstadoResultado != EstadoResultadoCorreccionId)
+            {
+                await JS.InvokeVoidAsync("alert", "Solo se pueden modificar resultados en estado Corrección.");
+                Navigation.NavigateTo("/ordenes");
+                return;
+            }
+
+            idOrden = _detalleResultadoEdicion.IdOrden;
+            _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
+            if (_datosOrden == null)
+            {
+                await JS.InvokeVoidAsync("alert", "No se pudieron cargar los datos de la orden.");
+                return;
+            }
+
+            _fechaResultado = _detalleResultadoEdicion.FechaResultado;
+            _observacionesGenerales = _detalleResultadoEdicion.Observaciones ?? string.Empty;
+
+            var todos = await ExamenesApi.ListarExamenesAsync();
+            _examenesAgrupados = new();
+            _valoresIngresados = new();
+
+            foreach (var detalle in _detalleResultadoEdicion.Detalles)
+            {
+                var examen = todos.FirstOrDefault(e => e.IdExamen == detalle.IdExamen);
+                if (examen == null) continue;
+                _examenesAgrupados.Add((examen, new List<ExamenDto>()));
+                _valoresIngresados[examen.IdExamen] = detalle.Valor ?? string.Empty;
+            }
+        });
+
+    private Task GuardarResultadosAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
             try
             {
-                var authState = await AuthProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
-                if (user.Identity?.IsAuthenticated ?? false)
+                var resultados = new List<ResultadoExamenDto>();
+
+                foreach (var grupo in _examenesAgrupados)
                 {
-                    var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
-                    if (rol is "1" or "3")
-                     {
-                         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-                         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-                         if (query.TryGetValue("idResultado", out var idResultadoStr) && int.TryParse(idResultadoStr, out var idResultado))
-                         {
-                            _modoEdicion = true;
-                            _idResultadoEdicion = idResultado;
-                            await InicializarDatosEdicionAsync();
-                         }
-                         else
-                         {
-                            if (query.TryGetValue("idOrden", out var idOrdenStr))
-                                 idOrden = int.TryParse(idOrdenStr, out var parsedId) ? parsedId : 0;
-                            if (query.TryGetValue("idsExamenes", out var ids))
-                                 idsExamenes = ids.Select(int.Parse).ToList();
-                            await InicializarDatosAsync();
-                         }
-                     }
-                 }
-            }
-            catch (HttpRequestException)
-            {
-                await JS.InvokeVoidAsync("alert", "No autorizado para cargar datos de resultados.");
-            }
-            finally
-            {
-                _cargando = false;
-                StateHasChanged();
-            }
-        }
-    }
-
-    private async Task InicializarDatosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
-        if (_datosOrden == null) return;
-
-        var todos = await ExamenesApi.ListarExamenesAsync();
-        foreach (var idPadre in idsExamenes)
-        {
-            var padre = todos.FirstOrDefault(e => e.IdExamen == idPadre);
-            if (padre == null) continue;
-            var hijos = await ExamenesApi.ListarExamenesHijosAsync(idPadre);
-            _examenesAgrupados.Add((padre, hijos));
-            _valoresIngresados.TryAdd(padre.IdExamen, string.Empty);
-            foreach (var hijo in hijos)
-                _valoresIngresados.TryAdd(hijo.IdExamen, string.Empty);
-        }
-    }
-
-    private async Task InicializarDatosEdicionAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        _detalleResultadoEdicion = await ResultadosApi.ObtenerDetalleResultadoAsync(_idResultadoEdicion);
-        if (_detalleResultadoEdicion == null)
-        {
-            await JS.InvokeVoidAsync("alert", "No se encontró el resultado para editar.");
-            return;
-        }
-
-        if (!string.Equals(_detalleResultadoEdicion.EstadoResultado, "CORRECCION", StringComparison.OrdinalIgnoreCase))
-        {
-            await JS.InvokeVoidAsync("alert", "Solo se pueden modificar resultados en estado Corrección.");
-            Navigation.NavigateTo("/ordenes");
-            return;
-        }
-
-        idOrden = _detalleResultadoEdicion.IdOrden;
-        _datosOrden = await OrdenesApi.ObtenerDetalleOrdenAsync(idOrden);
-        if (_datosOrden == null)
-        {
-            await JS.InvokeVoidAsync("alert", "No se pudieron cargar los datos de la orden.");
-            return;
-        }
-
-        _fechaResultado = _detalleResultadoEdicion.FechaResultado;
-        _observacionesGenerales = _detalleResultadoEdicion.Observaciones ?? string.Empty;
-
-        var todos = await ExamenesApi.ListarExamenesAsync();
-        _examenesAgrupados = new();
-        _valoresIngresados = new();
-
-        foreach (var detalle in _detalleResultadoEdicion.Detalles)
-        {
-            var examen = todos.FirstOrDefault(e => e.IdExamen == detalle.IdExamen);
-            if (examen == null) continue;
-            _examenesAgrupados.Add((examen, new List<ExamenDto>()));
-            _valoresIngresados[examen.IdExamen] = detalle.Valor ?? string.Empty;
-        }
-    }
-
-    private async Task GuardarResultadosAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        try
-        {
-            var resultados = new List<ResultadoExamenDto>();
-
-            foreach (var grupo in _examenesAgrupados)
-            {
-                if (grupo.Hijos.Any())
-                {
-                    foreach (var hijo in grupo.Hijos)
+                    if (grupo.Hijos.Any())
+                    {
+                        foreach (var hijo in grupo.Hijos)
+                        {
+                            resultados.Add(new ResultadoExamenDto
+                            {
+                                IdExamen = hijo.IdExamen,
+                                NombreExamen = hijo.NombreExamen ?? "",
+                                Valor = _valoresIngresados.GetValueOrDefault(hijo.IdExamen, ""),
+                                Unidad = hijo.Unidad ?? "",
+                                ValorReferencia = hijo.ValorReferencia ?? "",
+                                Observacion = ""
+                            });
+                        }
+                    }
+                    else
                     {
                         resultados.Add(new ResultadoExamenDto
                         {
-                            IdExamen = hijo.IdExamen,
-                            NombreExamen = hijo.NombreExamen ?? "",
-                            Valor = _valoresIngresados.GetValueOrDefault(hijo.IdExamen, ""),
-                            Unidad = hijo.Unidad ?? "",
-                            ValorReferencia = hijo.ValorReferencia ?? "",
+                            IdExamen = grupo.Padre.IdExamen,
+                            NombreExamen = grupo.Padre.NombreExamen ?? "",
+                            Valor = _valoresIngresados.GetValueOrDefault(grupo.Padre.IdExamen, ""),
+                            Unidad = grupo.Padre.Unidad ?? "",
+                            ValorReferencia = grupo.Padre.ValorReferencia ?? "",
                             Observacion = ""
                         });
                     }
                 }
-                else
-                {
-                    resultados.Add(new ResultadoExamenDto
-                    {
-                        IdExamen = grupo.Padre.IdExamen,
-                        NombreExamen = grupo.Padre.NombreExamen ?? "",
-                        Valor = _valoresIngresados.GetValueOrDefault(grupo.Padre.IdExamen, ""),
-                        Unidad = grupo.Padre.Unidad ?? "",
-                        ValorReferencia = grupo.Padre.ValorReferencia ?? "",
-                        Observacion = ""
-                    });
-                }
-            }
 
-            if (_modoEdicion)
-            {
-                var dtoActualizacion = new ResultadoActualizarDto
+                if (_modoEdicion)
                 {
-                    IdResultado = _idResultadoEdicion,
+                    var dtoActualizacion = new ResultadoActualizarDto
+                    {
+                        IdResultado = _idResultadoEdicion,
+                        FechaResultado = _fechaResultado,
+                        ObservacionesGenerales = _observacionesGenerales,
+                        Examenes = resultados
+                    };
+
+                    var ok = await ResultadosApi.ActualizarResultadoAsync(dtoActualizacion);
+                    if (ok)
+                    {
+                        await JS.InvokeVoidAsync("alert", "Resultado actualizado y enviado a revisión.");
+                        Navigation.NavigateTo("/ordenes");
+                    }
+                    else
+                    {
+                        await JS.InvokeVoidAsync("alert", "No se pudo actualizar el resultado.");
+                    }
+                    return;
+                }
+
+                var dto = new ResultadoGuardarDto
+                {
+                    IdOrden = idOrden,
+                    IdPaciente = _datosOrden?.IdPaciente ?? 0,
                     FechaResultado = _fechaResultado,
-                    ObservacionesGenerales = _observacionesGenerales,
-                    Examenes = resultados
+                    Examenes = resultados,
+                    ObservacionesGenerales = _observacionesGenerales
                 };
 
-                var ok = await ResultadosApi.ActualizarResultadoAsync(dtoActualizacion);
-                if (ok)
+                var response = await OrdenesApi.GuardarResultadosAsync(dto);
+                var contenido = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
                 {
-                    await JS.InvokeVoidAsync("alert", "Resultado actualizado y enviado a revisión.");
+                    await JS.InvokeVoidAsync("alert", "Resultados guardados correctamente.");
+                    await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden);
                     Navigation.NavigateTo("/ordenes");
                 }
                 else
                 {
-                    await JS.InvokeVoidAsync("alert", "No se pudo actualizar el resultado.");
+                    string mensaje = "Error al guardar el resultado.";
+                    try
+                    {
+                        var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(contenido);
+                        if (errorObj != null && errorObj.ContainsKey("mensaje"))
+                            mensaje = errorObj["mensaje"]?.ToString() ?? mensaje;
+                    }
+                    catch { }
+                    await JS.InvokeVoidAsync("alert", mensaje);
                 }
-                return;
             }
-
-            var dto = new ResultadoGuardarDto
+            catch (HttpRequestException)
             {
-                IdOrden = idOrden,
-                IdPaciente = _datosOrden?.IdPaciente ?? 0,
-                FechaResultado = _fechaResultado,
-                Examenes = resultados,
-                ObservacionesGenerales = _observacionesGenerales
-            };
-
-            var response = await OrdenesApi.GuardarResultadosAsync(dto);
-            var contenido = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                await JS.InvokeVoidAsync("alert", "Resultados guardados correctamente.");
-                await OrdenesApi.VerificarNotificacionResultadosOrdenAsync(idOrden);
-                Navigation.NavigateTo("/resultados");
+                await JS.InvokeVoidAsync("alert", "No autorizado para guardar resultados.");
             }
-            else
-            {
-                string mensaje = "Error al guardar el resultado.";
-                try
-                {
-                    var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(contenido);
-                    if (errorObj != null && errorObj.ContainsKey("mensaje"))
-                        mensaje = errorObj["mensaje"]?.ToString() ?? mensaje;
-                }
-                catch { }
-                await JS.InvokeVoidAsync("alert", mensaje);
-            }
-        }
-        catch (HttpRequestException)
-        {
-            await JS.InvokeVoidAsync("alert", "No autorizado para guardar resultados.");
-        }
-    }
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

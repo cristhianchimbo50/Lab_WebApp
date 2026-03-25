@@ -157,101 +157,100 @@
     {
         if (firstRender && !_datosCargados)
         {
-            var authState = await AuthProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (!user.Identity?.IsAuthenticated ?? true)
+            await SesionService.EjecutarConSesionAsync(async () =>
             {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (!user.Identity?.IsAuthenticated ?? true)
+                {
+                    _cargando = false;
+                    _datosCargados = true;
+                    StateHasChanged();
+                    return;
+                }
+
+                var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
+                bool puedeVer = rol == "1";
+
+                if (puedeVer && IdExamenPadre.HasValue)
+                {
+                    _examenPadre = await ExamenesApiService.ObtenerDetalleExamenAsync(IdExamenPadre.Value);
+                    _nombreExamenPadre = _examenPadre?.NombreExamen;
+                    await CargarComposicionesAsync();
+                    await CargarExamenesDisponiblesAsync();
+                }
+
                 _cargando = false;
                 _datosCargados = true;
                 StateHasChanged();
+            }, forzarVerificacion: true);
+        }
+    }
+
+    private Task CargarComposicionesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (IdExamenPadre.HasValue)
+                _composiciones = await ExamenComposicionApiService.ListarComposicionesPorPadreAsync(IdExamenPadre.Value);
+        });
+
+    private Task CargarExamenesDisponiblesAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var todos = await ExamenesApiService.ListarExamenesAsync();
+            _examenesDisponibles = todos
+                .Where(x => !x.Anulado && x.IdExamen != IdExamenPadre && !_composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
+                .OrderBy(x => x.NombreExamen)
+                .ToList();
+        });
+
+    private Task AgregarComposicionAsync()
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (!_idExamenHijoSeleccionado.HasValue)
+            {
+                await JS.InvokeVoidAsync("alert", "Seleccione un examen hijo.");
                 return;
             }
 
-            var rol = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("IdRol")?.Value ?? "";
-            bool puedeVer = rol == "1";
-
-            if (puedeVer && IdExamenPadre.HasValue)
+            var dto = new ExamenComposicionDto
             {
-                _examenPadre = await ExamenesApiService.ObtenerDetalleExamenAsync(IdExamenPadre.Value);
-                _nombreExamenPadre = _examenPadre?.NombreExamen;
+                IdExamenPadre = IdExamenPadre!.Value,
+                IdExamenHijo = _idExamenHijoSeleccionado.Value
+            };
+
+            var response = await ExamenComposicionApiService.GuardarComposicionAsync(dto);
+            if (response.IsSuccessStatusCode)
+            {
+                await CargarComposicionesAsync();
+                await CargarExamenesDisponiblesAsync();
+                _idExamenHijoSeleccionado = null;
+            }
+            else
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Error al agregar: {msg}");
+            }
+        });
+
+    private Task EliminarComposicionAsync(ExamenComposicionDto composicion)
+        => SesionService.EjecutarConSesionAsync(async () =>
+        {
+            var confirmado = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
+            if (!confirmado) return;
+
+            var response = await ExamenComposicionApiService.EliminarComposicionAsync(composicion.IdExamenPadre, composicion.IdExamenHijo);
+            if (response.IsSuccessStatusCode)
+            {
                 await CargarComposicionesAsync();
                 await CargarExamenesDisponiblesAsync();
             }
-
-            _cargando = false;
-            _datosCargados = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CargarComposicionesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (IdExamenPadre.HasValue)
-            _composiciones = await ExamenComposicionApiService.ListarComposicionesPorPadreAsync(IdExamenPadre.Value);
-    }
-
-    private async Task CargarExamenesDisponiblesAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var todos = await ExamenesApiService.ListarExamenesAsync();
-        _examenesDisponibles = todos
-            .Where(x => x.IdExamen != IdExamenPadre && !_composiciones.Any(c => c.IdExamenHijo == x.IdExamen))
-            .OrderBy(x => x.NombreExamen)
-            .ToList();
-    }
-
-    private async Task AgregarComposicionAsync()
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        if (!_idExamenHijoSeleccionado.HasValue)
-        {
-            await JS.InvokeVoidAsync("alert", "Seleccione un examen hijo.");
-            return;
-        }
-
-        var dto = new ExamenComposicionDto
-        {
-            IdExamenPadre = IdExamenPadre!.Value,
-            IdExamenHijo = _idExamenHijoSeleccionado.Value
-        };
-
-        var response = await ExamenComposicionApiService.GuardarComposicionAsync(dto);
-        if (response.IsSuccessStatusCode)
-        {
-            await CargarComposicionesAsync();
-            await CargarExamenesDisponiblesAsync();
-            _idExamenHijoSeleccionado = null;
-        }
-        else
-        {
-            var msg = await response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("alert", $"Error al agregar: {msg}");
-        }
-    }
-
-    private async Task EliminarComposicionAsync(ExamenComposicionDto composicion)
-    {
-        if (!await SesionService.VerificarOSalirAsync()) return;
-
-        var confirmado = await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la relación con {composicion.NombreExamenHijo}?");
-        if (!confirmado) return;
-
-        var response = await ExamenComposicionApiService.EliminarComposicionAsync(composicion.IdExamenPadre, composicion.IdExamenHijo);
-        if (response.IsSuccessStatusCode)
-        {
-            await CargarComposicionesAsync();
-            await CargarExamenesDisponiblesAsync();
-        }
-        else
-        {
-            await JS.InvokeVoidAsync("alert", "No se pudo eliminar la relación.");
-        }
-    }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "No se pudo eliminar la relación.");
+            }
+        });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 }

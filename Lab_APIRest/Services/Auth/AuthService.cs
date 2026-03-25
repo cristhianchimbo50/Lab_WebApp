@@ -2,6 +2,7 @@
 using Lab_APIRest.Infrastructure.EF.Models;
 using usuario = Lab_APIRest.Infrastructure.EF.Models.usuario;
 using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Email;
 using Lab_Contracts.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ namespace Lab_APIRest.Services.Auth
         private readonly IMemoryCache _cache;
         private readonly ILogger<AuthService> _logger;
         private readonly PasswordHasher<object> _hasher = new();
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
 
         private const int MaxIntentos = 5;
         private static readonly TimeSpan LockoutTiempo = TimeSpan.FromMinutes(15);
@@ -61,7 +62,7 @@ namespace Lab_APIRest.Services.Auth
             TokenService tokenService,
             IMemoryCache cache,
             ILogger<AuthService> logger,
-            EmailService emailService)
+            IEmailService emailService)
         {
             _context = context;
             _tokenService = tokenService;
@@ -109,7 +110,7 @@ namespace Lab_APIRest.Services.Auth
             }
 
             if (usuarioEntidad.Activo != true)
-                return null;
+                throw new InvalidOperationException("Cuenta inhabilitada. Contacte al administrador.");
 
             _cache.Remove(cacheKey);
 
@@ -137,10 +138,15 @@ namespace Lab_APIRest.Services.Auth
             {
                 var pacienteEntidad = await _context.Paciente.AsNoTracking()
                     .Where(p => p.id_persona == usuarioEntidad.IdPersona)
-                    .Select(p => new { p.id_paciente })
+                    .Select(p => new { p.id_paciente, p.activo })
                     .FirstOrDefaultAsync(ct);
                 if (pacienteEntidad != null)
+                {
+                    if (pacienteEntidad.activo != true)
+                        throw new InvalidOperationException("La cuenta del paciente está inhabilitada.");
+
                     idPaciente = pacienteEntidad.id_paciente;
+                }
             }
 
             (string token, DateTime expiraUtc) = _tokenService.CreateToken(

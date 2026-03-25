@@ -23,8 +23,6 @@ public partial class orden
 
     public DateTime? fecha_completado { get; set; }
 
-    public bool resultados_habilitados { get; set; }
-
     public int? id_medico { get; set; }
 
     public string? observacion { get; set; }
