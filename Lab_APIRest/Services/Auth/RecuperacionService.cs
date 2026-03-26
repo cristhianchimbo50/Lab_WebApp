@@ -15,11 +15,13 @@ namespace Lab_APIRest.Services.Auth
         private readonly LabDbContext _db;
         private readonly IEmailService _emailService;
         private readonly PasswordHasher<object> _hasher = new();
+        private readonly string _frontendBaseUrl;
 
-        public RecuperacionService(LabDbContext db, IEmailService emailService)
+        public RecuperacionService(LabDbContext db, IEmailService emailService, IConfiguration configuration)
         {
             _db = db;
             _emailService = emailService;
+            _frontendBaseUrl = configuration["FrontendBaseUrl"];
         }
 
         public async Task<RespuestaMensajeDto> SolicitarRecuperacionAsync(OlvideContraseniaDto dto, CancellationToken ct)
@@ -56,7 +58,7 @@ namespace Lab_APIRest.Services.Auth
             _db.TokensUsuarios.Add(registro);
             await _db.SaveChangesAsync(ct);
 
-            var link = $"http://laboratorioinmaculada:9111/auth/restablecer?token={Uri.EscapeDataString(token)}"; // TODO: cambiar dominio en producción
+            var link = $"{_frontendBaseUrl.TrimEnd('/')}/auth/restablecer?token={Uri.EscapeDataString(token)}";
             var asunto = "Recuperación de Contraseña - Laboratorio Clínico 'La Inmaculada'";
             var cuerpoHtml = $@"
                 <p>Hola <strong>{usuario.Nombres} {usuario.Apellidos}</strong>,</p>

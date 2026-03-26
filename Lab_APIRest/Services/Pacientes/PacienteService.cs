@@ -17,12 +17,14 @@ namespace Lab_APIRest.Services.Pacientes
     public class PacienteService : IPacienteService
     {
         private readonly LabDbContext _context;
-            private readonly IEmailService _emailService;
+        private readonly IEmailService _emailService;
+        private readonly string _frontendBaseUrl;
 
-            public PacienteService(LabDbContext context, IEmailService emailService)
+        public PacienteService(LabDbContext context, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _emailService = emailService;
+            _frontendBaseUrl = configuration["FrontendBaseUrl"] ?? "http://laboratorioinmaculada.site";
         }
 
         private static PacienteDto MapPaciente(paciente entidadPaciente) => new()
@@ -370,13 +372,12 @@ namespace Lab_APIRest.Services.Pacientes
             await _context.SaveChangesAsync();
 
             var tokenUrl = Uri.EscapeDataString(token);
-            var dominio = "http://laboratorioinmaculada:9111";
-            var enlace = $"{dominio}/activar-cuenta?token={tokenUrl}";
+            var enlace = $"{_frontendBaseUrl.TrimEnd('/')}/activar-cuenta?token={tokenUrl}";
 
             var asunto = "Activación de cuenta - Laboratorio Clínico La Inmaculada";
             var cuerpo = $@"<p>Hola <strong>{persona.nombres} {persona.apellidos}</strong>,</p>
 
-<p>Se ha creado una cuenta para ti en el sistema del Laboratorio Clínico La Inmaculada.</p>
+<p>Se ha creado una cuenta para ti en la página del Laboratorio Clínico La Inmaculada.</p>
 
 <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el siguiente enlace:</p>
 
