@@ -15,6 +15,7 @@ namespace Lab_Contracts.Dashboard
         public string Medico { get; set; } = string.Empty;
         public string EstadoOrden { get; set; } = string.Empty;
         public string EstadoPago { get; set; } = string.Empty;
+        public int IdEstadoPago { get; set; }
         public bool ListoParaEntrega { get; set; }
     }
 

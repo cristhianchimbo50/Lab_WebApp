@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
 @inject IOrdenesApiService OrdenesApi
+@using Lab_Contracts.Common
 
 @if (!_checkedAuth)
 {
@@ -58,9 +59,9 @@ else if (_esLaboratorista)
 
         @if (_cargandoDashboard)
         {
-            <div class="d-flex align-items-center justify-content-center py-5 text-primary">
-                <div class="spinner-border me-2" role="status"></div>
-                <span>Cargando tu panel...</span>
+            <div class="text-center text-primary my-5">
+                <div class="spinner-border" role="status"></div>
+                <div class="mt-2">Cargando...</div>
             </div>
         }
         else
@@ -168,7 +169,7 @@ else if (_esLaboratorista)
                                             <td>@ord.NombrePaciente</td>
                                             <td>@ord.Medico</td>
                                             <td>
-                                                <span class="badge bg-@(ord.EstadoPago?.Equals("PAGADO", StringComparison.OrdinalIgnoreCase) == true ? "success" : "warning text-dark")">@ord.EstadoPago</span>
+                                                <span class="badge bg-@(ord.IdEstadoPago == EstadoIds.Pago.Pagado ? "success" : "warning text-dark")">@ord.EstadoPago</span>
                                             </td>
                                             <td>
                                                 @if (ord.ListoParaEntrega)
@@ -236,9 +237,9 @@ else if (_esAdministrador)
 
         @if (_cargandoDashboard)
         {
-            <div class="d-flex align-items-center justify-content-center py-5 text-primary">
-                <div class="spinner-border me-2" role="status"></div>
-                <span>Cargando tu panel...</span>
+            <div class="text-center text-primary my-5">
+                <div class="spinner-border" role="status"></div>
+                <div class="mt-2">Cargando...</div>
             </div>
         }
         else
@@ -421,9 +422,9 @@ else if (_esRecepcionista)
 
         @if (_cargandoDashboard)
         {
-            <div class="d-flex align-items-center justify-content-center py-5 text-primary">
-                <div class="spinner-border me-2" role="status"></div>
-                <span>Cargando tu panel...</span>
+            <div class="text-center text-primary my-5">
+                <div class="spinner-border" role="status"></div>
+                <div class="mt-2">Cargando...</div>
             </div>
         }
         else
@@ -531,7 +532,7 @@ else if (_esRecepcionista)
                                             <td>@ord.Paciente</td>
                                             <td>@ord.Medico</td>
                                             <td>
-                                                <span class="badge bg-@(ord.EstadoPago?.Equals("PAGADO", StringComparison.OrdinalIgnoreCase) == true ? "success" : "warning text-dark")">@ord.EstadoPago</span>
+                                                <span class="badge bg-@(ord.IdEstadoPago == EstadoIds.Pago.Pagado ? "success" : "warning text-dark")">@ord.EstadoPago</span>
                                             </td>
                                             <td>
                                                 @if (ord.ListoParaEntrega)
@@ -604,9 +605,9 @@ else if (_esPaciente)
 
                 @if (_cargandoDashboard)
                 {
-                    <div class="d-flex align-items-center justify-content-center py-5 text-primary">
-                        <div class="spinner-border me-2" role="status"></div>
-                        <span>Cargando tu resumen...</span>
+                    <div class="text-center text-primary my-5">
+                        <div class="spinner-border" role="status"></div>
+                        <div class="mt-2">Cargando...</div>
                     </div>
                 }
                 else

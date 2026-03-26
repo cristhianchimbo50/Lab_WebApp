@@ -25,18 +25,18 @@ namespace Lab_APIRest.Services.Ordenes
         private readonly ILogger<OrdenService> _logger;
         private static readonly ConcurrentDictionary<int, bool> _ordenesNotificadas = new();
 
-        private const int EstadoOrdenEnProcesoId = 1;
-        private const int EstadoOrdenFinalizadaId = 2;
-        private const int EstadoOrdenAnuladaId = 3;
+        private const int EstadoOrdenEnProcesoId = EstadoIds.Orden.EnProceso;
+        private const int EstadoOrdenFinalizadaId = EstadoIds.Orden.Finalizada;
+        private const int EstadoOrdenAnuladaId = EstadoIds.Orden.Anulada;
 
-        private const int EstadoResultadoAprobadoId = 4;
+        private const int EstadoResultadoAprobadoId = EstadoIds.Resultado.Aprobado;
         private const int EstadoResultadoPendienteId = EstadoIds.Resultado.Pendiente;
         private const int EstadoResultadoRevisionId = EstadoIds.Resultado.EnRevision;
         private const int EstadoResultadoCorreccionId = EstadoIds.Resultado.Correccion;
 
-        private const int EstadoPagoPendienteId = 1;
-        private const int EstadoPagoAbonadoId = 2;
-        private const int EstadoPagoPagadoId = 3;
+        private const int EstadoPagoPendienteId = EstadoIds.Pago.Pendiente;
+        private const int EstadoPagoAbonadoId = EstadoIds.Pago.Abonado;
+        private const int EstadoPagoPagadoId = EstadoIds.Pago.Pagado;
 
         public OrdenService(
             LabDbContext context,
@@ -677,6 +677,7 @@ namespace Lab_APIRest.Services.Ordenes
                     NombrePaciente = $"{o.paciente_navigation!.persona_navigation!.nombres} {o.paciente_navigation!.persona_navigation!.apellidos}",
                     Medico = o.medico_navigation != null ? o.medico_navigation.nombre_medico : string.Empty,
                     EstadoPago = o.estado_pago_navigation != null ? o.estado_pago_navigation.nombre ?? string.Empty : string.Empty,
+                    IdEstadoPago = o.id_estado_pago,
                     ListoParaEntrega = o.id_estado_orden == EstadoOrdenFinalizadaId
                 })
                 .ToListAsync();
@@ -731,23 +732,47 @@ namespace Lab_APIRest.Services.Ordenes
                 UsuariosTotales = await _context.Usuario.CountAsync(u => u.activo == true && u.rol_navigation.nombre != "paciente")
             };
 
+            var examenesHijosIds = resultados
+                .SelectMany(r => r.detalle_resultado.Select(d => d.id_examen))
+                .Distinct()
+                .ToList();
+
+            var composiciones = await _context.ExamenComposicion
+                .Where(ec => ec.activo && examenesHijosIds.Contains(ec.id_examen_hijo))
+                .Include(ec => ec.examen_padre_navigation)
+                .ToListAsync();
+
             var pendientes = resultados
                 .Where(r => r.id_estado_resultado == EstadoResultadoPendienteId
                     || r.id_estado_resultado == EstadoResultadoRevisionId
                     || r.id_estado_resultado == EstadoResultadoCorreccionId)
                 .Take(5)
-                .Select(r => new AdminResultadoPendienteDto
-                {
-                    IdResultado = r.id_resultado,
-                    IdOrden = r.id_orden,
-                    NumeroOrden = r.orden_navigation!.numero_orden ?? string.Empty,
-                    Paciente = r.orden_navigation!.paciente_navigation != null
-                        ? $"{r.orden_navigation.paciente_navigation.persona_navigation!.nombres} {r.orden_navigation.paciente_navigation.persona_navigation!.apellidos}"
-                        : string.Empty,
-                    TipoExamen = r.detalle_resultado
-                        .Select(d => d.examen_navigation!.titulo_examen ?? d.examen_navigation!.nombre_examen)
-                        .FirstOrDefault() ?? string.Empty,
-                    Estado = r.estado_resultado_navigation?.nombre ?? "PENDIENTE"
+                .Select(r => {
+                    var detalle = r.detalle_resultado.FirstOrDefault();
+                    string tipoExamen = string.Empty;
+                    if (detalle != null)
+                    {
+                        var comp = composiciones.FirstOrDefault(c => c.id_examen_hijo == detalle.id_examen);
+                        if (comp != null && comp.examen_padre_navigation != null)
+                        {
+                            tipoExamen = comp.examen_padre_navigation.titulo_examen ?? comp.examen_padre_navigation.nombre_examen ?? string.Empty;
+                        }
+                        else
+                        {
+                            tipoExamen = detalle.examen_navigation?.titulo_examen ?? detalle.examen_navigation?.nombre_examen ?? string.Empty;
+                        }
+                    }
+                    return new AdminResultadoPendienteDto
+                    {
+                        IdResultado = r.id_resultado,
+                        IdOrden = r.id_orden,
+                        NumeroOrden = r.orden_navigation!.numero_orden ?? string.Empty,
+                        Paciente = r.orden_navigation!.paciente_navigation != null
+                            ? $"{r.orden_navigation.paciente_navigation.persona_navigation!.nombres} {r.orden_navigation.paciente_navigation.persona_navigation!.apellidos}"
+                            : string.Empty,
+                        TipoExamen = tipoExamen,
+                        Estado = r.estado_resultado_navigation?.nombre ?? "PENDIENTE"
+                    };
                 })
                 .ToList();
 
@@ -865,6 +890,7 @@ namespace Lab_APIRest.Services.Ordenes
                     Paciente = o.paciente_navigation != null ? $"{o.paciente_navigation.persona_navigation!.nombres} {o.paciente_navigation.persona_navigation!.apellidos}" : string.Empty,
                     Medico = o.medico_navigation != null ? o.medico_navigation.nombre_medico : string.Empty,
                     EstadoPago = o.estado_pago_navigation != null ? o.estado_pago_navigation.nombre ?? "-" : "-",
+                    IdEstadoPago = o.id_estado_pago,
                     ListoParaEntrega = o.id_estado_orden == EstadoOrdenFinalizadaId
                 })
                 .ToListAsync();

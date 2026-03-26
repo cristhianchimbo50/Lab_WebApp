@@ -205,7 +205,7 @@ namespace Lab_APIRest.Services.Resultados
         {
             var consulta = _context.Resultado
                 .Include(r => r.estado_resultado_navigation)
-                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filtro.NumeroResultado))
@@ -231,7 +231,7 @@ namespace Lab_APIRest.Services.Resultados
         {
             var consulta = _context.Resultado
                 .Include(r => r.estado_resultado_navigation)
-                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)
+                .Include(r => r.orden_navigation)!.ThenInclude(o => o.paciente_navigation)!.ThenInclude(p => p.persona_navigation)
                 .AsNoTracking()
                 .AsQueryable();
 

@@ -95,27 +95,9 @@
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(_mensaje))
-            {
-                <div class="alert alert-@_tipoMensaje alert-dismissible fade show" role="alert">
-                    @_mensaje
-                    <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
-                </div>
-            }
 
-            @if (!_mostroBusqueda)
-            {
-                <div class="alert alert-info text-center">
-                    <i class="bi bi-info-circle me-2"></i> Usa los filtros y presiona <strong>Buscar</strong> para ver los usuarios.
-                </div>
-            }
-            else if (_usuarios.Count == 0)
-            {
-                <div class="alert alert-warning text-center">
-                    <i class="bi bi-exclamation-triangle me-2"></i> No se encontraron usuarios internos.
-                </div>
-            }
-            else
+
+            @if (_mostroBusqueda && _usuarios.Count > 0)
             {
                 <div class="table-responsive shadow-sm rounded">
                     <table class="table table-striped table-hover align-middle text-center">
@@ -349,6 +331,8 @@
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
 
+    private bool _toastInfoBusqueda;
+    private bool _toastAdvertenciaNoUsuarios;
     private Task BuscarAsync()
         => SesionService.EjecutarConSesionAsync(async () =>
         {
@@ -369,18 +353,41 @@
             try
             {
                 _usuarios = await UsuariosApi.ListarUsuariosAsync(_filtro);
+                if (_usuarios.Count == 0)
+                {
+                    _toastAdvertenciaNoUsuarios = true;
+                }
                 _mensaje = null;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden || ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                _mensaje = "No autorizado. Inicie sesión como administrador para ver usuarios.";
-                _tipoMensaje = "danger";
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No autorizado. Inicie sesión como administrador para ver usuarios.", "danger");
                 _usuarios.Clear();
             }
             catch (Exception ex)
             {
-                _mensaje = $"Error al buscar usuarios: {ex.Message}";
-                _tipoMensaje = "danger";
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"Error al buscar usuarios: {ex.Message}", "danger");
+            }
+            finally
+            {
+                if (_mostroBusqueda && _usuarios.Count == 0 && _toastAdvertenciaNoUsuarios)
+                {
+                    _toastAdvertenciaNoUsuarios = false;
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "No se encontraron usuarios internos.", "warning");
+                }
+                if (_mostroBusqueda && _usuarios.Count > 0)
+                {
+                    _toastInfoBusqueda = false;
+                }
+                if (_mostroBusqueda && _usuarios.Count == 0 && !_toastAdvertenciaNoUsuarios && !_toastInfoBusqueda)
+                {
+                    _toastInfoBusqueda = false;
+                }
+                if (!_mostroBusqueda && !_toastInfoBusqueda)
+                {
+                    _toastInfoBusqueda = true;
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Usa los filtros y presiona Buscar para ver los usuarios.", "info");
+                }
             }
         });
 
@@ -507,13 +514,13 @@
                 {
                     if (_cedulaYaRegistradaComoPaciente)
                     {
-                        await JS.InvokeVoidAsync("alert", "La cédula ingresada ya corresponde a un paciente registrado. No se puede guardar.");
+                        await JS.InvokeVoidAsync("mostrarToastAsync", "La cédula ingresada ya corresponde a un paciente registrado. No se puede guardar.", "warning");
                         return;
                     }
 
                     if (_cedulaYaRegistradaComoUsuario)
                     {
-                        await JS.InvokeVoidAsync("alert", "La cédula ingresada ya tiene un usuario registrado. No se puede guardar.");
+                        await JS.InvokeVoidAsync("mostrarToastAsync", "La cédula ingresada ya tiene un usuario registrado. No se puede guardar.", "warning");
                         return;
                     }
 
@@ -531,23 +538,20 @@
                     };
 
                     await UsuariosApi.GuardarUsuarioAsync(crearDto);
-                    _mensaje = "Usuario registrado correctamente. Se ha enviado un enlace de activación al correo del usuario.";
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Usuario registrado correctamente. Se ha enviado un enlace de activación al correo del usuario.", "success");
                 }
                 else
                 {
                     await UsuariosApi.GuardarUsuarioAsync(_usuarioActual);
-                    _mensaje = "Usuario actualizado correctamente.";
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Usuario actualizado correctamente.", "success");
                 }
 
-                _tipoMensaje = "success";
                 _modalVisible = false;
                 await BuscarAsync();
             }
             catch (Exception ex)
             {
-                _mensaje = $"Error: {ex.Message}";
-                _tipoMensaje = "danger";
-                await JS.InvokeVoidAsync("alert", ex.Message);
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"Error: {ex.Message}", "danger");
             }
             finally
             {
@@ -561,8 +565,7 @@
         {
             if (usuario.Correo == _usuarioActualCorreo)
             {
-                _mensaje = "No puedes deshabilitar tu propio usuario.";
-                _tipoMensaje = "warning";
+                await JS.InvokeVoidAsync("mostrarToastAsync", "No puedes deshabilitar tu propio usuario.", "warning");
                 return;
             }
 
@@ -572,14 +575,12 @@
             try
             {
                 await UsuariosApi.CambiarEstadoUsuarioAsync(usuario.IdUsuario, !usuario.Activo);
-                _mensaje = usuario.Activo ? "Usuario desactivado." : "Usuario activado.";
-                _tipoMensaje = "success";
+                await JS.InvokeVoidAsync("mostrarToastAsync", usuario.Activo ? "Usuario desactivado." : "Usuario activado.", "success");
                 await BuscarAsync();
             }
             catch (Exception ex)
             {
-                _mensaje = ex.Message;
-                _tipoMensaje = "danger";
+                await JS.InvokeVoidAsync("mostrarToastAsync", $"Error al cambiar estado del usuario: {ex.Message}", "danger");
             }
         });
 
