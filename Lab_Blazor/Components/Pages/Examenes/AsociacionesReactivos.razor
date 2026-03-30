@@ -73,18 +73,27 @@
                                        _ => "Ingrese valor a buscar"
                                    })"
                                @onkeypress="@(e => { if (e.Key == "Enter") BuscarAsociacionesAsync(); })" />
-                </div>
-                <div class="col-md-4 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
-                    <button class="btn btn-primary shadow-sm" @onclick="BuscarAsociacionesAsync">
-                        <i class="bi bi-search me-1"></i>Buscar
-                    </button>
-                    <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarBusquedaAsync">
-                        <i class="bi bi-eraser me-1"></i>Limpiar
-                    </button>
-
+                    </div>
+                    
+                    <div class="col-md-3 text-md-end text-center d-flex flex-wrap justify-content-md-end gap-2">
+                        <button class="btn btn-primary shadow-sm" @onclick="BuscarAsociacionesAsync">
+                            <i class="bi bi-search me-1"></i>Buscar
+                        </button>
+                        <button class="btn btn-outline-secondary shadow-sm" @onclick="LimpiarBusquedaAsync">
+                            <i class="bi bi-eraser me-1"></i>Limpiar
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div class="col-md-2 d-flex align-items-center mt-2">
+                <InputCheckbox @bind-Value="_filtroHabilitado" class="form-check-input me-2" />
+                <label class="form-check-label">Habilitado</label>
+            </div>
+            <div class="col-md-2 d-flex align-items-center mt-2">
+                <InputCheckbox @bind-Value="_filtroInhabilitado" class="form-check-input me-2" />
+                <label class="form-check-label">Inhabilitado</label>
+            </div>
 
         @if (_asociacionesFiltradas == null)
             {
@@ -139,10 +148,11 @@
                         <table class="table align-middle mb-0 tabla-asociaciones">
                             <thead class="table-light sticky-top">
                                 <tr>
-                                    <th style="width: 25%;">Examen</th>
-                                    <th style="width: 25%;">Reactivo</th>
-                                    <th style="width: 15%;" class="text-end">Cantidad Usada</th>
-                                    <th style="width: 15%;">Unidad</th>
+                                    <th style="width: 22%;">Examen</th>
+                                    <th style="width: 22%;">Reactivo</th>
+                                    <th style="width: 12%;" class="text-end">Cantidad Usada</th>
+                                    <th style="width: 12%;">Unidad</th>
+                                    <th style="width: 12%;">Estado</th>
                                     <th style="width: 20%;">Acciones</th>
                                 </tr>
                             </thead>
@@ -154,14 +164,25 @@
                                         <td data-label="Reactivo" class="text-truncate">@item.NombreReactivo</td>
                                         <td data-label="Cantidad" class="text-end">@item.CantidadUsada</td>
                                         <td data-label="Unidad">@item.Unidad</td>
+                                        <td data-label="Estado">
+                                            <span class="badge bg-@(item.Activo ? "success" : "danger")">
+                                                @(item.Activo ? "Habilitado" : "Inhabilitado")
+                                            </span>
+                                        </td>
                                         <td data-label="Acciones">
                                             <div class="d-flex justify-content-center gap-2">
                                                 <button class="btn btn-warning btn-sm" title="Editar" @onclick="() => IrAEditarAsync(item.IdExamen)">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
-                                                <button class="btn btn-danger btn-sm" title="Eliminar" @onclick="() => EliminarAsociacionAsync(item.IdExamenReactivo)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                @if (item.Activo)
+                                                {
+                                                    <button class="btn btn-danger btn-sm" title="Deshabilitar" @onclick="() => CambiarEstadoAsociacionAsync(item, false)"><i class="bi bi-x-circle-fill"></i></button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-success btn-sm" title="Habilitar" @onclick="() => CambiarEstadoAsociacionAsync(item, true)"><i class="bi bi-check-circle-fill"></i></button>
+                                                }
+
                                             </div>
                                         </td>
                                     </tr>
@@ -193,6 +214,8 @@
 @code {
     private List<AsociacionReactivoDto> _asociaciones = new();
     private List<AsociacionReactivoDto> _asociacionesFiltradas = new();
+    private bool _filtroHabilitado = true;
+    private bool _filtroInhabilitado = true;
     private bool _cargando = true;
     private string _criterioBusqueda = "";
     private string _valorBusqueda = "";
@@ -236,20 +259,27 @@
                 _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
                 var valor = _valorBusqueda?.Trim().ToLower() ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(_criterioBusqueda) || string.IsNullOrWhiteSpace(valor))
+                IEnumerable<AsociacionReactivoDto> query = _asociaciones;
+
+                if (!string.IsNullOrWhiteSpace(_criterioBusqueda) && !string.IsNullOrWhiteSpace(valor))
                 {
-                    _asociacionesFiltradas = _asociaciones.ToList();
-                }
-                else
-                {
-                    _asociacionesFiltradas = _criterioBusqueda switch
+                    query = _criterioBusqueda switch
                     {
-                        "examen" => _asociaciones.Where(a => a.NombreExamen.ToLower().Contains(valor)).ToList(),
-                        "reactivo" => _asociaciones.Where(a => a.NombreReactivo.ToLower().Contains(valor)).ToList(),
-                        "unidad" => _asociaciones.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false).ToList(),
-                        _ => _asociaciones.ToList()
+                        "examen" => query.Where(a => a.NombreExamen.ToLower().Contains(valor)),
+                        "reactivo" => query.Where(a => a.NombreReactivo.ToLower().Contains(valor)),
+                        "unidad" => query.Where(a => a.Unidad?.ToLower().Contains(valor) ?? false),
+                        _ => query
                     };
                 }
+
+                if (_filtroHabilitado && !_filtroInhabilitado)
+                    query = query.Where(a => a.Activo);
+                else if (!_filtroHabilitado && _filtroInhabilitado)
+                    query = query.Where(a => !a.Activo);
+                else if (!_filtroHabilitado && !_filtroInhabilitado)
+                    query = Enumerable.Empty<AsociacionReactivoDto>();
+
+                _asociacionesFiltradas = query.ToList();
             }
             catch
             {
@@ -272,18 +302,18 @@
     private Task EliminarAsociacionAsync(int idAsociacion)
         => SesionService.EjecutarConSesionAsync(async () =>
         {
-            if (!await JS.InvokeAsync<bool>("confirm", "¿Desea eliminar esta asociación?")) return;
+            if (!await JS.InvokeAsync<bool>("confirm", "¿Desea deshabilitar esta asociación?")) return;
 
-            var ok = await AsociacionesApi.EliminarAsociacionAsync(idAsociacion);
+            var ok = await AsociacionesApi.AnularAsociacionAsync(idAsociacion);
             if (ok)
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación eliminada correctamente.", "success");
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación deshabilitada correctamente.", "success");
                 _asociaciones = await AsociacionesApi.ListarAsociacionesAsync();
                 _asociacionesFiltradas = _asociaciones.ToList();
             }
             else
             {
-                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al eliminar la asociación.", "danger");
+                await JS.InvokeVoidAsync("mostrarToastAsync", "Error al deshabilitar la asociación.", "danger");
             }
         });
 
@@ -302,4 +332,36 @@
         });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private async Task CambiarEstadoAsociacionAsync(AsociacionReactivoDto item, bool habilitar)
+        => await SesionService.EjecutarConSesionAsync(async () =>
+        {
+            if (habilitar)
+            {
+                item.Activo = true;
+                var ok = await AsociacionesApi.ActivarAsociacionAsync(item.IdExamenReactivo, item);
+                if (ok)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación habilitada correctamente.", "success");
+                    await BuscarAsociacionesAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo habilitar la asociación.", "danger");
+                }
+            }
+            else
+            {
+                var ok = await AsociacionesApi.AnularAsociacionAsync(item.IdExamenReactivo);
+                if (ok)
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "Asociación deshabilitada correctamente.", "success");
+                    await BuscarAsociacionesAsync();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo deshabilitar la asociación.", "danger");
+                }
+            }
+        });
 }

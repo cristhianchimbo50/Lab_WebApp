@@ -160,7 +160,7 @@
                     <div class="text-muted small">
                         @if (_resultado != null)
                         {
-                            <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
+                            <span>@RangoMostrado</span>
                         }
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -235,7 +235,10 @@
                                         </th>
                                         <th style="width:12%;">Estado Orden</th>
                                         <th style="width:12%;">Estado</th>
-                                        <th style="width:14%;">Acciones</th>
+                                        @if (!esPaciente)
+                                        {
+                                            <th style="width:14%;">Acciones</th>
+                                        }
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -267,12 +270,15 @@
                                                     @(orden.Anulado ? "Anulado" : "Vigente")
                                                 </span>
                                             </td>
-                                            <td data-label="Acciones">
-                                                <button class="btn btn-primary btn-sm shadow-sm me-1"
-                                                        @onclick="async () => await VerDetalleOrdenAsync(orden.IdOrden)">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                            </td>
+                                            @if (!esPaciente)
+                                            {
+                                                <td data-label="Acciones">
+                                                    <button class="btn btn-primary btn-sm shadow-sm me-1"
+                                                            @onclick="async () => await VerDetalleOrdenAsync(orden.IdOrden)">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                </td>
+                                            }
                                         </tr>
                                     }
                                 </tbody>
@@ -400,35 +406,35 @@
                                                                 <span class="text-muted">Pendiente</span>
                                                             }
                                                         </td>
-                                                        <td>
-                                                            @if (examen.IdResultado.HasValue)
-                                                            {
-                                                                <div class="d-flex gap-1 justify-content-center">
-                                                                    @if (esAdmin || esLaboratorista)
-                                                                    {
-                                                                        <button class="btn btn-outline-primary btn-sm" title="Ver resultado"
-                                                                                @onclick="() => VerResultadoAsync(examen.IdResultado!.Value)">
-                                                                            <i class="bi bi-eye"></i>
-                                                                        </button>
-                                                                    }
-                                                                    @if (puedeEditarResultados && examen.IdEstadoResultado == EstadoResultadoCorreccionId)
-                                                                    {
-                                                                        <button class="btn btn-warning btn-sm" title="Editar resultado"
-                                                                                @onclick="() => EditarResultadoAsync(examen.IdResultado!.Value)">
-                                                                            <i class="bi bi-pencil-square"></i>
-                                                                        </button>
-                                                                    }
-                                                                    @if (!(esAdmin || esLaboratorista))
-                                                                    {
-                                                                        <span class="text-muted small">Solo admin</span>
-                                                                    }
-                                                                </div>
-                                                            }
-                                                            else
-                                                            {
-                                                                <span class="text-muted small">Sin resultado</span>
-                                                            }
-                                                        </td>
+                                                    <td>
+                                                        @if (examen.IdResultado.HasValue)
+                                                        {
+                                                            <div class="d-flex gap-1 justify-content-center">
+                                                                @if (esAdmin || esLaboratorista)
+                                                                {
+                                                                    <button class="btn btn-outline-primary btn-sm" title="Ver resultado"
+                                                                            @onclick="() => VerResultadoAsync(examen.IdResultado!.Value)">
+                                                                        <i class="bi bi-eye"></i>
+                                                                    </button>
+                                                                }
+                                                                @if ((esAdmin || esLaboratorista) && examen.IdEstadoResultado == EstadoResultadoCorreccionId)
+                                                                {
+                                                                    <button class="btn btn-warning btn-sm" title="Editar resultado"
+                                                                            @onclick="() => EditarResultadoAsync(examen.IdResultado!.Value)">
+                                                                        <i class="bi bi-pencil-square"></i>
+                                                                    </button>
+                                                                }
+                                                                @if (!(esAdmin || esLaboratorista))
+                                                                {
+                                                                    <span class="text-muted small">Solo admin</span>
+                                                                }
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted small">Sin resultado</span>
+                                                        }
+                                                    </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -556,7 +562,6 @@
                                 </div>
 
 
-                                @* Buttons moved to modal-footer to keep spacing consistent *@
                             </div>
                             @if (!_resultadoDetalleActual.Anulado && esAdmin)
                             {
@@ -1108,4 +1113,16 @@
                 await JS.InvokeVoidAsync("mostrarToastAsync", "Resultados habilitados para el paciente.", "success");
             }
         });
+
+    private string RangoMostrado
+    {
+        get
+        {
+            if (_resultado == null || _resultado.TotalCount == 0)
+                return "Mostrando 0 de 0 órdenes";
+            int desde = (_resultado.PageNumber - 1) * _resultado.PageSize + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} órdenes";
+        }
+    }
 }

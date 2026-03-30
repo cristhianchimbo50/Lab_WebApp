@@ -17,13 +17,21 @@ namespace Lab_APIRest.Controllers
         [HttpGet("email")]
         public async Task<IActionResult> ProbarEmail()
         {
-            await _email.EnviarCorreoAsync(
-                "chimbocristhian994@gmail.com",
-                "Usuario de Prueba",
-                "Prueba de correo desde API",
-                "<h2>Correo enviado con éxito desde el backend</h2>"
-            );
-            return Ok("Correo enviado correctamente");
+            try
+            {
+                await _email.EnviarCorreoAsync(
+                    "chimbocristhian994@gmail.com",
+                    "Usuario de Prueba",
+                    "Prueba de correo desde API",
+                    "<h2>Correo enviado con éxito desde el backend</h2>"
+                );
+
+                return Ok("Correo enviado correctamente");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.ToString());
+            }
         }
     }
 }

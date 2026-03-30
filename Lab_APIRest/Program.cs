@@ -21,7 +21,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 builder.Services.AddDbContext<LabDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("LabDb")));
@@ -136,16 +140,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.SaveToken = false;
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazorFrontend", policy =>
+        policy.WithOrigins("https://laboratorioinmaculada.site")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+
 app.UseResponseCompression();
 app.UseHttpsRedirection();
+
+app.UseCors("AllowBlazorFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

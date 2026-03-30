@@ -291,7 +291,7 @@
                     ?? user.FindFirst("roles")?.Value
                     ?? "";
 
-                bool puedeVer = rol is "administrador" or "recepcionista";
+                bool puedeVer = rol is "1" or "2";
 
                 if (puedeVer)
                 {

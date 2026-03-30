@@ -1,4 +1,5 @@
 ﻿using Lab_APIRest.Infrastructure.EF;
+using Microsoft.Extensions.Logging;
 using Lab_APIRest.Infrastructure.EF.Models;
 using paciente = Lab_APIRest.Infrastructure.EF.Models.paciente;
 using persona = Lab_APIRest.Infrastructure.EF.Models.persona;
@@ -19,12 +20,14 @@ namespace Lab_APIRest.Services.Pacientes
         private readonly LabDbContext _context;
         private readonly IEmailService _emailService;
         private readonly string _frontendBaseUrl;
+        private readonly ILogger<PacienteService> _logger;
 
-        public PacienteService(LabDbContext context, IEmailService emailService, IConfiguration configuration)
+        public PacienteService(LabDbContext context, IEmailService emailService, IConfiguration configuration, ILogger<PacienteService> logger)
         {
             _context = context;
             _emailService = emailService;
             _frontendBaseUrl = configuration["FrontendBaseUrl"] ?? "http://laboratorioinmaculada.site";
+            _logger = logger;
         }
 
         private static PacienteDto MapPaciente(paciente entidadPaciente) => new()
@@ -171,78 +174,96 @@ namespace Lab_APIRest.Services.Pacientes
 
         public async Task<(bool Exito, string Mensaje, PacienteDto? Paciente)> GuardarPacienteAsync(PacienteDto dto)
         {
-            if (!ValidarCedula(dto.Cedula))
-                return (false, "La cédula ingresada no es válida.", null);
-
-            if (!dto.IdGenero.HasValue)
-                return (false, "El género es obligatorio.", null);
-
-            await using var transaccion = await _context.Database.BeginTransactionAsync();
-
-            var persona = await _context.Persona
-                .Include(p => p.usuario)
-                .FirstOrDefaultAsync(p => p.cedula == dto.Cedula);
-
-            if (persona == null)
+            try
             {
-                persona = new persona
+                if (!ValidarCedula(dto.Cedula))
                 {
-                    cedula = dto.Cedula,
-                    nombres = dto.Nombres,
-                    apellidos = dto.Apellidos,
-                    telefono = dto.Telefono,
-                    direccion = dto.Direccion,
-                    fecha_nacimiento = dto.FechaNacimiento.HasValue ? DateOnly.FromDateTime(dto.FechaNacimiento.Value) : null,
-                    id_genero = dto.IdGenero.Value,
+                    _logger.LogWarning("Intento de guardar paciente con cédula inválida: {Cedula}", dto.Cedula);
+                    return (false, "La cédula ingresada no es válida.", null);
+                }
+
+                if (!dto.IdGenero.HasValue)
+                {
+                    _logger.LogWarning("Intento de guardar paciente sin género especificado. Cédula: {Cedula}", dto.Cedula);
+                    return (false, "El género es obligatorio.", null);
+                }
+
+                await using var transaccion = await _context.Database.BeginTransactionAsync();
+
+                var persona = await _context.Persona
+                    .Include(p => p.usuario)
+                    .FirstOrDefaultAsync(p => p.cedula == dto.Cedula);
+
+                if (persona == null)
+                {
+                    persona = new persona
+                    {
+                        cedula = dto.Cedula,
+                        nombres = dto.Nombres,
+                        apellidos = dto.Apellidos,
+                        telefono = dto.Telefono,
+                        direccion = dto.Direccion,
+                        fecha_nacimiento = dto.FechaNacimiento.HasValue ? DateOnly.FromDateTime(dto.FechaNacimiento.Value) : null,
+                        id_genero = dto.IdGenero.Value,
+                        activo = true,
+                        fecha_creacion = DateTime.UtcNow
+                    };
+                    _context.Persona.Add(persona);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Nueva persona creada con cédula: {Cedula}", dto.Cedula);
+                }
+
+                var pacienteExistente = await _context.Paciente
+                    .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
+                    .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
+                    .FirstOrDefaultAsync(p => p.id_persona == persona.id_persona);
+
+                if (pacienteExistente != null)
+                {
+                    await transaccion.RollbackAsync();
+                    _logger.LogInformation("La persona con cédula {Cedula} ya está registrada como paciente.", dto.Cedula);
+                    return (true, "La persona ya está registrada como paciente.", MapPaciente(pacienteExistente));
+                }
+
+                var entidadPaciente = new paciente
+                {
+                    id_persona = persona.id_persona,
                     activo = true,
                     fecha_creacion = DateTime.UtcNow
                 };
-                _context.Persona.Add(persona);
+
+                _context.Paciente.Add(entidadPaciente);
                 await _context.SaveChangesAsync();
-            }
+                _logger.LogInformation("Paciente registrado correctamente para persona con cédula: {Cedula}", dto.Cedula);
 
-            var pacienteExistente = await _context.Paciente
-                .Include(p => p.persona_navigation)!.ThenInclude(p => p.genero_navigation)
-                .Include(p => p.persona_navigation)!.ThenInclude(p => p.usuario)
-                .FirstOrDefaultAsync(p => p.id_persona == persona.id_persona);
+                usuario? usuarioPaciente = null;
 
-            if (pacienteExistente != null)
-            {
-                await transaccion.RollbackAsync();
-                return (true, "La persona ya está registrada como paciente.", MapPaciente(pacienteExistente));
-            }
+                var tieneUsuario = persona.usuario.Any();
 
-            var entidadPaciente = new paciente
-            {
-                id_persona = persona.id_persona,
-                activo = true,
-                fecha_creacion = DateTime.UtcNow
-            };
-
-            _context.Paciente.Add(entidadPaciente);
-            await _context.SaveChangesAsync();
-
-            usuario? usuarioPaciente = null;
-
-            var tieneUsuario = persona.usuario.Any();
-
-            if (!tieneUsuario && !string.IsNullOrWhiteSpace(dto.Correo))
-            {
-                var crearUsuario = await CrearUsuarioPacienteAsync(persona, dto.Correo);
-                if (!crearUsuario.Exito)
+                if (!tieneUsuario && !string.IsNullOrWhiteSpace(dto.Correo))
                 {
-                    await transaccion.RollbackAsync();
-                    return (false, crearUsuario.Mensaje, null);
+                    var crearUsuario = await CrearUsuarioPacienteAsync(persona, dto.Correo);
+                    if (!crearUsuario.Exito)
+                    {
+                        await transaccion.RollbackAsync();
+                        _logger.LogError("Error al crear usuario para paciente con cédula {Cedula}: {Mensaje}", dto.Cedula, crearUsuario.Mensaje);
+                        return (false, crearUsuario.Mensaje, null);
+                    }
+                    usuarioPaciente = crearUsuario.UsuarioCreado;
                 }
-                usuarioPaciente = crearUsuario.UsuarioCreado;
+
+                await transaccion.CommitAsync();
+
+                var dtoRespuesta = MapPaciente(entidadPaciente);
+                dtoRespuesta.Correo = usuarioPaciente?.correo ?? dtoRespuesta.Correo;
+
+                return (true, "Paciente registrado correctamente", dtoRespuesta);
             }
-
-            await transaccion.CommitAsync();
-
-            var dtoRespuesta = MapPaciente(entidadPaciente);
-            dtoRespuesta.Correo = usuarioPaciente?.correo ?? dtoRespuesta.Correo;
-
-            return (true, "Paciente registrado correctamente", dtoRespuesta);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al guardar paciente con cédula {Cedula}", dto.Cedula);
+                return (false, "Ocurrió un error al registrar el paciente.", null);
+            }
         }
 
         public async Task<bool> GuardarPacienteAsync(int idPaciente, PacienteDto dto)

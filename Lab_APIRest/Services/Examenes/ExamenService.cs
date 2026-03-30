@@ -10,16 +10,19 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Examenes
 {
     public class ExamenService : IExamenService
     {
         private readonly LabDbContext _context;
+        private readonly ILogger<ExamenService> _logger;
 
-        public ExamenService(LabDbContext context)
+        public ExamenService(LabDbContext context, ILogger<ExamenService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<List<ExamenDto>> ListarExamenesAsync()
@@ -70,108 +73,132 @@ namespace Lab_APIRest.Services.Examenes
 
         public async Task<ExamenDto> GuardarExamenAsync(ExamenDto datosExamen)
         {
-            var entidad = new examen
+            try
             {
-                nombre_examen = datosExamen.NombreExamen,
-                precio = datosExamen.Precio,
-                activo = true,
-                tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos,
-                id_estudio = datosExamen.IdEstudio,
-                id_grupo_examen = datosExamen.IdGrupoExamen,
-                id_tipo_muestra = datosExamen.IdTipoMuestra,
-                id_tipo_examen = datosExamen.IdTipoExamen,
-                id_tecnica = datosExamen.IdTecnica,
-                id_tipo_registro = datosExamen.IdTipoRegistro,
-                titulo_examen = datosExamen.TituloExamen,
-                fecha_creacion = DateTime.UtcNow
-            };
-            _context.Examen.Add(entidad);
-            await _context.SaveChangesAsync();
-
-            if (datosExamen.Referencias?.Any() == true)
-            {
-                foreach (var r in datosExamen.Referencias)
+                var entidad = new examen
                 {
-                    _context.ReferenciaExamen.Add(new referencia_examen
-                    {
-                        id_examen = entidad.id_examen,
-                        valor_min = r.ValorMin,
-                        valor_max = r.ValorMax,
-                        valor_texto = r.ValorTexto,
-                        unidad = r.Unidad,
-                        activo = r.Activo,
-                        fecha_creacion = DateTime.UtcNow
-                    });
-                }
+                    nombre_examen = datosExamen.NombreExamen,
+                    precio = datosExamen.Precio,
+                    activo = true,
+                    tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos,
+                    id_estudio = datosExamen.IdEstudio,
+                    id_grupo_examen = datosExamen.IdGrupoExamen,
+                    id_tipo_muestra = datosExamen.IdTipoMuestra,
+                    id_tipo_examen = datosExamen.IdTipoExamen,
+                    id_tecnica = datosExamen.IdTecnica,
+                    id_tipo_registro = datosExamen.IdTipoRegistro,
+                    titulo_examen = datosExamen.TituloExamen,
+                    fecha_creacion = DateTime.UtcNow
+                };
+                _context.Examen.Add(entidad);
                 await _context.SaveChangesAsync();
+
+                if (datosExamen.Referencias?.Any() == true)
+                {
+                    foreach (var r in datosExamen.Referencias)
+                    {
+                        _context.ReferenciaExamen.Add(new referencia_examen
+                        {
+                            id_examen = entidad.id_examen,
+                            valor_min = r.ValorMin,
+                            valor_max = r.ValorMax,
+                            valor_texto = r.ValorTexto,
+                            unidad = r.Unidad,
+                            activo = r.Activo,
+                            fecha_creacion = DateTime.UtcNow
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                datosExamen.IdExamen = entidad.id_examen;
+                datosExamen.Anulado = false;
+                return datosExamen;
             }
-            datosExamen.IdExamen = entidad.id_examen;
-            datosExamen.Anulado = false;
-            return datosExamen;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al guardar el examen {NombreExamen}", datosExamen.NombreExamen);
+                throw;
+            }
         }
 
         public async Task<bool> GuardarExamenAsync(int idExamen, ExamenDto datosExamen)
         {
-            var entidad = await _context.Examen
-                .Include(e => e.referencia_examen)
-                .FirstOrDefaultAsync(e => e.id_examen == idExamen);
-            if (entidad == null) return false;
-            entidad.nombre_examen = datosExamen.NombreExamen;
-            entidad.precio = datosExamen.Precio;
-            entidad.tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos;
-            entidad.id_estudio = datosExamen.IdEstudio;
-            entidad.id_grupo_examen = datosExamen.IdGrupoExamen;
-            entidad.id_tipo_muestra = datosExamen.IdTipoMuestra;
-            entidad.id_tipo_examen = datosExamen.IdTipoExamen;
-            entidad.id_tecnica = datosExamen.IdTecnica;
-            entidad.id_tipo_registro = datosExamen.IdTipoRegistro;
-            entidad.titulo_examen = datosExamen.TituloExamen;
-            entidad.activo = !datosExamen.Anulado;
-            entidad.fecha_actualizacion = DateTime.UtcNow;
-            if (!entidad.activo)
+            try
             {
-                entidad.fecha_fin = entidad.fecha_fin ?? DateTime.UtcNow;
-            }
-            else
-            {
-                entidad.fecha_fin = null;
-            }
-
-            if (entidad.referencia_examen.Any())
-            {
-                _context.ReferenciaExamen.RemoveRange(entidad.referencia_examen);
-                await _context.SaveChangesAsync();
-            }
-            if (datosExamen.Referencias?.Any() == true)
-            {
-                foreach (var r in datosExamen.Referencias)
+                var entidad = await _context.Examen
+                    .Include(e => e.referencia_examen)
+                    .FirstOrDefaultAsync(e => e.id_examen == idExamen);
+                if (entidad == null) return false;
+                entidad.nombre_examen = datosExamen.NombreExamen;
+                entidad.precio = datosExamen.Precio;
+                entidad.tiempo_entrega_minutos = datosExamen.TiempoEntregaMinutos;
+                entidad.id_estudio = datosExamen.IdEstudio;
+                entidad.id_grupo_examen = datosExamen.IdGrupoExamen;
+                entidad.id_tipo_muestra = datosExamen.IdTipoMuestra;
+                entidad.id_tipo_examen = datosExamen.IdTipoExamen;
+                entidad.id_tecnica = datosExamen.IdTecnica;
+                entidad.id_tipo_registro = datosExamen.IdTipoRegistro;
+                entidad.titulo_examen = datosExamen.TituloExamen;
+                entidad.activo = !datosExamen.Anulado;
+                entidad.fecha_actualizacion = DateTime.UtcNow;
+                if (!entidad.activo)
                 {
-                    _context.ReferenciaExamen.Add(new referencia_examen
-                    {
-                        id_examen = entidad.id_examen,
-                        valor_min = r.ValorMin,
-                        valor_max = r.ValorMax,
-                        valor_texto = r.ValorTexto,
-                        unidad = r.Unidad,
-                        activo = r.Activo,
-                        fecha_creacion = DateTime.UtcNow
-                    });
+                    entidad.fecha_fin = entidad.fecha_fin ?? DateTime.UtcNow;
                 }
+                else
+                {
+                    entidad.fecha_fin = null;
+                }
+
+                if (entidad.referencia_examen.Any())
+                {
+                    _context.ReferenciaExamen.RemoveRange(entidad.referencia_examen);
+                    await _context.SaveChangesAsync();
+                }
+                if (datosExamen.Referencias?.Any() == true)
+                {
+                    foreach (var r in datosExamen.Referencias)
+                    {
+                        _context.ReferenciaExamen.Add(new referencia_examen
+                        {
+                            id_examen = entidad.id_examen,
+                            valor_min = r.ValorMin,
+                            valor_max = r.ValorMax,
+                            valor_texto = r.ValorTexto,
+                            unidad = r.Unidad,
+                            activo = r.Activo,
+                            fecha_creacion = DateTime.UtcNow
+                        });
+                    }
+                }
+                await _context.SaveChangesAsync();
+                return true;
             }
-            await _context.SaveChangesAsync();
-            return true;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar el examen {IdExamen}", idExamen);
+                throw;
+            }
         }
 
         public async Task<bool> AnularExamenAsync(int idExamen)
         {
-            var entidad = await _context.Examen.FindAsync(idExamen);
-            if (entidad == null) return false;
-            if (!entidad.activo) return true;
-            entidad.activo = false;
-            entidad.fecha_fin = DateTime.UtcNow;
-            entidad.fecha_actualizacion = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
+            try
+            {
+                var entidad = await _context.Examen.FindAsync(idExamen);
+                if (entidad == null) return false;
+                if (!entidad.activo) return true;
+                entidad.activo = false;
+                entidad.fecha_fin = DateTime.UtcNow;
+                entidad.fecha_actualizacion = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al anular el examen {IdExamen}", idExamen);
+                throw;
+            }
         }
 
         public async Task<List<ExamenDto>> ListarExamenesHijosAsync(int idExamenPadre)

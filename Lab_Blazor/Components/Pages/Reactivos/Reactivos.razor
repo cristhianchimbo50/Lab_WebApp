@@ -76,11 +76,11 @@
                 <div class="card-body row g-3">
                     <div class="col-md-3 d-flex align-items-center mt-2">
                         <InputCheckbox @bind-Value="_filtro.IncluirAnulados" class="form-check-input me-2" />
-                        <label class="form-check-label">Anulado</label>
+                        <label class="form-check-label">Inhabilitado</label>
                     </div>
                     <div class="col-md-3 d-flex align-items-center mt-2">
                         <InputCheckbox @bind-Value="_filtro.IncluirVigentes" class="form-check-input me-2" />
-                        <label class="form-check-label">No Anulado</label>
+                        <label class="form-check-label">Habilitado</label>
                     </div>
                 </div>
             </div>
@@ -89,7 +89,7 @@
                 <div class="text-muted small">
                     @if (_resultado != null)
                     {
-                        <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
+                        <span>@RangoMostrado</span>
                     }
                 </div>
 
@@ -156,7 +156,7 @@
                                         <td data-label="Cantidad">@reactivo.CantidadDisponible.ToString("N2")</td>
                                         <td data-label="Estado">
                                             <span class="badge bg-@(reactivo.Anulado ? "danger" : "success")">
-                                                @(reactivo.Anulado ? "Deshabilitado" : "Activo")
+                                                @(reactivo.Anulado ? "Inhabilitado" : "Habilitado")
                                             </span>
                                         </td>
                                         <td data-label="Acciones">
@@ -418,4 +418,16 @@
         });
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private string RangoMostrado
+    {
+        get
+        {
+            if (_resultado == null || _resultado.TotalCount == 0)
+                return "Mostrando 0 de 0 reactivos";
+            int desde = (_resultado.PageNumber - 1) * _resultado.PageSize + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} reactivos";
+        }
+    }
 }

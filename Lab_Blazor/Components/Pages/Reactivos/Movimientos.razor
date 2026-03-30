@@ -100,7 +100,7 @@
                 <div class="text-muted small">
                     @if (_resultado != null)
                     {
-                        <span>Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)</span>
+                        <span>@RangoMostrado</span>
                     }
                 </div>
 
@@ -322,4 +322,16 @@
     }
 
     private async Task VolverAtrasAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private string RangoMostrado
+    {
+        get
+        {
+            if (_resultado == null || _resultado.TotalCount == 0)
+                return "Mostrando 0 de 0 movimientos";
+            int desde = (_resultado.PageNumber - 1) * _resultado.PageSize + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} movimientos";
+        }
+    }
 }

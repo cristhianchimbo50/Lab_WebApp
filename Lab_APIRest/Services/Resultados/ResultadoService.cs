@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Lab_Contracts.Common;
 using Lab_APIRest.Infrastructure.Services;
+using Lab_APIRest.Services.Ordenes;
 
 namespace Lab_APIRest.Services.Resultados
 {
@@ -14,6 +15,7 @@ namespace Lab_APIRest.Services.Resultados
         private readonly LabDbContext _context;
         private readonly PdfResultadoService _pdfResultadoService;
         private readonly ILogger<ResultadoService> _logger;
+        private readonly IOrdenService _ordenService;
         private const int EstadoResultadoPendienteId = EstadoIds.Resultado.Pendiente;
         private const int EstadoResultadoRevisionId = EstadoIds.Resultado.EnRevision;
         private const int EstadoResultadoCorreccionId = EstadoIds.Resultado.Correccion;
@@ -24,11 +26,12 @@ namespace Lab_APIRest.Services.Resultados
         private const int EstadoOrdenFinalizadaId = EstadoIds.Orden.Finalizada;
         private const int EstadoOrdenAnuladaId = EstadoIds.Orden.Anulada;
 
-        public ResultadoService(LabDbContext context, PdfResultadoService pdfResultadoService, ILogger<ResultadoService> logger)
+        public ResultadoService(LabDbContext context, PdfResultadoService pdfResultadoService, ILogger<ResultadoService> logger, IOrdenService ordenService)
         {
             _context = context;
             _pdfResultadoService = pdfResultadoService;
             _logger = logger;
+            _ordenService = ordenService;
         }
 
         private static ResultadoListadoDto MapListado(resultado r) => new()
@@ -362,6 +365,7 @@ namespace Lab_APIRest.Services.Resultados
             entidad.fecha_revision = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _ordenService.VerificarYNotificarResultadosCompletosAsync(entidad.id_orden);
             await ActualizarOrdenSegunResultadosAsync(entidad.id_orden);
             return true;
         }

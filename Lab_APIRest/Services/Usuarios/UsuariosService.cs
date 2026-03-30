@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Lab_APIRest.Services.Email;
 using System;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Lab_APIRest.Services.Usuarios
 {
@@ -16,12 +17,14 @@ namespace Lab_APIRest.Services.Usuarios
         private readonly LabDbContext _context;
         private readonly IEmailService _emailService;
         private readonly string _frontendBaseUrl;
+        private readonly ILogger<UsuariosService> _logger;
 
-        public UsuariosService(LabDbContext context, IEmailService emailService, IConfiguration configuration)
+        public UsuariosService(LabDbContext context, IEmailService emailService, IConfiguration configuration, ILogger<UsuariosService> logger)
         {
             _context = context;
             _emailService = emailService;
             _frontendBaseUrl = configuration["FrontendBaseUrl"] ?? "http://laboratorioinmaculada.site";
+            _logger = logger;
         }
 
         private static UsuarioListadoDto MapUsuario(usuario entidad) => new()
@@ -65,10 +68,12 @@ namespace Lab_APIRest.Services.Usuarios
             }
             catch (DbUpdateException ex)
             {
+                _logger.LogError(ex, "Error al acceder a la base de datos al listar usuarios.");
                 throw new Exception("Error al acceder a la base de datos al listar usuarios.", ex);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error inesperado al listar usuarios.");
                 throw new Exception("Error inesperado al listar usuarios.", ex);
             }
         }
@@ -85,10 +90,12 @@ namespace Lab_APIRest.Services.Usuarios
             }
             catch (DbUpdateException ex)
             {
+                _logger.LogError(ex, "Error al acceder a la base de datos al obtener el usuario con ID {IdUsuario}.", idUsuario);
                 throw new Exception($"Error al acceder a la base de datos al obtener el usuario con ID {idUsuario}.", ex);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error inesperado al obtener el detalle del usuario con ID {IdUsuario}.", idUsuario);
                 throw new Exception($"Error inesperado al obtener el detalle del usuario con ID {idUsuario}.", ex);
             }
         }
@@ -222,10 +229,12 @@ namespace Lab_APIRest.Services.Usuarios
             }
             catch (DbUpdateException ex)
             {
+                _logger.LogError(ex, "Error al actualizar el usuario con ID {IdUsuario} en la base de datos.", usuario.IdUsuario);
                 throw new Exception($"Error al actualizar el usuario con ID {usuario.IdUsuario} en la base de datos.", ex);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error inesperado al actualizar el usuario con ID {IdUsuario}.", usuario.IdUsuario);
                 throw new Exception($"Error inesperado al actualizar el usuario con ID {usuario.IdUsuario}.", ex);
             }
         }
@@ -258,10 +267,12 @@ namespace Lab_APIRest.Services.Usuarios
             }
             catch (DbUpdateException ex)
             {
+                _logger.LogError(ex, "Error al cambiar el estado del usuario con ID {IdUsuario} en la base de datos.", idUsuario);
                 throw new Exception($"Error al cambiar el estado del usuario con ID {idUsuario} en la base de datos.", ex);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error inesperado al cambiar el estado del usuario con ID {IdUsuario}.", idUsuario);
                 throw new Exception($"Error inesperado al cambiar el estado del usuario con ID {idUsuario}.", ex);
             }
         }

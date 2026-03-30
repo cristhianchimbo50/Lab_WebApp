@@ -301,7 +301,7 @@
     {
         var nombre = user?.FindFirst("NombreRol")?.Value;
         var rawRol = user?.FindFirst(ClaimTypes.Role)?.Value ?? "";
-        return nombre ?? rawRol switch
+        var rol = nombre ?? rawRol switch
         {
             "1" => "Administrador",
             "2" => "Recepcionista",
@@ -309,5 +309,6 @@
             "4" => "Paciente",
             _ => rawRol
         };
+        return string.IsNullOrEmpty(rol) ? rol : char.ToUpper(rol[0]) + rol.Substring(1);
     }
 }

@@ -155,22 +155,42 @@
                 <div class="modal-dialog modal-md modal-dialog-centered">
                     <div class="modal-content shadow-lg border-0">
                         <div class="modal-header bg-info text-white">
-                            <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Detalle de Usuario</h5>
-                            <button type="button" class="btn-close" @onclick="CerrarModalDetalle">
-                            </button>
+                            <h5 class="modal-title d-flex align-items-center gap-2">
+                                <i class="bi bi-person-badge fs-4"></i>
+                                <span>Detalle de Usuario</span>
+                            </h5>
+                            <button type="button" class="btn-close" @onclick="CerrarModalDetalle"></button>
                         </div>
                         <div class="modal-body">
                             @if (_detalleUsuario != null)
                             {
-                                <ul class="list-group list-group-flush">
-                                    <li class="list-group-item"><strong>Nombre:</strong> @_detalleUsuario.Nombres @_detalleUsuario.Apellidos</li>
-                                    <li class="list-group-item"><strong>Género:</strong> @_detalleUsuario.NombreGenero</li>
-                                    <li class="list-group-item"><strong>Correo:</strong> @_detalleUsuario.Correo</li>
-                                    <li class="list-group-item"><strong>Rol:</strong> <span class="text-capitalize">@_detalleUsuario.NombreRol</span></li>
-                                    <li class="list-group-item"><strong>Activo:</strong> @_detalleUsuario.Activo ? "Sí" : "No"</li>
-                                    <li class="list-group-item"><strong>Fecha creación:</strong> @_detalleUsuario.FechaCreacion.ToLocalTime()</li>
-                                    <li class="list-group-item"><strong>Último acceso:</strong> @_detalleUsuario.UltimoAcceso?.ToLocalTime().ToString() ?? "-"</li>
-                                </ul>
+                                <div class="text-center mb-3">
+                                    <i class="bi bi-person-circle text-info" style="font-size: 3rem;"></i>
+                                    <div class="fw-bold fs-5 mt-2">@_detalleUsuario.Nombres @_detalleUsuario.Apellidos</div>
+                                    <span class="badge bg-secondary text-capitalize">@_detalleUsuario.NombreRol</span>
+                                    <span class="badge bg-@(_detalleUsuario.Activo ? "success" : "secondary") ms-1">
+                                        <i class="bi bi-@(_detalleUsuario.Activo ? "check-circle-fill" : "x-circle-fill")"></i>
+                                        @(_detalleUsuario.Activo ? "Activo" : "Inactivo")
+                                    </span>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-12">
+                                        <i class="bi bi-envelope me-1 text-primary"></i>
+                                        <strong>Correo:</strong> @_detalleUsuario.Correo
+                                    </div>
+                                    <div class="col-6">
+                                        <i class="bi bi-gender-ambiguous me-1 text-primary"></i>
+                                        <strong>Género:</strong> @_detalleUsuario.NombreGenero
+                                    </div>
+                                    <div class="col-6">
+                                        <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                        <strong>Creación:</strong> @_detalleUsuario.FechaCreacion.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                    </div>
+                                    <div class="col-12">
+                                        <i class="bi bi-clock-history me-1 text-primary"></i>
+                                        <strong>Último acceso:</strong> @(_detalleUsuario.UltimoAcceso.HasValue ? _detalleUsuario.UltimoAcceso.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "-")
+                                    </div>
+                                </div>
                             }
                         </div>
                         <div class="modal-footer">

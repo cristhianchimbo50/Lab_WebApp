@@ -10,7 +10,9 @@ namespace Lab_Blazor.Services.Examenes
         Task<AsociacionReactivoDto?> ObtenerDetalleAsociacionAsync(int idAsociacion);
         Task<AsociacionReactivoDto?> CrearAsociacionAsync(AsociacionReactivoDto asociacionReactivo);
         Task<bool> EditarAsociacionAsync(int idAsociacion, AsociacionReactivoDto asociacionReactivo);
-        Task<bool> EliminarAsociacionAsync(int idAsociacion);
+        Task<bool> AnularAsociacionAsync(int idAsociacion);
+        // Task<bool> EliminarAsociacionAsync(int idAsociacion); // Eliminado, se usa AnularAsociacionAsync
+        Task<bool> ActivarAsociacionAsync(int idAsociacion, AsociacionReactivoDto asociacionReactivo);
         Task<List<AsociacionReactivoDto>> ListarAsociacionesPorExamenIdAsync(int idExamen);
         Task<bool> GuardarAsociacionesPorExamenAsync(int idExamen, List<AsociacionReactivoDto> asociaciones);
     }

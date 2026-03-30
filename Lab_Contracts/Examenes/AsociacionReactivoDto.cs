@@ -9,5 +9,6 @@
         public string? NombreReactivo { get; set; }
         public decimal CantidadUsada { get; set; }
         public string? Unidad { get; set; }
+        public bool Activo { get; set; } // Indica si la asociación está habilitada o no
     }
 }

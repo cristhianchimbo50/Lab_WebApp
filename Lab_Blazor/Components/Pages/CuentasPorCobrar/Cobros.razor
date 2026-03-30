@@ -237,52 +237,65 @@
 
             @if (_mostrarModalCobro)
             {
-                <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content shadow-lg">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="bi bi-wallet2 me-2"></i>Registrar Cobro
-                                </h5>
-                                <button type="button" class="btn-close" @onclick="CerrarModalCobroAsync"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Dinero en Efectivo</label>
-                                    <InputNumber class="form-control" @bind-Value="_dineroEfectivo" />
+                <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <EditForm OnValidSubmit="RegistrarCobroAsync">
+                                <div class="modal-header">
+                                    <h5 class="modal-title"><i class="fas fa-cash-register me-2"></i> Registrar Cobro</h5>
+                                    <button class="btn-close" type="button" @onclick="CerrarModalCobroAsync"></button>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Transferencia</label>
-                                    <InputNumber class="form-control" @bind-Value="_transferencia" />
+                                <div class="modal-body">
+                                    <div class="mb-2">
+                                        <label>Total a cobrar</label>
+                                        <input class="form-control" value="@_totalSaldoSeleccionado.ToString("C")" disabled />
+                                    </div>
+                                    <div class="mb-2">
+                                        <label>Efectivo</label>
+                                        <InputNumber class="form-control" @bind-Value="_dineroEfectivo" />
+                                    </div>
+                                    <div class="mb-2">
+                                        <label>Transferencia</label>
+                                        <InputNumber class="form-control" @bind-Value="_transferencia" />
+                                    </div>
+                                    @if (_transferencia > 0)
+                                    {
+                                        <div class="mb-2">
+                                            <label>N° Comprobante (Transferencia)</label>
+                                            <InputText class="form-control" @bind-Value="_numeroComprobanteTransferencia" />
+                                        </div>
+                                    }
+                                    @if ((TotalCobro > _totalSaldoSeleccionado))
+                                    {
+                                        <div class="mb-2">
+                                            <label>Cambio</label>
+                                            <input class="form-control" value="@((TotalCobro - _totalSaldoSeleccionado).ToString("C"))" disabled />
+                                        </div>
+                                    }
+                                    else if ((_totalSaldoSeleccionado - TotalCobro) > 0)
+                                    {
+                                        <div class="mb-2">
+                                            <label>Saldo pendiente</label>
+                                            <input class="form-control" value="@((_totalSaldoSeleccionado - TotalCobro).ToString("C"))" disabled />
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-2">
+                                            <label>Cambio</label>
+                                            <input class="form-control" value="0,00" disabled />
+                                        </div>
+                                    }
+                                    <div class="mb-2">
+                                        <label>Observación</label>
+                                        <InputTextArea class="form-control" @bind-Value="_observacion" />
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Observación</label>
-                                    <InputText class="form-control text-uppercase" @bind-Value="_observacion"
-                                               @oninput="(e => _observacion = e.Value?.ToString()?.ToUpper() ?? string.Empty)" />
+                                <div class="modal-footer">
+                                    <button class="btn btn-success" type="submit">Confirmar</button>
+                                    <button class="btn btn-secondary" type="button" @onclick="CerrarModalCobroAsync">Cancelar</button>
                                 </div>
-                                <hr />
-                                <p><strong>Total Cobro:</strong> @TotalCobro.ToString("C")</p>
-                                <p><strong>Saldo Seleccionado:</strong> @_totalSaldoSeleccionado.ToString("C")</p>
-                                @if (TotalCobro > _totalSaldoSeleccionado)
-                                {
-                                    <p><strong>Cambio:</strong> <span class="text-warning fw-bold">@((TotalCobro - _totalSaldoSeleccionado).ToString("C"))</span></p>
-                                }
-                                else
-                                {
-                                    <p>
-                                        <strong>Restante:</strong>
-                                        <span class="@( (_totalSaldoSeleccionado - TotalCobro) > 0 ? "text-danger fw-bold" : "text-success fw-bold")">
-                                            @((_totalSaldoSeleccionado - TotalCobro).ToString("C"))
-                                        </span>
-                                    </p>
-                                }
-                            </div>
-                            <div class="modal-footer">
-                                <button class="btn btn-primary" @onclick="RegistrarCobroAsync">
-                                    <i class="bi bi-check-circle me-1"></i> Confirmar
-                                </button>
-                                <button class="btn btn-secondary" @onclick="CerrarModalCobroAsync">Cancelar</button>
-                            </div>
+                            </EditForm>
                         </div>
                     </div>
                 </div>
@@ -313,6 +326,7 @@
     private List<OrdenDto> _ordenesSeleccionadas = new();
     private List<DetallePagoDto> _pagosPrevios = new();
     private decimal _totalDeuda, _totalPagos, _totalSaldoSeleccionado, _dineroEfectivo, _transferencia;
+    private string _numeroComprobanteTransferencia = string.Empty;
     private string _observacion = string.Empty;
     private bool _mostrarModalCobro;
     private bool _datosCargados;

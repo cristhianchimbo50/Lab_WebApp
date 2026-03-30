@@ -136,7 +136,10 @@
                 {
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="text-muted small">
-                            Mostrando página @_resultado.PageNumber de @TotalPaginas (Total: @_resultado.TotalCount)
+                            @if (_resultado != null)
+                            {
+                                <span>@RangoMostrado</span>
+                            }
                         </div>
 
                         <div class="d-flex align-items-center gap-2">
@@ -196,54 +199,102 @@
 
             @if (_mostrarDetalle && _detalleActual is not null)
             {
-                <div class="modal fade show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
-                    <div class="modal-dialog modal-xl modal-dialog-centered">
-                        <div class="modal-content shadow-lg border-0">
-                            @if (!string.IsNullOrEmpty(_pdfUrl))
-                            {
-                                <div class="modal-header bg-dark text-white">
-                                    <h5 class="modal-title"><i class="fas fa-file-pdf me-2"></i>Visualización de Resultado</h5>
-                                    <button class="btn-close btn-close-white" @onclick="CerrarPdf">
-                                    </button>
-                                </div>
-                                <div class="modal-body p-0"><iframe src="@_pdfUrl" style="width:100%;height:80vh;border:none;"></iframe></div>
-                            }
-                            else
-                            {
-                                <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title d-flex align-items-center gap-2"><i class="fas fa-info-circle me-2"></i>Detalle de Resultado <span class="badge bg-light text-dark">@_detalleActual.NumeroResultado</span><span class="badge bg-@ObtenerClaseEstadoResultado(_detalleActual.IdEstadoResultado)">@EstadoResultadoTexto(_detalleActual.IdEstadoResultado)</span></h5>
-                                    <button class="btn-close" @onclick="CerrarDetalle">
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    @if (_detalleActual.Anulado)
-                                    { <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div> }
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-md-3 col-6 mb-2"><label><strong>Fecha de Resultado</strong></label><input class="form-control" value="@_detalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled /></div>
-                                        <div class="col-md-3 col-6 mb-2"><label><strong>N° Orden</strong></label><input class="form-control" value="@_detalleActual.NumeroOrden" disabled /></div>
-                                        <div class="col-md-3 col-6 mb-2"><label><strong>Cédula</strong></label><input class="form-control" value="@_detalleActual.CedulaPaciente" disabled /></div>
-                                        <div class="col-md-3 col-6 mb-2"><label><strong>Paciente</strong></label><input class="form-control" value="@_detalleActual.NombrePaciente" disabled /></div>
-                                        <div class="col-md-3 col-6 mb-2"><label><strong>Género</strong></label><input class="form-control" value="@_detalleActual.GeneroPaciente" disabled /></div>
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index:1056;">
+                    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:900px;">
+                        <div class="modal-content shadow-lg border-0" style="max-height:100vh; overflow:hidden;">
+                            <div class="modal-header bg-secondary text-white">
+                                <h5 class="modal-title d-flex align-items-center gap-2">
+                                    <i class="bi bi-eye-fill"></i>
+                                    <span>Detalle de Resultado</span>
+                                    <span class="badge bg-light text-dark">@_detalleActual.NumeroResultado</span>
+                                    <span class="badge bg-@ObtenerClaseEstadoResultado(_detalleActual.IdEstadoResultado)">@EstadoResultadoTexto(_detalleActual.IdEstadoResultado)</span>
+                                </h5>
+                                <button class="btn-close btn-close-white" @onclick="CerrarDetalle"></button>
+                            </div>
+                            <div class="modal-body">
+                                @if (_detalleActual.Anulado)
+                                {
+                                    <div class="alert alert-danger text-center fw-bold">Este resultado ha sido anulado.</div>
+                                }
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">N° Orden</label>
+                                        <input class="form-control" value="@_detalleActual.NumeroOrden" disabled />
                                     </div>
-                                    <h5 class="mt-4 mb-3"><i class="fas fa-vial me-2"></i>Exámenes</h5>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Fecha Resultado</label>
+                                        <input class="form-control" value="@_detalleActual.FechaResultado.ToString("dd/MM/yyyy")" disabled />
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Cédula</label>
+                                        <input class="form-control" value="@_detalleActual.CedulaPaciente" disabled />
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label fw-semibold">Paciente</label>
+                                        <input class="form-control" value="@_detalleActual.NombrePaciente" disabled />
+                                    </div>
+                                </div>
+
+                                <h6 class="mt-3 mb-2"><i class="fas fa-vial me-1"></i>Resultados</h6>
+                                <div style="max-height:25vh; overflow-y:auto;">
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered align-middle text-center">
-                                            <thead class="table-light"><tr><th>Nombre del Examen</th><th>Valor</th><th>Unidad</th><th>Referencia</th></tr></thead>
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Nombre del Examen</th>
+                                                    <th>Valor</th>
+                                                    <th>Unidad</th>
+                                                    <th>Referencia</th>
+                                                </tr>
+                                            </thead>
                                             <tbody>
                                                 @foreach (var d in _detalleActual.Detalles)
-                                                { <tr><td>@d.NombreExamen</td><td>@d.Valor</td><td>@d.Unidad</td><td>@d.ValorReferencia</td></tr> }
+                                                {
+                                                    <tr>
+                                                        <td>@d.NombreExamen</td>
+                                                        <td>@d.Valor</td>
+                                                        <td>@d.Unidad</td>
+                                                        <td>@d.ValorReferencia</td>
+                                                    </tr>
+                                                }
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="mb-3"><label><strong>Observaciones</strong></label><textarea class="form-control" value="@_detalleActual.Observaciones" disabled style="min-height:70px;"></textarea></div>
-                                    @if (!_detalleActual.Anulado)
-                                    {
-                                        <div class="d-flex flex-wrap gap-2 justify-content-start mt-3">
-                                            <button class="btn btn-secondary" @onclick="ImprimirResultadoAsync"><i class="fas fa-print me-1"></i> Imprimir</button>
-                                            @if (puedeAnular)
-                                            { <button class="btn btn-danger" @onclick="AnularResultadoAsync"><i class="fas fa-ban me-1"></i> Anular</button> }
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Observaciones</label>
+                                    <textarea class="form-control" disabled readonly style="min-height:70px;">@_detalleActual.Observaciones</textarea>
+                                </div>
+
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Observación de revisión</label>
+                                        <textarea class="form-control" rows="3" @bind="_observacionRevision" placeholder="Agregar observación opcional" disabled="@(rol != "1")"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Historial de revisión</label>
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="fw-semibold">Estado actual: <span class="badge bg-@ObtenerClaseEstadoResultado(_detalleActual.IdEstadoResultado)">@EstadoResultadoTexto(_detalleActual.IdEstadoResultado)</span></div>
+                                            <div>Revisor: @(_detalleActual.NombreRevisor ?? "-")</div>
+                                            <div>Fecha: @(_detalleActual.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                                            <div>Observación: @(_detalleActual.ObservacionRevision ?? "-")</div>
                                         </div>
-                                    }
+                                    </div>
+                                </div>
+                            </div>
+                            @if (!_detalleActual.Anulado && rol == "1")
+                            {
+                                var yaAprobado = _detalleActual != null && EsResultadoAprobado(_detalleActual.IdEstadoResultado);
+                                <div class="modal-footer">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+                                        <button class="btn btn-success" @onclick="AprobarResultadoAsync" disabled="@yaAprobado">
+                                            <i class="bi bi-check-lg me-1"></i> Aprobar
+                                        </button>
+                                        <button class="btn btn-danger" @onclick="RechazarResultadoAsync" disabled="@yaAprobado">
+                                            <i class="bi bi-x-circle me-1"></i> Rechazar / Corrección
+                                        </button>
+                                    </div>
                                 </div>
                             }
                         </div>
@@ -272,6 +323,7 @@
     private ResultadoDetalleDto? _detalleActual;
     private bool _mostrarDetalle = false;
     private bool _isRendered = false;
+    private string _observacionRevision = string.Empty;
 
     private ResultadoFiltroDto _filtro = new()
     {
@@ -530,5 +582,62 @@
             EstadoResultadoPendienteId => "Pendiente",
             _ => "Pendiente"
         };
+    }
+
+    private string RangoMostrado
+    {
+        get
+        {
+            if (_resultado == null || _resultado.TotalCount == 0)
+                return "Mostrando 0 de 0 resultados";
+            int desde = (_resultado.PageNumber - 1) * _resultado.PageSize + 1;
+            int hasta = Math.Min(_resultado.PageNumber * _resultado.PageSize, _resultado.TotalCount);
+            return $"Mostrando {desde} - {hasta} de {_resultado.TotalCount} resultados";
+        }
+    }
+
+    private async Task AprobarResultadoAsync()
+    {
+        if (_detalleActual == null) return;
+        var ok = await ResultadosApi.RevisarResultadoAsync(_detalleActual.IdResultado, new ResultadoRevisionDto
+        {
+            IdEstadoResultado = EstadoResultadoAprobadoId,
+            ObservacionRevision = string.IsNullOrWhiteSpace(_observacionRevision) ? null : _observacionRevision.Trim()
+        });
+        if (ok)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado aprobado.", "success");
+            _mostrarDetalle = false;
+            await BuscarResultadosAsync();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo aprobar el resultado.", "danger");
+        }
+    }
+
+    private async Task RechazarResultadoAsync()
+    {
+        if (_detalleActual == null) return;
+        if (string.IsNullOrWhiteSpace(_observacionRevision))
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Ingrese una observación para rechazar.", "warning");
+            return;
+        }
+        var ok = await ResultadosApi.RevisarResultadoAsync(_detalleActual.IdResultado, new ResultadoRevisionDto
+        {
+            IdEstadoResultado = EstadoResultadoCorreccionId,
+            ObservacionRevision = _observacionRevision.Trim()
+        });
+        if (ok)
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "Resultado rechazado/corrección enviada.", "danger");
+            _mostrarDetalle = false;
+            await BuscarResultadosAsync();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("mostrarToastAsync", "No se pudo rechazar el resultado.", "danger");
+        }
     }
 }

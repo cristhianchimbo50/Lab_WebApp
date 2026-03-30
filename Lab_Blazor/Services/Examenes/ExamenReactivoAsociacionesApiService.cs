@@ -133,5 +133,33 @@ namespace Lab_Blazor.Services.Examenes
             var response = await _http.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<bool> AnularAsociacionAsync(int idAsociacion)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/ExamenReactivoAsociaciones/{idAsociacion}");
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> ActivarAsociacionAsync(int idAsociacion, AsociacionReactivoDto asociacionReactivo)
+        {
+            if (!await SetAuthHeaderAsync())
+                throw new HttpRequestException("Token no disponible o sesión expirada.");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/ExamenReactivoAsociaciones/{idAsociacion}")
+            {
+                Content = JsonContent.Create(asociacionReactivo)
+            };
+            AddTokenHeader(request);
+
+            var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+
     }
 }

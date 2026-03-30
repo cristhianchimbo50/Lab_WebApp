@@ -829,14 +829,27 @@ namespace Lab_APIRest.Services.Ordenes
             bool todosAprobados = examenesRequeridos.All(examenesAprobados.Contains);
             bool pagada = orden.id_estado_pago == EstadoPagoPagadoId;
             bool estabaFinalizada = orden.id_estado_orden == EstadoOrdenFinalizadaId;
-
             bool finalizada = todosAprobados && pagada;
+            _logger.LogInformation("[Depuracion Notificacion] Orden {IdOrden}: todosAprobados={TodosAprobados}, pagada={Pagada}, estabaFinalizada={EstabaFinalizada}, finalizada={Finalizada}, notificadaAntes={NotificadaAntes}, EstadoOrden={EstadoOrden}, EstadoPago={EstadoPago}, examenesRequeridos=[{ExamenesRequeridos}], examenesAprobados=[{ExamenesAprobados}]",
+                idOrden,
+                todosAprobados,
+                pagada,
+                estabaFinalizada,
+                finalizada,
+                _ordenesNotificadas.ContainsKey(idOrden),
+                orden.id_estado_orden,
+                orden.id_estado_pago,
+                string.Join(",", examenesRequeridos),
+                string.Join(",", examenesAprobados)
+            );
+
+
             orden.id_estado_orden = finalizada ? EstadoOrdenFinalizadaId : EstadoOrdenEnProcesoId;
             orden.fecha_completado = finalizada
                 ? (orden.fecha_completado ?? DateTime.UtcNow)
                 : null;
 
-            bool debeNotificar = finalizada && !estabaFinalizada && !_ordenesNotificadas.ContainsKey(idOrden);
+            bool debeNotificar = finalizada && !_ordenesNotificadas.ContainsKey(idOrden);
 
             await _context.SaveChangesAsync();
 
@@ -855,6 +868,7 @@ namespace Lab_APIRest.Services.Ordenes
                     string cuerpo = $@"<div style='font-family:Arial,sans-serif;color:#333;'><h3>Estimado/a {nombre},</h3><p>Su orden <strong>{orden.numero_orden}</strong> ha sido finalizada y los resultados ya están habilitados.</p><p>Puede consultarlos ingresando a su cuenta.</p><p style='margin-top:20px;'>Gracias por confiar en nosotros.<br><strong>Laboratorio Clínico La Inmaculada</strong></p></div>";
 
                     await _emailService.EnviarCorreoAsync(correo, string.IsNullOrWhiteSpace(nombre) ? "Paciente" : nombre, asunto, cuerpo);
+                    _logger.LogInformation("Correo de resultados enviado al cliente: {Correo}", correo);
                     _ordenesNotificadas.TryAdd(idOrden, true);
                 }
                 else

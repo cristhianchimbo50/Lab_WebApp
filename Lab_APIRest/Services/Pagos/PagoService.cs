@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Lab_Contracts.Common;
 using System;
 using System.Linq;
+using Lab_APIRest.Services.Ordenes;
+
 
 namespace Lab_APIRest.Services.Pagos
 {
@@ -27,10 +29,12 @@ namespace Lab_APIRest.Services.Pagos
         private const int TipoPagoTransferenciaId = 2;
 
         private readonly LabDbContext _context;
+        private readonly IOrdenService _ordenService;
 
-        public PagoService(LabDbContext context)
+        public PagoService(LabDbContext context, IOrdenService ordenService)
         {
             _context = context;
+            _ordenService = ordenService;
         }
 
         private static PagoDto MapPago(pago entidadPago)
@@ -102,6 +106,9 @@ namespace Lab_APIRest.Services.Pagos
             await _context.SaveChangesAsync();
 
             await ActualizarEstadoOrdenAsync(entidadPago.id_orden, entidadPago.monto_aplicado);
+            // Notificar si corresponde
+            if (entidadPago.id_orden.HasValue)
+                await _ordenService.VerificarYNotificarResultadosCompletosAsync(entidadPago.id_orden.Value);
 
             return MapPago(entidadPago);
         }
@@ -176,6 +183,8 @@ namespace Lab_APIRest.Services.Pagos
             await _context.SaveChangesAsync();
 
             await RecalcularEstadoOrdenAsync(pagoDto.IdOrden);
+            // Notificar si corresponde
+            await _ordenService.VerificarYNotificarResultadosCompletosAsync(pagoDto.IdOrden);
 
             return MapPago(entidadPago);
         }
